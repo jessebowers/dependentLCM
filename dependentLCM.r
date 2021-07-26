@@ -7,7 +7,8 @@ library(tidyverse)
 CLASSPI_ALPHA_DEFAULT = 2
 DOMAIN_ALPHA_RATIO = 2
 THETA_ALPHA_DEFAULT = 2
-DOMAIN_PROPOSAL_RATIO_DEFAULT = 0.5
+DOMAIN_PROPOSAL_NONEMPTY = 0.5
+DOMAIN_PROPOSAL_SWAP = 0.4
 
 dependentLCM_fit <- function(nitr, ...) {
   
@@ -21,7 +22,7 @@ dependentLCM_fit <- function(nitr, ...) {
   
   # Clean up output
   out$thetas_id <- do.call(cbind, out$thetas_id)
-  rownames(out$thetas_id) <- c("itr", "class", "domain")
+  rownames(out$thetas_id) <- c("itr", "class", "domain", "pattern_id")
   out$thetas_patterns <- do.call(cbind, out$thetas_patterns)
   rownames(out$thetas_patterns) <- paste0("item_", 0:(nrow(out$thetas_patterns)-1))
   out$thetas_probs <- unlist(out$thetas_probs)
@@ -57,7 +58,7 @@ dependentLCM_fit <- function(nitr, ...) {
 get_start <- function(
   df=NULL, mat=NULL
   # Hyperparameters
-  ,nclass=2, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA_DEFAULT, domain_alpha=NULL, domain_maxitems=NULL, theta_alpha=THETA_ALPHA_DEFAULT, domain_proposal_ratio=DOMAIN_PROPOSAL_RATIO_DEFAULT
+  ,nclass=2, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA_DEFAULT, domain_alpha=NULL, domain_maxitems=NULL, theta_alpha=THETA_ALPHA_DEFAULT, domain_proposal_nonempty=DOMAIN_PROPOSAL_NONEMPTY, domain_proposal_swap=DOMAIN_PROPOSAL_SWAP# , domain_nproposals=NULL
   # Bayes parameters
   , class_pi = NULL, classes = NULL,  domains_pi = NULL, thetas = NULL
   # Misc
@@ -70,7 +71,7 @@ get_start <- function(
   hparams <- get_start.hparams(
     df=mat
     # Hyperparameters
-    ,nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_alpha=domain_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, domain_proposal_ratio=domain_proposal_ratio
+    ,nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_alpha=domain_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, domain_proposal_nonempty=domain_proposal_nonempty, domain_proposal_swap=domain_proposal_swap# , domain_nproposals=domain_nproposals
   )
   
   bayesparams <- get_start.bayes_params(
@@ -90,7 +91,7 @@ get_start <- function(
 get_start.hparams <- function(
   df=NULL, nitems=NULL
   # Hyperparameters
-  ,nclass=2, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA_DEFAULT, domain_alpha=NULL, domain_maxitems=NULL, theta_alpha=THETA_ALPHA_DEFAULT, domain_proposal_ratio=DOMAIN_PROPOSAL_RATIO_DEFAULT
+  ,nclass=2, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA_DEFAULT, domain_alpha=NULL, domain_maxitems=NULL, theta_alpha=THETA_ALPHA_DEFAULT, domain_proposal_nonempty=DOMAIN_PROPOSAL_NONEMPTY, domain_proposal_swap=DOMAIN_PROPOSAL_SWAP# , domain_nproposals=NULL
 ) {
   # Purpose: Add default hyperparameters
   
@@ -126,10 +127,14 @@ get_start.hparams <- function(
     domain_maxitems <- nitems # No restrictions
   }
   
+  # if (is.null(domain_nproposals)) {
+  #   domain_nproposals <- nitems
+  # }
+  
   # theta_alpha, no action taken
   
   return(list(
-    nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_alpha=domain_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, nitems = nitems, item_nlevels = item_nlevels, nclass2domain = nclass2domain, domain_proposal_ratio=domain_proposal_ratio
+    nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_alpha=domain_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, nitems = nitems, item_nlevels = item_nlevels, nclass2domain = nclass2domain, domain_proposal_nonempty=domain_proposal_nonempty, domain_proposal_swap=domain_proposal_swap # , domain_nproposals=domain_nproposals
   ))
 }
 

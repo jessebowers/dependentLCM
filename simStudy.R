@@ -48,12 +48,12 @@ outfile_path <- "C:/Users/drakethrice/Desktop/analysis-output.txt" # ; close(fil
 
 system.time(
   {
-    nitr <- 6000
+    nitr <- 12000
     close(file(outfile_path, open="w")); sink(outfile_path)
     rm(out)
     set.seed(4)
     sim_list <- generate(
-      n = 1000
+      n = 200 # 1000
       , pis = c(1)
       , thetas = cbind(
         c(rep(0.2, 1), rep(0.8, 1), rep(0.9,20))
@@ -65,8 +65,8 @@ system.time(
     sim_list$responses3 <- sim_list$responses2 - sim_list$responses[, -c(1,2)] * (2 * sim_list$responses2 - 1)
     
     set.seed(4)
-    out <- dependentLCM_fit(df = sim_list$responses3, nclass=1, class2domain = c(0), nitr= nitr, class_init_method = "kmodes", domain_proposal_ratio=0.5
-                            , domain_maxitems=2
+    out <- dependentLCM_fit(df = sim_list$responses3, nclass=1, class2domain = c(0), nitr= nitr, class_init_method = "kmodes"
+                            , domain_maxitems=2, domain_proposal_swap=0.8
     )
     out_summary <- dlcm.summary(out)
     sink.reset()
