@@ -7,8 +7,8 @@ library(tidyverse)
 CLASSPI_ALPHA_DEFAULT = 2
 DOMAIN_ALPHA_RATIO = 2
 THETA_ALPHA_DEFAULT = 2
-DOMAIN_PROPOSAL_NONEMPTY = 0.5
-DOMAIN_PROPOSAL_SWAP = 0.4
+DOMAIN_PROPOSAL_EMPTY = 0.3
+DOMAIN_PROPOSAL_SWAP = 0.3
 
 dependentLCM_fit <- function(nitr, ...) {
   
@@ -58,7 +58,7 @@ dependentLCM_fit <- function(nitr, ...) {
 get_start <- function(
   df=NULL, mat=NULL
   # Hyperparameters
-  ,nclass=2, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA_DEFAULT, domain_alpha=NULL, domain_maxitems=NULL, theta_alpha=THETA_ALPHA_DEFAULT, domain_proposal_nonempty=DOMAIN_PROPOSAL_NONEMPTY, domain_proposal_swap=DOMAIN_PROPOSAL_SWAP# , domain_nproposals=NULL
+  ,nclass=2, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA_DEFAULT, domain_alpha=NULL, domain_maxitems=NULL, theta_alpha=THETA_ALPHA_DEFAULT, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_proposal_swap=DOMAIN_PROPOSAL_SWAP, domain_nproposals=NULL
   # Bayes parameters
   , class_pi = NULL, classes = NULL,  domains_pi = NULL, thetas = NULL
   # Misc
@@ -71,7 +71,7 @@ get_start <- function(
   hparams <- get_start.hparams(
     df=mat
     # Hyperparameters
-    ,nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_alpha=domain_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, domain_proposal_nonempty=domain_proposal_nonempty, domain_proposal_swap=domain_proposal_swap# , domain_nproposals=domain_nproposals
+    ,nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_alpha=domain_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, domain_proposal_empty=domain_proposal_empty, domain_proposal_swap=domain_proposal_swap, domain_nproposals=domain_nproposals
   )
   
   bayesparams <- get_start.bayes_params(
@@ -91,7 +91,7 @@ get_start <- function(
 get_start.hparams <- function(
   df=NULL, nitems=NULL
   # Hyperparameters
-  ,nclass=2, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA_DEFAULT, domain_alpha=NULL, domain_maxitems=NULL, theta_alpha=THETA_ALPHA_DEFAULT, domain_proposal_nonempty=DOMAIN_PROPOSAL_NONEMPTY, domain_proposal_swap=DOMAIN_PROPOSAL_SWAP# , domain_nproposals=NULL
+  ,nclass=2, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA_DEFAULT, domain_alpha=NULL, domain_maxitems=NULL, theta_alpha=THETA_ALPHA_DEFAULT, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_proposal_swap=DOMAIN_PROPOSAL_SWAP, domain_nproposals=NULL
 ) {
   # Purpose: Add default hyperparameters
   
@@ -127,14 +127,14 @@ get_start.hparams <- function(
     domain_maxitems <- nitems # No restrictions
   }
   
-  # if (is.null(domain_nproposals)) {
-  #   domain_nproposals <- nitems
-  # }
+  if (is.null(domain_nproposals)) {
+    domain_nproposals <- nitems
+  }
   
   # theta_alpha, no action taken
   
   return(list(
-    nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_alpha=domain_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, nitems = nitems, item_nlevels = item_nlevels, nclass2domain = nclass2domain, domain_proposal_nonempty=domain_proposal_nonempty, domain_proposal_swap=domain_proposal_swap # , domain_nproposals=domain_nproposals
+    nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_alpha=domain_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, nitems = nitems, item_nlevels = item_nlevels, nclass2domain = nclass2domain, domain_proposal_empty=domain_proposal_empty, domain_proposal_swap=domain_proposal_swap, domain_nproposals=domain_nproposals
   ))
 }
 
@@ -245,35 +245,6 @@ check_params <- function(all_params) {
 ############## SIMULATION
 ##############
 
-generate <- function(n, pis, thetas) {
-  
-  classes <- apply(rmultinom(n, 1, pis), 2, function(x) which(x==1))
-  
-  responses <- sapply(
-    classes
-    , function(iclass) {runif(nrow(thetas)) > thetas[, iclass]}
-  )+0
-  
-  posterior <- lapply(
-    1:ncol(thetas)
-    , function(iclass){
-      apply(responses, 2
-            , function(iresp) {
-              prod(c(thetas[which(iresp==1), iclass], (1-thetas)[which(iresp==0), iclass]))
-            }
-      )
-    }
-  )
-  posterior <- do.call(cbind, posterior)
-  posterior <- sweep(posterior, 2, pis, "*")
-  posterior <- posterior / rowSums(posterior)
-  
-  return(list(
-    classes = classes
-    , responses = t(responses)
-  ))
-}
-
 dlcm.thetas_items <- function(dlcm) {
   return(data.frame(
     items = apply(
@@ -303,11 +274,13 @@ dlcm.summary <- function(out, nwarmup=1000) {
   thetas_avg <- out$thetas %>% filter(itr > nwarmup) %>% group_by(class, items, item_value) %>% summarize(n=n(), prob=mean(prob))
   domain_items <- out$thetas %>% filter(domain_filter==TRUE, itr > nwarmup) %>% group_by(items) %>% summarize(nitems=max(nitems), n=n())
   domain_nitems <- table((out$thetas %>% filter(itr > nwarmup, domain_filter==TRUE))$nitems)
-  domain_accept <- apply(
-    out$thetas_accept[, , -(1:nwarmup)], 1
-    , function(x) list(table(x))
-  )
-  domain_accept <- do.call(bind_rows, domain_accept)
+  
+  # domain_accept <- apply(
+  #   out$thetas_accept[, , -(1:nwarmup)], 1
+  #   , function(x) list(table(x))
+  # )
+  # domain_accept <- do.call(bind_rows, domain_accept)
+  domain_accept <- table(out$thetas_accept[, , -(1:nwarmup)])
   
   return(list(
     "thetas_avg"=thetas_avg, "domain_items"=domain_items, "domain_nitems"=domain_nitems, "domain_accept"=domain_accept

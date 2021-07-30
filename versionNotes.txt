@@ -1,9 +1,5 @@
 Dependent LCM
 * Fixed number of domains (100X number of items by default)
-* Use metropolis to move one item at a time to a new domain
-* Domain proposal function is a weighted average of 'just filled domains' vs 'any possible domain' based on DOMAIN_RATIO
+* Use metropolis to move one item at a time either transfering it to a new domain or swapping it with another item
+* Domain proposal function is a weighted average of 'just filled domains' vs 'any possible domain' based on DOMAIN_PROPOSAL_EMPTY, and decide on swapping based on DOMAIN_PROPOSAL_SWAP
 * Implemented domain_maxitems
-
-In progress
-* Allow swapping of items
-* Separate out domain_next into different subprocesses

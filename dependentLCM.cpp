@@ -126,19 +126,30 @@ Rcpp::IntegerVector which(const Rcpp::LogicalVector& x) {
   return Rcpp::wrap(out);
 }
 
-// tk switch to using template
+
 std::map<int,  int> count_integers(const Rcpp::IntegerVector& x) {
-  std::map<int,  int> counts;
-  int n = x.size();
-  int ix;
   
-  for (int i=0; i < n; i++) {
+  std::map<int,  int> counts_map;
+  int i;
+  int nx = x.size();
+  int ix;
+  for (i=0; i < nx; i++) {
     ix = x[i];
-    counts.insert({ix, 0});
-    counts[ix] += 1;
+    counts_map.insert({ix, 0});
+    counts_map[ix] += 1;
   }
   
-  return counts;
+  // Rcpp::IntegerMatrix counts_mat = Rcpp::IntegerMatrix(Rcpp::no_init_matrix(counts_map.size(), 2));
+  // std::map<int,  int>::iterator iter;
+  // std::map<int,  int>::const_iterator iter_end = counts_map.end();
+  // i = 0;
+  // for (iter = counts_map.begin(); iter!=iter_end; ++iter) {
+  //   counts_mat(i, 0) = iter->first;
+  //   counts_mat(i, 1) = iter->second;
+  //   i += 1;
+  // }
+  
+  return counts_map;
 }
 
 template <typename K, typename V>
@@ -149,6 +160,15 @@ V map_get(const  std::map <K,V> & map, const K & key, const V & defaultvalue ) {
   }
   else {
     return iter->second;
+  }
+}
+
+template <typename T>
+T minimum(const T x1, const T x2) {
+  if (x1 < x2) {
+    return x1;
+  } else {
+    return x2;
   }
 }
 
@@ -166,8 +186,9 @@ public:
   Rcpp::IntegerVector class2domain;
   Rcpp::NumericVector classPi_alpha;
   float domain_alpha;
-  float domain_proposal_nonempty;
+  float domain_proposal_empty;
   float domain_proposal_swap;
+  int domain_nproposals;
   int domain_maxitems;
   float theta_alpha;
   // Data Info
@@ -182,7 +203,7 @@ public:
   int nclass2domain_calc() {return count_unique(class2domain);};
   int nitem_calc() {return item_nlevels.size();};
   float domain_alpha_one_calc() {if (ndomains>0){return domain_alpha/float(ndomains);} else {return 0;};}; // treat 0 as infinity
-  void set_hparams(int ndomains_in, int nclass_in, Rcpp::IntegerVector& class2domain_in, Rcpp::NumericVector& classPi_alpha_in, float domain_alpha_in, int domain_maxitems_in, float theta_alpha_in, float domain_proposal_nonempty_in, float domain_proposal_swap_in);
+  void set_hparams(int ndomains_in, int nclass_in, Rcpp::IntegerVector& class2domain_in, Rcpp::NumericVector& classPi_alpha_in, float domain_alpha_in, int domain_maxitems_in, float theta_alpha_in, float domain_proposal_empty_in, float domain_proposal_swap_in, int domain_nproposals_in);
   void set_hparams(Rcpp::List hparams_in);
   void set_dataInfo(Rcpp::IntegerMatrix& x);
   void print();
@@ -196,8 +217,9 @@ void Hyperparameter::set_hparams(
   , float domain_alpha_in
   , int domain_maxitems_in
   , float theta_alpha_in
-  , float domain_proposal_nonempty_in
-  , float domain_proposal_swap_in) {
+  , float domain_proposal_empty_in
+  , float domain_proposal_swap_in
+  , int domain_nproposals_in) {
   if (IS_LOUD) {Rcpp::Rcout << "Hyperparameter::set_hparams" << "\n";} // tkprint
   
   ndomains = ndomains_in;
@@ -207,8 +229,9 @@ void Hyperparameter::set_hparams(
   domain_alpha = domain_alpha_in;
   domain_maxitems = domain_maxitems_in;
   theta_alpha = theta_alpha_in;
-  domain_proposal_nonempty = domain_proposal_nonempty_in;
+  domain_proposal_empty = domain_proposal_empty_in;
   domain_proposal_swap = domain_proposal_swap_in;
+  domain_nproposals = domain_nproposals_in;
   
   // Inferred
   nclass2domain = nclass2domain_calc();
@@ -225,10 +248,11 @@ void Hyperparameter::set_hparams(Rcpp::List hparams_in) {
   float domain_alpha = hparams_in("domain_alpha");
   int domain_maxitems = hparams_in("domain_maxitems");
   float theta_alpha = hparams_in("theta_alpha");
-  float domain_proposal_nonempty = hparams_in("domain_proposal_nonempty");
+  float domain_proposal_empty = hparams_in("domain_proposal_empty");
   float domain_proposal_swap = hparams_in("domain_proposal_swap");
+  float domain_nproposals = hparams_in("domain_nproposals");
   
-  set_hparams(ndomains, nclass, class2domain, classPi_alpha, domain_alpha, domain_maxitems, theta_alpha, domain_proposal_nonempty, domain_proposal_swap);
+  set_hparams(ndomains, nclass, class2domain, classPi_alpha, domain_alpha, domain_maxitems, theta_alpha, domain_proposal_empty, domain_proposal_swap, domain_nproposals);
 }
 
 
@@ -250,7 +274,7 @@ void Hyperparameter::print() {
   Rcpp::Rcout << "hparams.classPi_alpha:" << classPi_alpha << "\n";
   Rcpp::Rcout << "hparams.domain_alpha:" << domain_alpha << "\n";
   Rcpp::Rcout << "hparams.domain_maxitems:" << domain_maxitems << "\n";
-  Rcpp::Rcout << "hparams.domain_proposal_nonempty:" << domain_proposal_nonempty << "\n";
+  Rcpp::Rcout << "hparams.domain_proposal_empty:" << domain_proposal_empty << "\n";
   Rcpp::Rcout << "hparams.domain_proposal_swap:" << domain_proposal_swap << "\n";
   Rcpp::Rcout << "hparams.theta_alpha:" << theta_alpha << "\n";
   Rcpp::Rcout << "hparams.item_nlevels:" << item_nlevels << "\n";
@@ -449,11 +473,11 @@ DomainCount BLANK_DOMAIN;
  *****************************************************/
 
 struct domainProposalOut {
-  int swap_type;
+  int swap_type; // 0 swap, 1 transfer to nonempty domain, 2 split into empty domain
   int domain_id1;
   int domain_id2;
-  int item_old1;
-  int item_old2;
+  int item1_old;
+  int item2_old;
   float forwardProb;
   float backwardProb;
   DomainCount* domain_old1;
@@ -492,15 +516,19 @@ void domainProposalOut_print(domainProposalOut& x) {
   Rcpp::Rcout << "domainProposalOut.swap_type:" << x.swap_type << "\n";
   Rcpp::Rcout << "domainProposalOut.domain_id1:" << x.domain_id1 << "\n";
   Rcpp::Rcout << "domainProposalOut.domain_id2:" << x.domain_id2 << "\n";
-  Rcpp::Rcout << "domainProposalOut.item_old1:" << x.item_old1 << "\n";
-  Rcpp::Rcout << "domainProposalOut.item_old2:" << x.item_old2 << "\n";
+  Rcpp::Rcout << "domainProposalOut.item1_old:" << x.item1_old << "\n";
+  Rcpp::Rcout << "domainProposalOut.item2_old:" << x.item2_old << "\n";
   Rcpp::Rcout << "domainProposalOut.forwardProb:" << x.forwardProb << "\n";
   Rcpp::Rcout << "domainProposalOut.backwardProb:" << x.backwardProb << "\n";
   Rcpp::Rcout << "domainProposalOut.domain_classes:" << x.domain_classes << "\n";
-  Rcpp::Rcout << "domainProposalOut.domain_old1:" << x.domain_old1->items << "\n";
+  Rcpp::Rcout << "domainProposalOut.domain_old1:" << "\n";
   x.domain_old1->print();
-  Rcpp::Rcout << "domainProposalOut.domain_old2:" << x.domain_old2->items << "\n";
+  Rcpp::Rcout << "domainProposalOut.domain_old2:" << "\n";
   x.domain_old2->print();
+  Rcpp::Rcout << "domainProposalOut.domain_new1:" << "\n";
+  x.domain_new1.print();
+  Rcpp::Rcout << "domainProposalOut.domain_new2:" << "\n";
+  x.domain_new2.print();
   if (true) {Rcpp::Rcout << "domainProposalOut_print" << "| END" << "\n";} // tkprint
 } // tkjmb delete
 
@@ -530,6 +558,7 @@ public:
   int nclass_calc() {return class_pi.size();};
   int nitems_calc() {return thetas[0].begin()->second.nitems_calc();};
   Rcpp::IntegerMatrix item2domainid_calc(Hyperparameter hparams);
+  int domain_id_new(int class2domain_id, Hyperparameter& hparams);
   
 public:
   Rcpp::NumericVector class_pi_args(Hyperparameter& hparams);
@@ -541,11 +570,9 @@ public:
 public:
   static float domain_getloglik_x(Rcpp::IntegerVector& pattern_counts, float theta_alpha);
   static float domain_getlik_domain(Hyperparameter hparams);
-  domainPropProbOut domain_proposal_prob(int class2domain_id, Hyperparameter& hparams);
-  Rcpp::NumericVector domain_proposal_probswap(int itemcount1, int itemcount2, Hyperparameter hparams);
-  domainProposalOut domain_proposal(int class2domain_id, int domain_id1, Hyperparameter& hparams);
+  domainProposalOut domain_proposal(int class2domain_id, Hyperparameter& hparams);
   domainAcceptOut domain_accept(Rcpp::IntegerMatrix& x, domainProposalOut& proposal, Hyperparameter& hparams);
-  int domain_next(int class2domain_id, int domain_id1, Rcpp::IntegerMatrix& x, Hyperparameter hparams);
+  int domain_next(int class2domain_id, Rcpp::IntegerMatrix& x, Hyperparameter hparams);
   void domains_next(Rcpp::IntegerMatrix& x, Hyperparameter& hparams);
 };
 
@@ -556,7 +583,7 @@ void BayesParameter::set_initial(Rcpp::NumericVector class_pi_in, Rcpp::IntegerV
   classes = classes_in;
   thetas = thetas_in;
   item2domainid = item2domainid_calc(hparams);
-  thetas_accept = Rcpp::IntegerMatrix(Rcpp::no_init_matrix(hparams.nitem, hparams.nclass2domain));
+  thetas_accept = Rcpp::IntegerMatrix(Rcpp::no_init_matrix(hparams.domain_nproposals, hparams.nclass2domain));
   thetas_accept.fill(-1);
 };
 
@@ -690,6 +717,26 @@ float BayesParameter::domain_getlik_domain(Hyperparameter hparams) {
   return 1; // Assume flat prior
 }
 
+int BayesParameter::domain_id_new(int class2domain_id, Hyperparameter& hparams) {
+  
+  int domain_id = -1;
+  int domain_class = which(hparams.class2domain == class2domain_id)[0];
+  int nmax = minimum(hparams.ndomains, hparams.nitem+1);
+  
+  for (int i=0; i < nmax; i++) {
+    if (thetas[domain_class].count(i) == 0) {
+      domain_id = i;
+      break;
+    }
+  }
+  
+  if (domain_id == -1) {
+    Rcpp::warning("BayesParameter::domain_id_new:: No empty domain found");
+  }
+  
+  return domain_id;
+}
+
 
 /*****************************************************
  ****** MCMC
@@ -778,96 +825,40 @@ void BayesParameter::thetas_next(Rcpp::IntegerMatrix& x, Hyperparameter& hparams
   }
 }
 
-domainPropProbOut BayesParameter::domain_proposal_prob(int class2domain_id, Hyperparameter& hparams) {
-  // First is probability of choosing this domain. Second is then count of items
-  if (IS_LOUD) {Rcpp::Rcout << "BayesParameter::domain_proposal_prob" << "\n";} // tkprint
-  
-  Rcpp::NumericVector probs = Rcpp::NumericVector(Rcpp::no_init_vector(hparams.ndomains));
-  probs.fill(0);
-  
-  // Bias towards proposing nonempty domains with domain_proposal_nonempty
-  std::map<int, int> domainitem_counts = count_integers(item2domainid.column(class2domain_id));
-  std::map<int,  int>::iterator count_iter;
-  std::map<int,  int>::const_iterator count_end = domainitem_counts.end();
-  for (count_iter = domainitem_counts.begin(); count_iter!=count_end; ++count_iter) {
-    probs[count_iter->first] += 1;
-  }
-  float probs_total = Rcpp::sum(probs);
-  if (probs_total > 0) {
-    probs = probs * hparams.domain_proposal_nonempty / probs_total;
-  }
-  
-  // Remaining (1-domain_proposal_nonempty) entirely at random
-  probs = probs + (1-hparams.domain_proposal_nonempty) / float(hparams.ndomains);
-  
-  // Should add to 1 already, but just to make sure...
-  probs = probs / Rcpp::sum(probs);
-  
-  domainPropProbOut out;
-  out.domain_probs = probs; // tk fill here initially to avoid copy
-  out.domainitem_counts = domainitem_counts; // tk fill here initially to avoid copy
-  return out;
-}
-
-Rcpp::NumericVector BayesParameter::domain_proposal_probswap(int itemcount1, int itemcount2, Hyperparameter hparams) {
-  // 0 go from domains1->2, 1 swap 1<->2, 2 go from 2->1
-  if (IS_LOUD) {Rcpp::Rcout << "BayesParameter::domain_proposal_probswap" << "\n";} // tkprint
-  Rcpp::NumericVector probs = Rcpp::NumericVector(3);
-  probs.fill(1);
-  
-  // Identify nonzero probabilities
-  if (itemcount1 <= 0) {
-    probs[0] = 0; // Cannot move to domain2
-    probs[1] = 0; // Cannot swap
-  }
-  if (itemcount2 <= 0) {
-    probs[2] = 0; // Cannot move to domain1
-    probs[1] = 0; // Cannot swap
-  }
-  if (itemcount1 >= hparams.domain_maxitems) {
-    probs[2] = 0; // Cannot move to domain1
-  }
-  if (itemcount2 >= hparams.domain_maxitems) {
-    probs[0] = 0; // Cannot move to domain2
-  }
-  if ((itemcount1 == 1) & (itemcount2 == 1)) {
-    probs[1] = 0; // Cannot swap
-  }
-  
-  // Make probabilities sum to 1
-  float ntransfer = probs[0]+probs[2];
-  if (probs[1]==1) {
-    if (ntransfer > 0) {
-      probs[1] = hparams.domain_proposal_swap;
-    } else {
-      probs[1] = 1;
-    }
-  }
-  if (probs[0]==1) {
-    probs[0] = (1 - probs[1]) / ntransfer;
-  }
-  if (probs[2]==1) {
-    probs[2] = (1 - probs[1]) / ntransfer;
-  }
-  
-  return probs;
-}
-
-domainProposalOut BayesParameter::domain_proposal(int class2domain_id, int domain_id1, Hyperparameter& hparams) {
+domainProposalOut BayesParameter::domain_proposal(int class2domain_id, Hyperparameter& hparams) {
   if (IS_LOUD) {Rcpp::Rcout << "BayesParameter::domain_proposal" << "\n";} // tkprint
   
   domainProposalOut out;
-  out.domain_id1 = domain_id1;
-  out.domain_classes = which(hparams.class2domain == class2domain_id); // maybe make fixed
+  out.swap_type = -100;
+  out.domain_id1 = -1;
+  out.domain_id2 = -1;
+  out.item1_old = -1;
+  out.item2_old = -1;
   
   /*
-   * Choose Domain
+   * Choose Domains
    */
   
-  domainPropProbOut probs_counts = domain_proposal_prob(class2domain_id, hparams);
-  Rcpp::NumericVector domain_probs = probs_counts.domain_probs; // tk avoid copy
-  std::map<int,  int> domainitem_counts = probs_counts.domainitem_counts; // tk avoid copy
-  out.domain_id2 = rCategorical(domain_probs);
+  out.domain_classes = which(hparams.class2domain == class2domain_id); // maybe make fixed
+  Rcpp::IntegerVector domains_nonempty = Rcpp::unique(item2domainid.column(class2domain_id));
+  std::map<int, int> domainitem_counts = count_integers(item2domainid.column(class2domain_id));
+  Rcpp::IntegerVector domains_chosen = Rcpp::sample(domains_nonempty, 2, false);
+  
+  out.domain_id1 = domains_chosen[0];
+
+  // Decide whether to split
+  if (map_get(domainitem_counts, out.domain_id1, 0) >= 2) {
+    // Split possible
+    if (R::runif(0,1) < hparams.domain_proposal_empty) {
+      // Ok split
+      out.swap_type = 2;
+      out.domain_id2 = domain_id_new(class2domain_id, hparams);
+    }
+  }
+  if (out.domain_id2 == -1) {
+    // Did not split
+    out.domain_id2 = domains_chosen[1];
+  }
   
   // Save (examples of) original domains
   out.domain_old1 = &thetas[out.domain_classes[0]][out.domain_id1];
@@ -875,37 +866,49 @@ domainProposalOut BayesParameter::domain_proposal(int class2domain_id, int domai
     out.domain_old2 = &thetas[out.domain_classes[0]][out.domain_id2];
   } else {
     // keep empty 
-    // DomainCount aDomain; //tk delete
-    // aDomain.npatterns = 0; // tk better handling of this scenario
     out.domain_old2 = &BLANK_DOMAIN; // do not mmodify!
   }
   
   /*
+   * Swap, empty, or transfer?
+   */
+  
+  if (out.swap_type == -100) {
+    // Swap not yet chosen
+    if (out.domain_old2->ndomainitems_calc() >= hparams.domain_maxitems) {
+      // Cannot transfer if capped. Must swap
+      out.swap_type = 0;
+    } else if ((out.domain_old1->ndomainitems_calc() <= 1) & (out.domain_old2->ndomainitems_calc() <= 1)) {
+      // Swapping irrelevant if both domains are of size 1. Must transfer
+      out.swap_type = 1;
+    } else if (R::runif(0,1) < hparams.domain_proposal_swap) {
+      // Swap chosen at random
+      out.swap_type = 0;
+    } else {
+      // Transfer chosen at random
+      out.swap_type = 1;
+    }
+  }
+  
+  /* 
    * Choose items
    */
   
-  // Choose individual items to move
-  Rcpp::NumericVector swap_probs_old = domain_proposal_probswap(map_get(domainitem_counts, out.domain_id1, 0), map_get(domainitem_counts, out.domain_id2, 0), hparams);
-  out.swap_type = rCategorical(swap_probs_old);
-  out.item_old1 = -1;
-  out.item_old2 = -1;
-  if (out.swap_type <= 1) { // 0 or 1
-    out.item_old1 = Rcpp::sample(out.domain_old1->items, 1)[0];
-  }
-  if (out.swap_type >= 1) { // 1 or 2
-    out.item_old2 = Rcpp::sample(out.domain_old2->items, 1)[0];
-  }
+  out.item1_old = Rcpp::sample(out.domain_old1->items, 1)[0];
+  if (out.swap_type == 0) {
+    out.item2_old = Rcpp::sample(out.domain_old2->items, 1)[0];
+  } // else item2_old = -1
   
   // Move chosen items
   Rcpp::IntegerVector items_new1 = Rcpp::clone(out.domain_old1->items);
   Rcpp::IntegerVector items_new2 = Rcpp::clone(out.domain_old2->items);
-  if (out.item_old1 > -1) {
-    items_new1 = items_new1[items_new1 != out.item_old1];
-    items_new2.push_back(out.item_old1);  //tk enforce ordering
+  if (out.item1_old > -1) {
+    items_new1 = items_new1[items_new1 != out.item1_old];
+    items_new2.push_back(out.item1_old);  //tk enforce ordering
   }
-  if (out.item_old2 > -1) {
-    items_new2 = items_new2[items_new2 != out.item_old2];
-    items_new1.push_back(out.item_old2);  //tk enforce ordering
+  if (out.item2_old > -1) {
+    items_new2 = items_new2[items_new2 != out.item2_old];
+    items_new1.push_back(out.item2_old);  //tk enforce ordering
   }
   
   // Save as domains
@@ -923,23 +926,58 @@ domainProposalOut BayesParameter::domain_proposal(int class2domain_id, int domai
    */
   
   
-  out.forwardProb = domain_probs[out.domain_id2];
-  out.forwardProb *= swap_probs_old[out.swap_type];
-  if (out.item_old1 > -1) {
-    out.forwardProb *= 1 / float(domainitem_counts[out.domain_id1]);
-  }
-  if (out.item_old2 > -1) {
-    out.forwardProb *= 1 / float(domainitem_counts[out.domain_id2]);
+  if (out.swap_type == 0) {
+    // swap. Probabilities the same (not necessarily 1, but the same)
+    out.forwardProb = 1;
+    out.backwardProb = 1;
   }
   
-  Rcpp::NumericVector swap_probs_new = domain_proposal_probswap(out.domain_new2.ndomainitems_calc(), out.domain_new1.ndomainitems_calc(), hparams);
-  out.backwardProb = domain_probs[out.domain_id1];
-  out.backwardProb *= swap_probs_new[out.swap_type];
-  if (out.item_old1 > -1) {
-    out.backwardProb *= 1 / float(out.domain_new2.ndomainitems_calc());
+  if (out.swap_type == 1) {
+    // transfer
+    out.forwardProb = (
+      1 / float(domains_nonempty.size()) // Choosing domain1
+    * (1 - hparams.domain_proposal_empty) // No split
+    * 1 / float(domains_nonempty.size()-1) // Choosing domain2
+    * (1 - hparams.domain_proposal_swap) // No swap
+    * 1 / float(out.domain_old1->ndomainitems_calc()) // this specific item
+    );
+    // Rcpp::Rcout << "BayesParameter::domain_proposal:" <<"| domains_nonempty.size():" << domains_nonempty.size() << "| hparams.domain_proposal_empty:" << hparams.domain_proposal_empty << "| hparams.domain_proposal_swap:" << hparams.domain_proposal_swap << "| out.domain_old1->ndomainitems_calc():" << out.domain_old1->ndomainitems_calc() << "| out.domain_old2->ndomainitems_calc():" << out.domain_old2->ndomainitems_calc() << "| out.forwardProb:" << out.forwardProb << "\n"; // tktrouble
+    
+    if (out.domain_old1->ndomainitems_calc() > 1) {
+      // New domain1 is nonempty
+      out.backwardProb = (
+        1 / float(domains_nonempty.size()) // Choosing domain2 for #1
+      * (1 - hparams.domain_proposal_empty) // No split
+      * 1 / float(domains_nonempty.size()-1) // Choosing domain1 for #2
+      * (1 - hparams.domain_proposal_swap) // No swap
+      * 1 / float(out.domain_old2->ndomainitems_calc() + 1) // this specific item
+      );
+    } else {
+      // New domain1 is empty
+      out.backwardProb = (
+        1 / float(domains_nonempty.size()-1) // Choosing domain2 for #1
+      * hparams.domain_proposal_empty // Choose to split
+      * 1 // Do not care about what specific empty domain we split into
+      * 1 / float(out.domain_old2->ndomainitems_calc() + 1) // Choose this item to split off
+      );
+    }
   }
-  if (out.item_old2 > -1) {
-    out.backwardProb *= 1 / float(out.domain_new1.ndomainitems_calc());
+  
+  if (out.swap_type == 2) {
+    // split
+    out.forwardProb = (
+      1 / float(domains_nonempty.size()) // Choosing domain1
+    * hparams.domain_proposal_empty // Choose to split
+    * 1 // Do not care about what specific empty domain we split into
+    * 1 / float(out.domain_old1->ndomainitems_calc()) // Choose this item to split off
+    );
+    
+    out.backwardProb = (
+      1 / float(domains_nonempty.size()+1) // Choose domain2 for #1
+    * 1 / float(domains_nonempty.size()) // Choose domain1 for #2
+    * (1-hparams.domain_proposal_swap) // No swap
+    * 1 // Choose to transfer my only item
+    );
   }
   
   return out;
@@ -960,7 +998,7 @@ domainAcceptOut BayesParameter::domain_accept(Rcpp::IntegerMatrix& x, domainProp
       out.thetas_new[iclass][proposal.domain_id1] = proposal.domain_new1.copy();
     }
     out.thetas_new[iclass][proposal.domain_id2] = proposal.domain_new2.copy();
-  }
+  } // tk move this over to proposal and only do counts here
   theta_addCounts(x, true, out.thetas_new); // tk do I really need to be true?
   
   out.loglik_old = std::log(domain_getlik_domain(hparams));
@@ -991,9 +1029,9 @@ domainAcceptOut BayesParameter::domain_accept(Rcpp::IntegerMatrix& x, domainProp
   return out;
 }
 
-int BayesParameter::domain_next(int class2domain_id, int domain_id1, Rcpp::IntegerMatrix& x, Hyperparameter hparams) {
+int BayesParameter::domain_next(int class2domain_id, Rcpp::IntegerMatrix& x, Hyperparameter hparams) {
   if (IS_LOUD) {Rcpp::Rcout << "BayesParameter::domain_next" << "\n";} // tkprint
-  // side effect. sets thetas. Also sets , thetas_accept
+  // side effect. sets thetas.
   
   // tkjmb
   
@@ -1001,15 +1039,17 @@ int BayesParameter::domain_next(int class2domain_id, int domain_id1, Rcpp::Integ
    *** Propose
    ***/  
   
-  domainProposalOut proposal =  domain_proposal(class2domain_id, domain_id1, hparams);
+  domainProposalOut proposal =  domain_proposal(class2domain_id, hparams);
   
   /***
    *** Terminate early if...
    ***/
   
   int accept = 0;
-  if (domain_id1 == proposal.domain_id2) {
+  if (proposal.domain_id1 == proposal.domain_id2) {
     // No change
+    // domainProposalOut_print(proposal); // tktrouble 
+    // domainAcceptOut_print(accept_info); // tktrouble 
     accept = 2;
     return accept;
   }
@@ -1026,12 +1066,6 @@ int BayesParameter::domain_next(int class2domain_id, int domain_id1, Rcpp::Integ
     accept = -2;
   }
   if (accept != 0) {
-    if (proposal.item_old1 > -1) {
-      thetas_accept(proposal.item_old1, class2domain_id) = accept;
-    }
-    if (proposal.item_old2 > -1) {
-      thetas_accept(proposal.item_old2, class2domain_id) = accept;
-    }
     return accept;
   }
   
@@ -1046,24 +1080,15 @@ int BayesParameter::domain_next(int class2domain_id, int domain_id1, Rcpp::Integ
    *** Apply changes
    ***/
   
-  if (proposal.item_old1 > -1) {
-    thetas_accept(proposal.item_old1, class2domain_id) = accept;
-  }
-  if (proposal.item_old2 > -1) {
-    thetas_accept(proposal.item_old2, class2domain_id) = accept;
-  }
-  
   if (accept == 0) {
-    // domainProposalOut_print(proposal); // tktrouble 
-    // domainAcceptOut_print(accept_info); // tktrouble 
     return accept; // Change nothing
   }
   
-  if (proposal.item_old1 > -1) {
-    item2domainid(proposal.item_old1, class2domain_id) = proposal.domain_id2;
+  if (proposal.item1_old > -1) {
+    item2domainid(proposal.item1_old, class2domain_id) = proposal.domain_id2;
   }
-  if (proposal.item_old2 > -1) {
-    item2domainid(proposal.item_old2, class2domain_id) = proposal.domain_id1;
+  if (proposal.item2_old > -1) {
+    item2domainid(proposal.item2_old, class2domain_id) = proposal.domain_id1;
   }
   
   int iclass;
@@ -1091,8 +1116,8 @@ void BayesParameter::domains_next(Rcpp::IntegerMatrix& x, Hyperparameter& hparam
   if (IS_LOUD) {Rcpp::Rcout << "BayesParameter::domains_next" << "\n";} // tkprint
   
   for (int iclass2domain=0; iclass2domain < hparams.nclass2domain; iclass2domain++) {
-    for (int iitem=0; iitem < hparams.nitem; iitem++) {
-      domain_next(iclass2domain, item2domainid[iclass2domain, iitem], x, hparams); // tkjmb change to pairs of domains
+    for (int i=0; i < hparams.domain_nproposals; i++) {
+      thetas_accept(i, iclass2domain) = domain_next(iclass2domain, x, hparams);
     }
   }
   
