@@ -3,6 +3,14 @@
 # library(abind)
 # library(dplyr)
 
+#' dependentLCM: Dependent Latent Class Model
+#'
+#' @docType package
+#' @name dependentLCM
+#' @useDynLib dependentLCM, .registration = TRUE
+#' @import  Rcpp klaR abind dplyr
+NULL
+
 NCLASS = 2
 CLASSPI_ALPHA = 2
 DOMAIN_ALPHA_RATIO = 2
@@ -94,7 +102,7 @@ dependentLCM_fit <- function(
     , t(dlcm$thetas_patterns)
   )
   theta_item_cols <- grep("^item_[0-9]+", colnames(dlcm$thetas))
-  dlcm$thetas_accept <- do.call(function(...) abind(..., along=3), dlcm$thetas_accept)
+  dlcm$thetas_accept <- do.call(function(...) abind::abind(..., along=3), dlcm$thetas_accept)
 
   dlcm$domains_merged <- dlcm$thetas %>% filter(pattern_id==0) %>% group_by(itr, class2domain) %>% summarize(
     domains_merged=paste(sort(unique(items)), collapse="|"))
@@ -122,6 +130,7 @@ dependentLCM_fit <- function(
 #' @param domain_proposal_empty numeric. Sets how often the domain metropolis proposal function pairs a nonempty domain with an empty domain.
 #' @param domain_proposal_swap numeric. Sets how often the domain metropolis proposal function swaps items between domains.
 #' @param domain_nproposals. Sets how many times the domain metropolis propsal function is called each iteration
+#' @keywords internal
 getStart_hparams <- function(
   df=NULL, nitems=NULL
   # Hyperparameters
@@ -173,6 +182,7 @@ getStart_hparams <- function(
 }
 
 #' Convert dataframe of factors to matrix of integers (indexed starting at 0)
+#' @keywords internal
 getStart_matrix <- function(df) {
   # Purpose: Convert to factor in integer form (0:k-1) and remove NA rows
 
@@ -194,6 +204,7 @@ getStart_matrix <- function(df) {
 #' @param classes integer vector size nrow(df). Initial condition for subject classes.
 #' @param thetas list. Initial values for thetas/probabilites.
 #' @param class_init_method string. Decides how 'classes' is defaulted if NULL. One of "kmodes" or "random"
+#' @keywords internal
 getStart_bayes_params <- function(
   mat, hparams
   , class_pi = NULL, classes = NULL, thetas = NULL
@@ -229,6 +240,7 @@ getStart_bayes_params <- function(
 #' Choose class of each observation entirely at random
 #' @param mat matrix. Raw data.
 #' @param hparams list. List of hyperparameters
+#' @keywords internal
 getStart_class_random <- function(mat, hparams) {
   class_pi <- hparams$classPi_alpha / sum(hparams$classPi_alpha)
   nobs <- dim(mat)[1]
@@ -244,14 +256,16 @@ getStart_class_random <- function(mat, hparams) {
 #' Choose class of each observation using kmodes
 #' @param mat matrix. Raw data.
 #' @param hparams list. List of hyperparameters
+#' @keywords internal
 getStart_class_kmodes <- function(mat, hparams, iter.max=2, ...) {
-  return(kmodes(mat, hparams$nclass, iter.max=iter.max, ...)$cluster-1)
+  return(klaR::kmodes(mat, hparams$nclass, iter.max=iter.max, ...)$cluster-1)
 }
 
 #' Choose starting theta values.
 #' @param mat matrix. Raw data.
 #' @param classes integer vector. The class of each observation.
 #' @param hparams list. List of hyperparameters
+#' @keywords internal
 getStart_thetas <- function(mat, classes, hparams) {
   # FUTURE: Maybe switch to internal C gibbs here? Keep this for now for validation
   thetas_list = list()
@@ -276,6 +290,7 @@ getStart_thetas <- function(mat, classes, hparams) {
 
 #' Check parameters for internal consistency
 #' @param all_params list. List of parameters and hyperparameters
+#' @keywords internal
 check_params <- function(all_params) {
   check_out = FALSE
 
@@ -289,16 +304,20 @@ check_params <- function(all_params) {
   return(check_out)
 }
 
+
 ##############
 ############## UTILITIES
 ##############
 
+
 #' Convert numeric vector x to percentages.
+#' @keywords internal
 get_perc <- function(x) {
   x / sum(x)
 }
 
 #' Calculate mode of x
+#' @keywords internal
 getmode <- function(x) {
   xcounts <- table(x)
   mode_name <- names(xcounts)[which.max(xcounts)]
@@ -306,15 +325,18 @@ getmode <- function(x) {
 }
 
 #' Reset all sinks. Sink is used to to write to file.
+#' @keywords internal
 sink.reset <- function(){
   for(i in seq_len(sink.number())){
     sink(NULL)
   }
 }
 
+
 ##############
 ############## SUMMARY
 ##############
+
 
 #' Get some summary statistics from fitted dependent LCM
 #' @param dlcm list. Fitted dependent LCM
@@ -356,11 +378,13 @@ dlcm.summary <- function(dlcm, nwarmup=1000) {
 ############## SIMULATION
 ##############
 
+
 #' Simulate random latent class model data
 #' @param n integer. Number of observations
 #' @param pis numeric vector. How often an observation is in class k.
 #' @param thetas response probabilities. If a matrix of size Kxlength(pi) then the response probabilites of k bernouli items across length(pi) classes. Otherwise a list of length(pi) (per class) containing lists of length K (per item), containing vectors of response probabilities of each item.
 #' @examples
+#' \donotrun{
 #' set.seed(4)
 #' sim_list1 <- simulate_lcm(
 #'   n = 1000
@@ -383,6 +407,7 @@ dlcm.summary <- function(dlcm, nwarmup=1000) {
 #'        , rep(list(c(rep(0.4,2), rep(0.2/6,6))), 1)
 #'   )
 #' ))
+#' }
 #' @export
 simulate_lcm <- function(n, pis, thetas) {
 

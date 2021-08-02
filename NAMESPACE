@@ -2,3 +2,9 @@
 
 export(dependentLCM_fit)
 export(dlcm.summary)
+export(simulate_lcm)
+import(Rcpp)
+import(abind)
+import(dplyr)
+import(klaR)
+useDynLib(dependentLCM, .registration = TRUE)

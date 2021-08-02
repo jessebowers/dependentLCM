@@ -17,6 +17,7 @@ simulate_lcm(n, pis, thetas)
 Simulate random latent class model data
 }
 \examples{
+\donotrun{
 set.seed(4)
 sim_list1 <- simulate_lcm(
   n = 1000
@@ -39,4 +40,5 @@ sims_list2 <- simulate_lcm(
        , rep(list(c(rep(0.4,2), rep(0.2/6,6))), 1)
   )
 ))
+}
 }

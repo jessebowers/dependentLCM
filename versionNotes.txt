@@ -3,3 +3,12 @@ Dependent LCM
 * Use metropolis to move one item at a time either transfering it to a new domain or swapping it with another item
 * Domain proposal function is a weighted average of 'just filled domains' vs 'any possible domain' based on DOMAIN_PROPOSAL_EMPTY, and decide on swapping based on DOMAIN_PROPOSAL_SWAP
 * Implemented domain_maxitems
+
+
+# To compile:
+library(devtools)
+Sys.setenv("PKG_CXXFLAGS"="-std=c++11")
+devtools::load_all(path="~/dependentLCM", recompile = FALSE)
+# To generate documentation:
+library(roxygen2)
+roxygen2::roxygenize("C:/Users/drakethrice/Documents/Git/dependentLCM", clean=TRUE)
