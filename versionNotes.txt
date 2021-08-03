@@ -7,8 +7,16 @@ Dependent LCM
 
 # To compile:
 library(devtools)
-Sys.setenv("PKG_CXXFLAGS"="-std=c++11")
+Sys.setenv("PKG_CXXFLAGS"="-std=c++11") # Sys.setenv("PKG_CXXFLAGS"="-std=gnu++11")
 devtools::load_all(path="~/dependentLCM", recompile = FALSE)
-# To generate documentation:
+# To generate documentation (also compiles):
 library(roxygen2)
-roxygen2::roxygenize("C:/Users/drakethrice/Documents/Git/dependentLCM", clean=TRUE)
+roxygen2::roxygenize("~/dependentLCM", clean=TRUE)
+# To load into library 1) compile, 2) convert to zip, 3) install.packages()
+# ISSUE: the above two methods compile 10X SLOWER than:
+sourceCpp("~/dependentLCM/src/dependentLCM.cpp")
+# Need to change compiler/compile options so that the package runs just as fast...
+
+Open bugs
+1) Speed with different methods of compiling
+2) dplyr::%>% not running properly if dplyr is not loaded (and not a valid package if loaded)

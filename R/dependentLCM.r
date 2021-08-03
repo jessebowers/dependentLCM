@@ -8,7 +8,6 @@
 #' @docType package
 #' @name dependentLCM
 #' @useDynLib dependentLCM, .registration = TRUE
-#' @import  Rcpp klaR abind dplyr
 NULL
 
 NCLASS = 2
@@ -33,7 +32,9 @@ dependentLCM_fit <- function(
   , class_pi = NULL, classes = NULL, thetas = NULL
   # Misc
   , class_init_method = "kmodes") {
-
+  
+  datetimes <- c(Sys.time())
+  
   #
   # Set starting values
   #
@@ -54,7 +55,7 @@ dependentLCM_fit <- function(
     # Misc
     , class_init_method = class_init_method
   )
-
+  
   all_params <- list(
     mat = mat
     , hparams = hparams
@@ -68,9 +69,11 @@ dependentLCM_fit <- function(
   #
   # Run MCMC
   #
-
+  
+  datetimes <- c(datetimes, Sys.time())
   dlcm = dependentLCM_fit_cpp(x=(all_params$mat),hparams_list=all_params$hparams, params_list=all_params$bayesparams, nitr=nitr)
-
+  datetimes <- c(datetimes, Sys.time())
+  
   #
   # Post Processing
   #
@@ -101,18 +104,22 @@ dependentLCM_fit <- function(
     , items = thetas_items
     , t(dlcm$thetas_patterns)
   )
-  theta_item_cols <- grep("^item_[0-9]+", colnames(dlcm$thetas))
+  all_params$hparams$theta_item_cols <- grep("^item_[0-9]+", colnames(dlcm$thetas))
   dlcm$thetas_accept <- do.call(function(...) abind::abind(..., along=3), dlcm$thetas_accept)
 
-  dlcm$domains_merged <- dlcm$thetas %>% filter(pattern_id==0) %>% group_by(itr, class2domain) %>% summarize(
-    domains_merged=paste(sort(unique(items)), collapse="|"))
+  
+  dlcm$domains_merged <- dplyr::summarize(dplyr::group_by(dplyr::filter(dlcm$thetas, pattern_id==0), itr, class2domain), domains_merged=paste(sort(unique(items)), collapse="|"), .groups="keep") # dlcm$domains_merged <- dlcm$thetas %>% dplyr::filter(pattern_id==0) %>% dplyr::group_by(itr, class2domain) %>% dplyr::summarize(domains_merged=paste(sort(unique(items)), collapse="|"), .groups="keep") 
 
   dlcm$thetas_id <- NULL
   dlcm$thetas_patterns <- NULL
   dlcm$thetas_probs <- NULL
   dlcm$nclass2domain <- NULL
-
-  return(c(dlcm, all_params$hparams, list(theta_item_cols=theta_item_cols)))
+  
+  datetimes <- c(datetimes, Sys.time())
+  dlcm$runtimes <- c(diff(datetimes), total=tail(datetimes,1)-datetimes[1])
+  names(dlcm$runtimes)[1:3] <- c("pre", "mcmc", "post")
+  
+  return(list(hparams=all_params$hparams, mcmc=dlcm))
 }
 
 
@@ -332,6 +339,12 @@ sink.reset <- function(){
   }
 }
 
+#' Wrapper for dplyr::`%>%` 
+#' @keywords internal
+`%>%` <- function(...) {
+  dplyr::`%>%`(...)
+}
+
 
 ##############
 ############## SUMMARY
@@ -353,13 +366,13 @@ dlcm.summary <- function(dlcm, nwarmup=1000) {
     out$thetas[, out$theta_item_cols]
     , 1, function(x) paste0(x[x>-1], collapse=", ")
   )
-  thetas_avg <- dlcm$thetas %>% filter(itr > nwarmup) %>% group_by(class, items, item_value) %>% summarize(n=n(), prob=mean(prob))
+  thetas_avg <- dlcm$thetas %>% dplyr::filter(itr > nwarmup) %>% dplyr::group_by(class, items, item_value) %>% dplyr::summarize(n=dplyr::n(), prob=mean(prob))
 
   domain_items <- rbind(
-    dlcm$domains_merged %>% group_by(class2domain, items=domains_merged) %>% summarize(nitems=NA, n=n(), all_items=TRUE) %>% arrange(-n)
-    , dlcm$thetas %>% filter(pattern_id==0, itr > nwarmup) %>% group_by(class2domain, items) %>% summarize(nitems=max(nitems), n=n(), all_items=FALSE) %>% arrange(-n)
+    dlcm$domains_merged %>% dplyr::group_by(class2domain, items=domains_merged) %>% dplyr::summarize(nitems=NA, n=dplyr::n(), all_items=TRUE) %>% dplyr::arrange(-n)
+    , dlcm$thetas %>% dplyr::filter(pattern_id==0, itr > nwarmup) %>% dplyr::group_by(class2domain, items) %>% dplyr::summarize(nitems=max(nitems), n=dplyr::n(), all_items=FALSE) %>% dplyr::arrange(-n)
   )
-  domain_nitems <- table((dlcm$thetas %>% filter(pattern_id==0, itr > nwarmup))$nitems)
+  domain_nitems <- table((dlcm$thetas %>% dplyr::filter(pattern_id==0, itr > nwarmup))$nitems)
 
   # domain_accept <- apply(
   #   dlcm$thetas_accept[, , -(1:nwarmup)], 1
