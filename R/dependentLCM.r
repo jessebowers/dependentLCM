@@ -339,11 +339,11 @@ sink.reset <- function(){
   }
 }
 
-#' Wrapper for dplyr::`%>%` 
-#' @keywords internal
-`%>%` <- function(...) {
-  dplyr::`%>%`(...)
-}
+# #' Wrapper for dplyr::`%>%` 
+# #' @keywords internal
+# `%>%` <- function(...) {
+#   dplyr::`%>%`(...)
+# }
 
 
 ##############
@@ -361,31 +361,77 @@ sink.reset <- function(){
 #' domain_accept = How often our metropolis step accepts its proposal
 #' @export
 dlcm.summary <- function(dlcm, nwarmup=1000) {
-
-  dlcm$thetas$item_value <- apply(
-    out$thetas[, out$theta_item_cols]
+  
+  dlcm$mcmc$thetas$item_value <- apply(
+    dlcm$mcmc$thetas[, dlcm$hparams$theta_item_cols]
     , 1, function(x) paste0(x[x>-1], collapse=", ")
   )
-  thetas_avg <- dlcm$thetas %>% dplyr::filter(itr > nwarmup) %>% dplyr::group_by(class, items, item_value) %>% dplyr::summarize(n=dplyr::n(), prob=mean(prob))
-
+  thetas_avg <- dlcm$mcmc$thetas %>% dplyr::filter(itr > nwarmup) %>% dplyr::group_by(class, items, item_value) %>% dplyr::summarize(n=dplyr::n(), prob=mean(prob), .groups="keep")
+  
   domain_items <- rbind(
-    dlcm$domains_merged %>% dplyr::group_by(class2domain, items=domains_merged) %>% dplyr::summarize(nitems=NA, n=dplyr::n(), all_items=TRUE) %>% dplyr::arrange(-n)
-    , dlcm$thetas %>% dplyr::filter(pattern_id==0, itr > nwarmup) %>% dplyr::group_by(class2domain, items) %>% dplyr::summarize(nitems=max(nitems), n=dplyr::n(), all_items=FALSE) %>% dplyr::arrange(-n)
+    dlcm$mcmc$domains_merged %>% dplyr::group_by(class2domain, items=domains_merged) %>% dplyr::summarize(nitems=NA, n=dplyr::n(), all_items=TRUE, .groups="keep") %>% dplyr::arrange(-n)
+    , dlcm$mcmc$thetas %>% dplyr::filter(pattern_id==0, itr > nwarmup) %>% dplyr::group_by(class2domain, items) %>% dplyr::summarize(nitems=max(nitems), n=dplyr::n(), all_items=FALSE, .groups="keep") %>% dplyr::arrange(-n)
   )
-  domain_nitems <- table((dlcm$thetas %>% dplyr::filter(pattern_id==0, itr > nwarmup))$nitems)
-
+  domain_nitems <- table((dlcm$mcmc$thetas %>% dplyr::filter(pattern_id==0, itr > nwarmup))$nitems)
+  
   # domain_accept <- apply(
   #   dlcm$thetas_accept[, , -(1:nwarmup)], 1
   #   , function(x) list(table(x))
   # )
   # domain_accept <- do.call(bind_rows, domain_accept)
-  domain_accept <- table(dlcm$thetas_accept[, , -(1:nwarmup)])
-
+  domain_accept <- table(dlcm$mcmc$thetas_accept[, , -(1:nwarmup)])
+  
   return(list(
     "thetas_avg"=thetas_avg, "domain_items"=domain_items, "domain_nitems"=domain_nitems, "domain_accept"=domain_accept
   ))
 }
 
+
+#' Calculate the probabilities of different patterns
+#' @param items integer vector. Which items should we include? (indexed starting at 1)
+#' @param this_sim a mcmc simulation. Output from dependentLCM_fit()
+#' @param itrs integer vector. Which iterations from this_sim should we include?
+#' @description Useful when getting probilities which cross domains.
+#' @returns Probabilities for each pattern of items
+#' @export
+theta_item_probs <- function(items, this_sim, itrs) {
+  
+  itr_filter <- this_sim$mcmc$thetas$itr %in% itrs
+  nitr <- length(itrs)
+  nitems <- length(items)
+  items_colnames <- colnames(this_sim$mcmc$thetas)[this_sim$hparams$theta_item_cols[items]]
+  
+  # Reduce thetas down to relevant patterns only (merging redundant patterns as necessary)
+  thetas_agg <- aggregate(
+    formula(paste0("prob ~ ", paste(c(items_colnames, "class", "itr"), collapse=" + ")))
+    , this_sim$mcmc$thetas[itr_filter, ]
+    , sum
+  )
+  thetas_agg <- thetas_agg[!(rowSums(thetas_agg[, 1:nitems, drop=FALSE]) == -nitems), ] # Remove unrelated rows
+  thetas_agg$prob_log <- log(thetas_agg$prob)
+  
+  all_patterns <- expand.grid(
+    lapply(this_sim$hparams$item_nlevels[items], function(n) 0:(n-1))
+  )
+  colnames(all_patterns) <- items_colnames
+  
+  prob_helper <- function(ipattern) {
+    # Purpose: Calculate the probability for this pattern
+    # Implict: thetas_agg, this_sim, nitr, nitems
+    imatch_pattern <- rowSums(
+      sweep(thetas_agg[,1:nitems, drop=FALSE], 2, ipattern, "==") # Matches pattern
+      | thetas_agg[,1:nitems, drop=FALSE] < 0 # Or is undefined
+    ) == nitems
+    iprobs <- thetas_agg %>% filter(imatch_pattern) %>% group_by(itr, class) %>% summarize(prob=exp(sum(prob_log)), .groups="keep")
+    iprobs$pi <- this_sim$mcm$class_pi[cbind(iprobs$class+1, iprobs$itr)]
+    out <- sum(iprobs$prob * iprobs$pi) / nitr
+    return(out)
+  }
+  
+  all_patterns$prob <- apply(all_patterns, 1, prob_helper)
+  
+  return(all_patterns)
+}
 
 ##############
 ############## SIMULATION
@@ -410,7 +456,7 @@ dlcm.summary <- function(dlcm, nwarmup=1000) {
 #' sims_list2 <- simulate_lcm(
 #'  n=1000
 #' , pis=c(0.5, 0.5) # 2 classes equally likely
-#' , thetas_list = list(
+#' , thetas = list(
 #'   c( rep(list(c(0.8,0.2)), 20)
 #'      , rep(list(c(0.6,0.3,0.05,0.05)), 2)
 #'      , rep(list(c(rep(0.3,3), rep(0.1/5,5))), 1)
@@ -445,6 +491,7 @@ simulate_lcm <- function(n, pis, thetas) {
           , 2, function(x) which(x==1))
       }
     }
+    responses <- responses - 1
   }
 
   return(list(classes=classes, responses=responses))
