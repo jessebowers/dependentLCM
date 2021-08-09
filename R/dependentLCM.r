@@ -103,6 +103,7 @@ dependentLCM_fit <- function(
     , nitems = thetas_nitems
     , items = thetas_items
     , t(dlcm$thetas_patterns)
+    , stringsAsFactors = FALSE
   )
   all_params$hparams$theta_item_cols <- grep("^item_[0-9]+", colnames(dlcm$thetas))
   dlcm$thetas_accept <- do.call(function(...) abind::abind(..., along=3), dlcm$thetas_accept)
