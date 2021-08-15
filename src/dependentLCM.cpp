@@ -5,6 +5,7 @@
 /*
  * Open items:
  * Enforce identifiability
+ * Maybe switch to doing likelihoods in log scale for preservation
  * Allow skipping/randomization of steps (including archive)
  * Allow warmup without archiving
  * incorporate checks/consistency checks eg domain size, nclasses, etc
@@ -191,6 +192,7 @@ public:
   int domain_nproposals;
   int domain_maxitems;
   float theta_alpha;
+  Rcpp::LogicalVector steps_active;
   // Data Info
   Rcpp::IntegerVector item_nlevels;
   int nobs;
@@ -203,7 +205,7 @@ public:
   int nclass2domain_calc() {return count_unique(class2domain);};
   int nitem_calc() {return item_nlevels.size();};
   float domain_alpha_one_calc() {if (ndomains>0){return domain_alpha/float(ndomains);} else {return 0;};}; // treat 0 as infinity
-  void set_hparams(int ndomains_in, int nclass_in, const Rcpp::IntegerVector& class2domain_in, const Rcpp::NumericVector& classPi_alpha_in, float domain_alpha_in, int domain_maxitems_in, float theta_alpha_in, float domain_proposal_empty_in, float domain_proposal_swap_in, int domain_nproposals_in);
+  void set_hparams(int ndomains_in, int nclass_in, const Rcpp::IntegerVector& class2domain_in, const Rcpp::NumericVector& classPi_alpha_in, float domain_alpha_in, int domain_maxitems_in, float theta_alpha_in, float domain_proposal_empty_in, float domain_proposal_swap_in, int domain_nproposals_in, Rcpp::LogicalVector steps_active_in);
   void set_hparams(Rcpp::List hparams_in);
   void set_dataInfo(const Rcpp::IntegerMatrix& x);
   void print();
@@ -219,7 +221,8 @@ void Hyperparameter::set_hparams(
   , float theta_alpha_in
   , float domain_proposal_empty_in
   , float domain_proposal_swap_in
-  , int domain_nproposals_in) {
+  , int domain_nproposals_in
+  , Rcpp::LogicalVector steps_active_in) {
   if (IS_LOUD) {Rcpp::Rcout << "Hyperparameter::set_hparams" << "\n";} // tkprint
   
   ndomains = ndomains_in;
@@ -232,6 +235,7 @@ void Hyperparameter::set_hparams(
   domain_proposal_empty = domain_proposal_empty_in;
   domain_proposal_swap = domain_proposal_swap_in;
   domain_nproposals = domain_nproposals_in;
+  steps_active =  steps_active_in;
   
   // Inferred
   nclass2domain = nclass2domain_calc();
@@ -251,8 +255,9 @@ void Hyperparameter::set_hparams(Rcpp::List hparams_in) {
   float domain_proposal_empty = hparams_in("domain_proposal_empty");
   float domain_proposal_swap = hparams_in("domain_proposal_swap");
   float domain_nproposals = hparams_in("domain_nproposals");
+  Rcpp::LogicalVector steps_active = hparams_in("steps_active");
   
-  set_hparams(ndomains, nclass, class2domain, classPi_alpha, domain_alpha, domain_maxitems, theta_alpha, domain_proposal_empty, domain_proposal_swap, domain_nproposals);
+  set_hparams(ndomains, nclass, class2domain, classPi_alpha, domain_alpha, domain_maxitems, theta_alpha, domain_proposal_empty, domain_proposal_swap, domain_nproposals, steps_active);
 }
 
 
@@ -281,6 +286,7 @@ void Hyperparameter::print() {
   Rcpp::Rcout << "hparams.nobs:" << nobs << "\n";
   Rcpp::Rcout << "hparams.nclass2domain:" << nclass2domain << "\n";
   Rcpp::Rcout << "hparams.nitem:" << nitem << "\n";
+  Rcpp::Rcout << "hparams.steps_active:" << steps_active << "\n";
 }
 
 
@@ -302,7 +308,7 @@ public:
   void set_pattern2id_map(Hyperparameter& hparams);
   int pattern2id(Rcpp::IntegerMatrix::ConstRow xobs); //tk maybe switch to template
   Rcpp::IntegerVector id2pattern(int id);
-  float get_theta(Rcpp::IntegerMatrix::ConstRow xobs); //tk maybe switch to template
+  double get_theta(Rcpp::IntegerMatrix::ConstRow xobs); //tk maybe switch to template
   
 public:
   int ndomainitems_calc() {return items.size();};
@@ -339,7 +345,7 @@ void Domain::set_pattern2id_map(Hyperparameter& hparams) {
     pattern2id_map[iitem] = cumprod_current;
     cumprod_current *= hparams.item_nlevels[iitem];
   }
-
+  
   npatterns = cumprod_current; // Should match npatterns = thetas.size() and product(item_nlevels[theseItems])
 }
 
@@ -357,7 +363,7 @@ int Domain::pattern2id(Rcpp::IntegerMatrix::ConstRow xobs) {
   return Rcpp::sum(xobs * pattern2id_map);
 }
 
-float Domain::get_theta(Rcpp::IntegerMatrix::ConstRow xobs) {
+double Domain::get_theta(Rcpp::IntegerMatrix::ConstRow xobs) {
   if (IS_LOUD) {Rcpp::Rcout << "Domain::get_theta" << "| nitems" << items.size() << "| npatterns" << npatterns << "\n";} // tkprint
   // Purpose: Extract one theta value
   
@@ -505,14 +511,18 @@ public:
   Rcpp::NumericVector class_pi;
   Rcpp::IntegerVector classes;
   std::vector<std::map<int,  DomainCount> > thetas;
-  Rcpp::IntegerMatrix item2domainid; // Function of thetas
-  Rcpp::IntegerMatrix thetas_accept; // Function of thetas
   
+  public: // Inferred
+    Rcpp::IntegerMatrix item2domainid; // Function of thetas
+    Rcpp::IntegerMatrix thetas_accept; // Function of thetas
+    Rcpp::NumericMatrix class_loglik;
+    
 public:
   void set_initial(Rcpp::NumericVector class_pi_in, Rcpp::IntegerVector classes_in, std::vector<std::map<int,  DomainCount> > thetas_in, Hyperparameter& hparams);
   void set_initial(Rcpp::List list_bparam, Hyperparameter& hparams);
-  float class_prob(Rcpp::IntegerMatrix::ConstRow xobs, int xclass);
-  Rcpp::NumericVector class_prob(Rcpp::IntegerMatrix::ConstRow xobs);
+  float class_lprob(Rcpp::IntegerMatrix::ConstRow xobs, int xclass);
+  Rcpp::NumericVector class_lprob(Rcpp::IntegerMatrix::ConstRow xobs);
+  void set_class_loglik(const Rcpp::IntegerMatrix& x, bool reset=false);
   
 public:
   void theta_resetCounts();
@@ -531,7 +541,6 @@ public:
 public:
   Rcpp::NumericVector class_pi_args(Hyperparameter& hparams);
   void class_pi_next(Hyperparameter& hparams);
-  Rcpp::NumericVector class_args(Rcpp::IntegerMatrix::ConstRow xobs);
   void classes_next(const Rcpp::IntegerMatrix& x);
   void thetas_next(const Rcpp::IntegerMatrix& x, Hyperparameter& hparams);
   
@@ -553,6 +562,7 @@ void BayesParameter::set_initial(Rcpp::NumericVector class_pi_in, Rcpp::IntegerV
   item2domainid = item2domainid_calc(hparams);
   thetas_accept = Rcpp::IntegerMatrix(hparams.domain_nproposals, hparams.nclass2domain);
   thetas_accept.fill(-1);
+  class_loglik = Rcpp::NumericMatrix(hparams.nclass, hparams.nobs); // initialize with all zeroes
 }
 
 void BayesParameter::set_initial(Rcpp::List list_bparam, Hyperparameter& hparams) {
@@ -565,30 +575,45 @@ void BayesParameter::set_initial(Rcpp::List list_bparam, Hyperparameter& hparams
   set_initial(class_pi_in, classes_in, thetas_in, hparams);
 }
 
-float BayesParameter::class_prob(Rcpp::IntegerMatrix::ConstRow xobs, int xclass) {
-  if (IS_LOUD) {Rcpp::Rcout << "BayesParameter::class_prob" << "\n";} // tkprint
-  // Purpose: Get probability of xclass generating xobs
-  float prob = 1;
+float BayesParameter::class_lprob(Rcpp::IntegerMatrix::ConstRow xobs, int xclass) {
+  if (IS_LOUD) {Rcpp::Rcout << "BayesParameter::class_lprob" << "\n";} // tkprint
+  // Purpose: Get log probability of xclass generating xobs
+  float lprob = 1;
   std::map<int,  DomainCount>::iterator domain_iter;
   std::map<int,  DomainCount>::const_iterator domain_end = thetas[xclass].end();
   
   
   for (domain_iter = thetas[xclass].begin(); domain_iter!=domain_end; ++domain_iter) {
-    prob *= domain_iter->second.get_theta(xobs);
+    lprob += std::log(domain_iter->second.get_theta(xobs));
   }
   
-  return prob;
+  return lprob;
 }
 
-Rcpp::NumericVector BayesParameter::class_prob(Rcpp::IntegerMatrix::ConstRow xobs) {
-  if (IS_LOUD) {Rcpp::Rcout << "BayesParameter::class_prob" << "\n";} // tkprint
-  // Purpose: Get probability of generating xobs for each class
-  Rcpp::NumericVector probs = Rcpp::NumericVector(nclass_calc());
+Rcpp::NumericVector BayesParameter::class_lprob(Rcpp::IntegerMatrix::ConstRow xobs) {
+  if (IS_LOUD) {Rcpp::Rcout << "BayesParameter::class_lprob" << "\n";} // tkprint
+  // Purpose: Get log probability of generating xobs for each class
+  Rcpp::NumericVector lprobs = Rcpp::NumericVector(nclass_calc());
   
   for (int i=0; i < nclass_calc(); i++) {
-    probs[i] = class_prob(xobs, i);
+    lprobs[i] = class_lprob(xobs, i);
   }
-  return probs;
+  return lprobs;
+}
+
+void BayesParameter::set_class_loglik(const Rcpp::IntegerMatrix& x, bool reset) {
+  // One column per observation and row per class. Get conditional likelihood
+  
+  int xnrow = x.nrow();
+  
+  if (reset == true) {
+    // Initialize matrix
+    class_loglik = Rcpp::NumericMatrix(nclass_calc(), xnrow);
+  }
+  
+  for (int i = 0; i < xnrow; i++) {
+    class_loglik.column(i) = class_lprob(x.row(i));
+  }
 }
 
 void BayesParameter::theta_resetCounts(std::vector<std::map<int,  DomainCount> >& thetas) {
@@ -744,30 +769,25 @@ void BayesParameter::class_pi_next(Hyperparameter& hparams) {
 }
 
 
-Rcpp::NumericVector BayesParameter::class_args(Rcpp::IntegerMatrix::ConstRow xobs) {
-  if (IS_LOUD) {Rcpp::Rcout << "BayesParameter::class_args" << "\n";} // tkprint
-  /**
-   * Purpose: For a single observation find the posterior classes probabilities
-   **/
-  
-  Rcpp::NumericVector args = Rcpp::clone(class_pi);  // Prevent overwrites. Maybe instead remove & from input
-  args = args * class_prob(xobs);
-  // tk maybe set exact zeroes to std::numeric_limits<float>::denorm_min()
-  args = args / Rcpp::sum(args);
-  
-  return(args);
-}
-
 void BayesParameter::classes_next(const Rcpp::IntegerMatrix& x) {
+  
   if (IS_LOUD) {Rcpp::Rcout << "BayesParameter::classes_next" << "\n";} // tkprint
   /**
    * Purpose: Gibbs sampling class
+   * Side effect: Updates likelihoods
    **/
   
-  int nrow = x.nrow();
   
+  set_class_loglik(x);
+  
+  int nrow = x.nrow();
+  Rcpp::NumericVector class_args(nclass_calc());
   for (int i=0; i < nrow; i++) {
-    classes(i) = rCategorical(class_args(x.row(i)));
+    class_args = Rcpp::log(class_pi) + class_loglik.column(i);
+    class_args = class_args - Rcpp::max(class_args); // Divide by max for precision: [e^a,e^b,e^c] = e^a[1, e^(b-a), e^(c-a)]
+    class_args = Rcpp::exp(class_args);
+    class_args = class_args / Rcpp::sum(class_args);
+    classes(i) = rCategorical(class_args);
   }
 }
 
@@ -1085,6 +1105,7 @@ public:
   std::vector<Rcpp::IntegerMatrix> thetas_patterns; // Row per item
   std::vector<Rcpp::NumericVector> thetas_probs;
   std::vector<Rcpp::IntegerMatrix> thetas_accept;
+  std::vector<Rcpp::NumericMatrix> class_loglik;
   int next_itr;
   int maxitr;
   
@@ -1106,6 +1127,7 @@ void Archive::set_initial(int nclasses, int nobs, int nitems, int maxiter_in) {
   thetas_patterns.resize(maxiter_in);
   thetas_probs.resize(maxiter_in);
   thetas_accept.resize(maxiter_in);
+  class_loglik.resize(maxiter_in);
 }
 
 
@@ -1179,6 +1201,7 @@ void Archive::add(BayesParameter& aparams) {
   Archive::thetas2mat(aparams, next_itr
                         , thetas_id[next_itr], thetas_patterns[next_itr], thetas_probs[next_itr]);
   thetas_accept[next_itr] = Rcpp::clone(aparams.thetas_accept);
+  class_loglik[next_itr] = Rcpp::clone(aparams.class_loglik);
   next_itr += 1;
 }
 
@@ -1197,7 +1220,6 @@ public:
 public:
   void set_initial(const Rcpp::IntegerMatrix& x_in, Rcpp::List hparams_list, Rcpp::List params_list, int maxitr);
   void run(int niter);
-  void run_once();
   void run_init(const Rcpp::IntegerMatrix& x_in, Rcpp::List hparams_list, Rcpp::List params_list, int nitr);
 };
 
@@ -1217,12 +1239,23 @@ void BayesContainer::run(int niter) {
   
   for (int i=0; i < niter; i++) {
     if (IS_LOUD) {Rcpp::Rcout << "BayesContainer::run" << "| i" << i << "\n";} // tkprint
-    // tk maybe optionally randomize order or add/omit steps
-    params.class_pi_next(hparams);
-    params.classes_next(x);
-    params.theta_addCounts(x, true);
-    params.domains_next(x, hparams);
-    params.thetas_next(x, hparams);
+    
+    if ((hparams.steps_active["thetas"]==true)
+          | (hparams.steps_active["domains"]==true)) {
+      params.theta_addCounts(x, true);
+    }
+    if (hparams.steps_active["domains"]==true) {
+      params.domains_next(x, hparams);
+    }
+    if (hparams.steps_active["thetas"]==true) {
+      params.thetas_next(x, hparams);
+    }
+    if (hparams.steps_active["class_pi"]==true) {
+      params.class_pi_next(hparams);
+    }
+    if (hparams.steps_active["classes"]==true) {
+      params.classes_next(x); // always last because it recalculates likelihood
+    }
     archive.add(params);
   }
 }
@@ -1257,6 +1290,6 @@ Rcpp::List dependentLCM_fit_cpp(Rcpp::IntegerMatrix& x_in, Rcpp::List hparams_li
     , Rcpp::Named("next_itr") = bcontainer.archive.next_itr
     , Rcpp::Named("maxitr") = bcontainer.archive.maxitr
     , Rcpp::Named("thetas_accept") = bcontainer.archive.thetas_accept
+    , Rcpp::Named("class_loglik") = bcontainer.archive.class_loglik
   );
 }
-

@@ -3,6 +3,8 @@
 # library(abind)
 # library(dplyr)
 
+# TK export on scale starting 1
+
 #' dependentLCM: Dependent Latent Class Model
 #'
 #' @docType package
@@ -16,9 +18,11 @@ DOMAIN_ALPHA_RATIO = 2
 THETA_ALPHA = 2
 DOMAIN_PROPOSAL_EMPTY = 0.3
 DOMAIN_PROPOSAL_SWAP = 0.3
+STEPS_ACTIVE = c("thetas"=TRUE, "domains"=TRUE, "thetas"=TRUE, "class_pi"=TRUE, "classes"=TRUE)
 
 #' Fits a bayesian dependent LCM model
 #' @param nitr integer. Number of iterations to run the bayes MCMC
+#' @param cleanup boolean. TRUE to delete some redundant data from output
 #' @inheritParams getStart_hparams
 #' @inheritParams getStart_bayes_params
 #' @export
@@ -27,7 +31,7 @@ dependentLCM_fit <- function(
   # Data
   , df=NULL, mat=NULL
   # Hyperparameters
-  ,nclass=NCLASS, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA, domain_alpha=NULL, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_proposal_swap=DOMAIN_PROPOSAL_SWAP, domain_nproposals=NULL
+  ,nclass=NCLASS, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA, domain_alpha=NULL, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_proposal_swap=DOMAIN_PROPOSAL_SWAP, domain_nproposals=NULL, steps_active = STEPS_ACTIVE
   # Bayes parameters
   , class_pi = NULL, classes = NULL, thetas = NULL
   # Misc
@@ -46,7 +50,7 @@ dependentLCM_fit <- function(
   hparams <- getStart_hparams(
     df=mat
     # Hyperparameters
-    ,nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_alpha=domain_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, domain_proposal_empty=domain_proposal_empty, domain_proposal_swap=domain_proposal_swap, domain_nproposals=domain_nproposals
+    ,nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_alpha=domain_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, domain_proposal_empty=domain_proposal_empty, domain_proposal_swap=domain_proposal_swap, domain_nproposals=domain_nproposals, steps_active = STEPS_ACTIVE
   )
 
   bayesparams <- getStart_bayes_params(
@@ -81,20 +85,25 @@ dependentLCM_fit <- function(
   # Clean up output
   dlcm$thetas_id <- do.call(cbind, dlcm$thetas_id)
   rownames(dlcm$thetas_id) <- c("itr", "class", "domain", "pattern_id")
+  mode(dlcm$thetas_id) <- "integer"
   dlcm$thetas_patterns <- do.call(cbind, dlcm$thetas_patterns)
-  rownames(dlcm$thetas_patterns) <- paste0("item_", 0:(nrow(dlcm$thetas_patterns)-1))
+  rownames(dlcm$thetas_patterns) <- paste0("item_", 1:(nrow(dlcm$thetas_patterns)))
+  mode(dlcm$thetas_patterns) <- "integer"
   dlcm$thetas_probs <- unlist(dlcm$thetas_probs)
-
+  dlcm$thetas_accept <- do.call(function(...) abind::abind(..., along=3), dlcm$thetas_accept)
+  dlcm$class_loglik <- do.call(function(...) abind::abind(..., along=3), dlcm$class_loglik)
+  
   # Supplemental
   thetas_items <- apply(
     dlcm$thetas_patterns > -1
-    , 2, function(x) paste0(c("", which(x)-1, ""), collapse=",")
+    , 2, function(x) paste0(c("", which(x), ""), collapse=",")
   )
-  thetas_nitems <- colSums(dlcm$thetas_patterns > -1)
+  thetas_nitems <- as.integer(colSums(dlcm$thetas_patterns > -1))
   thetas_class2domain <- all_params$hparams$class2domain[dlcm$thetas_id["class",,drop=TRUE]+1]
   thetas_domain_id <- as.data.frame(t(rbind(dlcm$thetas_id, thetas_class2domain)))
   thetas_domain_id <- do.call(paste, thetas_domain_id) # paste rows together, faster than apply
-
+  dlcm$thetas_id["itr",] <- dlcm$thetas_id["itr",] + 1L # start at 1
+  
   # Merge thetas attributes
   dlcm$thetas <- data.frame(
     t(dlcm$thetas_id)
@@ -106,16 +115,21 @@ dependentLCM_fit <- function(
     , stringsAsFactors = FALSE
   )
   all_params$hparams$theta_item_cols <- grep("^item_[0-9]+", colnames(dlcm$thetas))
-  dlcm$thetas_accept <- do.call(function(...) abind::abind(..., along=3), dlcm$thetas_accept)
-
   
-  dlcm$domains_merged <- dplyr::summarize(dplyr::group_by(dplyr::filter(dlcm$thetas, pattern_id==0), itr, class2domain), domains_merged=paste(sort(unique(items)), collapse="|"), .groups="keep") # dlcm$domains_merged <- dlcm$thetas %>% dplyr::filter(pattern_id==0) %>% dplyr::group_by(itr, class2domain) %>% dplyr::summarize(domains_merged=paste(sort(unique(items)), collapse="|"), .groups="keep") 
+  dlcm$domains_merged <- (
+    dlcm$thetas 
+    %>% dplyr::filter(pattern_id==0) 
+    %>% dplyr::group_by(itr, class2domain)
+    %>% filter(class == min(class))
+    %>% dplyr::arrange(-nitems, items)
+    %>% dplyr::summarize(domains_merged=paste(items, collapse="|"), .groups="keep")
+  ) # tk handle %>% correctly since it is from dplyr
 
   dlcm$thetas_id <- NULL
   dlcm$thetas_patterns <- NULL
   dlcm$thetas_probs <- NULL
   dlcm$nclass2domain <- NULL
-  
+    
   datetimes <- c(datetimes, Sys.time())
   dlcm$runtimes <- c(diff(datetimes), total=tail(datetimes,1)-datetimes[1])
   names(dlcm$runtimes)[1:3] <- c("pre", "mcmc", "post")
@@ -142,7 +156,7 @@ dependentLCM_fit <- function(
 getStart_hparams <- function(
   df=NULL, nitems=NULL
   # Hyperparameters
-  ,nclass=NCLASS, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA, domain_alpha=NULL, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_proposal_swap=DOMAIN_PROPOSAL_SWAP, domain_nproposals=NULL
+  ,nclass=NCLASS, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA, domain_alpha=NULL, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_proposal_swap=DOMAIN_PROPOSAL_SWAP, domain_nproposals=NULL, steps_active = STEPS_ACTIVE
 ) {
   # Purpose: Add default hyperparameters
 
@@ -182,10 +196,8 @@ getStart_hparams <- function(
     domain_nproposals <- nitems
   }
 
-  # theta_alpha, no action taken
-
   return(list(
-    nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_alpha=domain_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, nitems = nitems, item_nlevels = item_nlevels, nclass2domain = nclass2domain, domain_proposal_empty=domain_proposal_empty, domain_proposal_swap=domain_proposal_swap, domain_nproposals=domain_nproposals
+    nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_alpha=domain_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, nitems = nitems, item_nlevels = item_nlevels, nclass2domain = nclass2domain, domain_proposal_empty=domain_proposal_empty, domain_proposal_swap=domain_proposal_swap, domain_nproposals=domain_nproposals, steps_active = STEPS_ACTIVE
   ))
 }
 
@@ -346,6 +358,31 @@ sink.reset <- function(){
 #   dplyr::`%>%`(...)
 # }
 
+#' Robust estimate for variance. Inspired by MCD but fast approximation instead
+#' @param x numeric vector. Data we wish to calculate variance of
+#' @param alpha percentage. Remove the alpha most extreme points before calculating variance.
+#' @keywords internal
+robust_var <- function(x, alpha) {
+  if (alpha <= 0) {
+    # Not robust
+    return(var(x))
+  }
+  
+  center <- median(x)
+  center_diff <- abs(x-center)
+  v <- var(x[center_diff < quantile(center_diff, 1-alpha)])
+  return(v) 
+}
+
+#' Same as log(sum(exp(x))), but adjusted to improve precision.
+#' Assumes x are logged values. Calculates sum(e^x) and then converts back to log scale
+#' @param x numeric vector in log scale
+#' @keywords internal
+expSumLog <- function(x) {
+  # Handle precision: log(e^a+e^b+e^c) = log(a * (1+e^(b-a)+e^(c-1))) = log(a) + log(1+e^(b-a)+e^(c-1)))
+  xmax <- max(x)
+  return(xmax + log(sum(exp(x-xmax))))
+}
 
 ##############
 ############## SUMMARY
@@ -361,7 +398,7 @@ sink.reset <- function(){
 #' domain_nitems = How often the domains are of size k.
 #' domain_accept = How often our metropolis step accepts its proposal
 #' @export
-dlcm.summary <- function(dlcm, nwarmup=1000) {
+dlcm.summary <- function(dlcm, nwarmup=1000, alpha=0) {
   
   dlcm$mcmc$thetas$item_value <- apply(
     dlcm$mcmc$thetas[, dlcm$hparams$theta_item_cols]
@@ -370,8 +407,8 @@ dlcm.summary <- function(dlcm, nwarmup=1000) {
   thetas_avg <- dlcm$mcmc$thetas %>% dplyr::filter(itr > nwarmup) %>% dplyr::group_by(class, items, item_value) %>% dplyr::summarize(n=dplyr::n(), prob=mean(prob), .groups="keep")
   
   domain_items <- rbind(
-    dlcm$mcmc$domains_merged %>% dplyr::group_by(class2domain, items=domains_merged) %>% dplyr::summarize(nitems=NA, n=dplyr::n(), all_items=TRUE, .groups="keep") %>% dplyr::arrange(-n)
-    , dlcm$mcmc$thetas %>% dplyr::filter(pattern_id==0, itr > nwarmup) %>% dplyr::group_by(class2domain, items) %>% dplyr::summarize(nitems=max(nitems), n=dplyr::n(), all_items=FALSE, .groups="keep") %>% dplyr::arrange(-n)
+    dlcm$mcmc$domains_merged %>% dplyr::filter(itr > nwarmup) %>% dplyr::group_by(class2domain, items=domains_merged) %>% dplyr::summarize(nitems=NA, n=dplyr::n(), all_items=TRUE, .groups="keep") %>% dplyr::arrange(-n)
+    , dlcm$mcmc$thetas %>% dplyr::filter(pattern_id==0, itr > nwarmup) %>% dplyr::group_by(class2domain, items) %>% filter(class == min(class)) %>% dplyr::summarize(nitems=max(nitems), n=dplyr::n(), all_items=FALSE, .groups="keep") %>% dplyr::arrange(-n)
   )
   domain_nitems <- table((dlcm$mcmc$thetas %>% dplyr::filter(pattern_id==0, itr > nwarmup))$nitems)
   
@@ -382,11 +419,81 @@ dlcm.summary <- function(dlcm, nwarmup=1000) {
   # domain_accept <- do.call(bind_rows, domain_accept)
   domain_accept <- table(dlcm$mcmc$thetas_accept[, , -(1:nwarmup)])
   
+  waic <- dlcm.get_waic(dlcm, itrs=nwarmup:dlcm$mcmc$maxitr, alpha=alpha)
+  
   return(list(
-    "thetas_avg"=thetas_avg, "domain_items"=domain_items, "domain_nitems"=domain_nitems, "domain_accept"=domain_accept
+    "thetas_avg"=thetas_avg, "domain_items"=domain_items, "domain_nitems"=domain_nitems, "domain_accept"=domain_accept, "waic"=waic
   ))
 }
 
+#' Calculate likelihood and WAIC
+#' @param this_sim. Dependent Latent class model
+#' @param itrs integer vector. Which iterations should be include in calculation?
+#' @param alpha percentage. Used for robust calculation of varaince in WAIC. Ignore the alpha most extreme iterations.
+#' @export
+dlcm.get_waic <- function(this_sim, itrs=NULL, alpha=0) {
+  
+  if (is.null(itrs)) {
+    # default in all iterations
+    itrs = 1:this_sim$mcmc$maxitr
+  }
+  
+  #
+  # Initialize
+  #
+  
+  nitr <- length(itrs)
+  likelihoods <- data.frame(
+    matrix(0, nrow=nitr, ncol=3)
+  )
+  colnames(likelihoods) <- c("itr", "logLik", "nparameters")
+  likelihoods$itr <- itrs
+  
+  summary <- c()
+  
+  #
+  # Parameters, raw
+  #
+  
+  theta_parameters <- (
+    this_sim$mcmc$thetas 
+    %>% filter(itr %in% itrs) 
+    %>% group_by(itr) 
+    %>% summarize(nparams = n() - length(unique(domain))))
+  likelihoods$nparameters <- (
+    unlist(theta_parameters[match(likelihoods$itr, theta_parameters$itr), "nparams"])
+    + this_sim$hparams$nclass-1 # class pis
+    + length(unique(this_sim$hparams$class2domain)) * (this_sim$hparams$nitems-1) # domains
+  )
+  summary["nparams_avg"] <- mean(likelihoods$nparameters)
+  
+  #
+  # Likelihood and WAIC
+  #
+  
+  # Calculate likelihood for each observation in each iteration
+  obsLogLiks <- sweep(this_sim$mcmc$class_loglik[,,itrs, drop=FALSE]
+                      , c(1,3) # Include pi. Repeat for each observation (2)
+                      , log(this_sim$mcmc$class_pi[,itrs, drop=FALSE]), "+")
+  obsLogLiks <- apply(obsLogLiks, c(2,3), expSumLog)
+  
+  likelihoods$logLik <- colSums(obsLogLiks, 1) # sum across observations
+  
+  # QA against: LaplacesDemon::WAIC
+  summary["logLik_avg"] <- mean(likelihoods$logLik)
+  summary["lppd"] <- sum(apply(obsLogLiks, 1, expSumLog) - log(dim(obsLogLiks)[2])) 
+  summary["waic_nparams1"] <- 2 * sum(apply(obsLogLiks, 1, expSumLog) - log(dim(obsLogLiks)[2])
+                                      - apply(obsLogLiks, 1, mean))
+  summary["waic_nparams2"] <- sum(apply(obsLogLiks, 1, robust_var, alpha=alpha))
+  summary["waic1"] <- -2 * (summary["lppd"] - summary["waic_nparams1"])
+  summary["waic2"] <- -2 * (summary["lppd"] - summary["waic_nparams2"])
+  summary["aic"] <- -2*summary["logLik_avg"] + 2*summary["nparams_avg"]
+  
+  return(list(
+    summary=summary
+    , df=likelihoods
+  ))
+}
 
 #' Calculate the probabilities of different patterns
 #' @param items integer vector. Which items should we include? (indexed starting at 1)
@@ -496,4 +603,35 @@ simulate_lcm <- function(n, pis, thetas) {
   }
 
   return(list(classes=classes, responses=responses))
+}
+
+#' Take the parameters of a simulated lcm (simulate_lcm)
+#' and produce the probability of seeing this observation
+#' @inheritParams simulate_lcm
+#' @param xobs numeric vector. One vector observation
+#' @note Helper function for sim_logprobs. Currently only supports thetas in list form.
+#' @keywords internal
+sim_logprob_one <- function(xobs, pis, thetas) {
+  nclass <-length(pis)
+  class_logprobs <- sapply(
+    1:nclass
+    , function(iclass){
+      sum(log(mapply(
+        function(theta, xobs) theta[xobs+1]
+        , theta=thetas[[iclass]]
+        , xobs=xobs
+      )))}
+  )
+  class_logprobs <- class_logprobs + log(pis)
+  return(expSumLog(class_logprobs))
+}
+
+#' Take the parameters of a simulated lcm (simulate_lcm)
+#' and produce the probability of seeing each observation given
+#' @inheritParams simulate_lcm
+#' @param x numeric matrix. Data with one row per observation.
+#' @note Currently only supports thetas in list form. FUTURE extend to include matrix thetas as well.
+#' @export
+sim_logprobs <- function(x, pis, thetas) {
+  return(apply(x, 1, sim_logprob_one, pis=pis, thetas=thetas))
 }
