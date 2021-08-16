@@ -807,7 +807,7 @@ void BayesParameter::thetas_next(const Rcpp::IntegerMatrix& x, Hyperparameter& h
     for (domain_iter = thetas[iclass].begin(); domain_iter!=domain_end; ++domain_iter) {
       idomain = &(domain_iter->second);
       iprob = idomain->counts + hparams.theta_alpha;
-      iprob = iprob / Rcpp::sum(iprob);
+      // iprob = iprob / Rcpp::sum(iprob);
       idomain->thetas = rDirchlet(iprob);
     }
   }

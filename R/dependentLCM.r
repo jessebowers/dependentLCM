@@ -50,7 +50,7 @@ dependentLCM_fit <- function(
   hparams <- getStart_hparams(
     df=mat
     # Hyperparameters
-    ,nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_alpha=domain_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, domain_proposal_empty=domain_proposal_empty, domain_proposal_swap=domain_proposal_swap, domain_nproposals=domain_nproposals, steps_active = STEPS_ACTIVE
+    ,nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_alpha=domain_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, domain_proposal_empty=domain_proposal_empty, domain_proposal_swap=domain_proposal_swap, domain_nproposals=domain_nproposals, steps_active = steps_active
   )
 
   bayesparams <- getStart_bayes_params(
@@ -125,6 +125,7 @@ dependentLCM_fit <- function(
     %>% dplyr::summarize(domains_merged=paste(items, collapse="|"), .groups="keep")
   ) # tk handle %>% correctly since it is from dplyr
 
+  # Delete redundant info
   dlcm$thetas_id <- NULL
   dlcm$thetas_patterns <- NULL
   dlcm$thetas_probs <- NULL
@@ -197,7 +198,7 @@ getStart_hparams <- function(
   }
 
   return(list(
-    nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_alpha=domain_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, nitems = nitems, item_nlevels = item_nlevels, nclass2domain = nclass2domain, domain_proposal_empty=domain_proposal_empty, domain_proposal_swap=domain_proposal_swap, domain_nproposals=domain_nproposals, steps_active = STEPS_ACTIVE
+    nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_alpha=domain_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, nitems = nitems, item_nlevels = item_nlevels, nclass2domain = nclass2domain, domain_proposal_empty=domain_proposal_empty, domain_proposal_swap=domain_proposal_swap, domain_nproposals=domain_nproposals, steps_active = steps_active
   ))
 }
 
@@ -355,7 +356,7 @@ sink.reset <- function(){
 # #' Wrapper for dplyr::`%>%` 
 # #' @keywords internal
 # `%>%` <- function(...) {
-#   dplyr::`%>%`(...)
+#   magrittr::`%>%`(...)
 # }
 
 #' Robust estimate for variance. Inspired by MCD but fast approximation instead
