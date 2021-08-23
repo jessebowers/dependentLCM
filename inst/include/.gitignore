@@ -1,0 +1,4 @@
+# Cache directory for CPP compiling
+# Ignore all files except this file itself
+*
+!.gitignore

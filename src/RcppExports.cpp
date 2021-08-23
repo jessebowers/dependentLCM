@@ -19,9 +19,22 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// id2pattern
+Rcpp::IntegerMatrix id2pattern(const Rcpp::IntegerVector& xpattern, const Rcpp::IntegerVector& mapvec);
+RcppExport SEXP _dependentLCM_id2pattern(SEXP xpatternSEXP, SEXP mapvecSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type xpattern(xpatternSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type mapvec(mapvecSEXP);
+    rcpp_result_gen = Rcpp::wrap(id2pattern(xpattern, mapvec));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_dependentLCM_dependentLCM_fit_cpp", (DL_FUNC) &_dependentLCM_dependentLCM_fit_cpp, 4},
+    {"_dependentLCM_id2pattern", (DL_FUNC) &_dependentLCM_id2pattern, 2},
     {NULL, NULL, 0}
 };
 

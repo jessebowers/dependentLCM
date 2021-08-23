@@ -18,9 +18,10 @@ dependentLCM_fit(
   domain_proposal_empty = DOMAIN_PROPOSAL_EMPTY,
   domain_proposal_swap = DOMAIN_PROPOSAL_SWAP,
   domain_nproposals = NULL,
+  steps_active = STEPS_ACTIVE,
   class_pi = NULL,
   classes = NULL,
-  thetas = NULL,
+  domains = NULL,
   class_init_method = "kmodes"
 )
 }
@@ -53,9 +54,11 @@ dependentLCM_fit(
 
 \item{classes}{integer vector size nrow(df). Initial condition for subject classes.}
 
-\item{thetas}{list. Initial values for thetas/probabilites.}
+\item{domains}{list. Initial values for domains/probabilites.}
 
 \item{class_init_method}{string. Decides how 'classes' is defaulted if NULL. One of "kmodes" or "random"}
+
+\item{cleanup}{boolean. TRUE to delete some redundant data from output}
 }
 \description{
 Fits a bayesian dependent LCM model

@@ -30,7 +30,7 @@ sim_list1 <- simulate_lcm(
 sims_list2 <- simulate_lcm(
  n=1000
 , pis=c(0.5, 0.5) # 2 classes equally likely
-, thetas_list = list(
+, thetas = list(
   c( rep(list(c(0.8,0.2)), 20)
      , rep(list(c(0.6,0.3,0.05,0.05)), 2)
      , rep(list(c(rep(0.3,3), rep(0.1/5,5))), 1)

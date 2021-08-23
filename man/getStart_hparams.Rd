@@ -17,7 +17,8 @@ getStart_hparams(
   theta_alpha = THETA_ALPHA,
   domain_proposal_empty = DOMAIN_PROPOSAL_EMPTY,
   domain_proposal_swap = DOMAIN_PROPOSAL_SWAP,
-  domain_nproposals = NULL
+  domain_nproposals = NULL,
+  steps_active = STEPS_ACTIVE
 )
 }
 \arguments{

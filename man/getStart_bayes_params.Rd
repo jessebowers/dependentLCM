@@ -9,7 +9,7 @@ getStart_bayes_params(
   hparams,
   class_pi = NULL,
   classes = NULL,
-  thetas = NULL,
+  domains = NULL,
   class_init_method = "kmodes"
 )
 }
@@ -22,7 +22,7 @@ getStart_bayes_params(
 
 \item{classes}{integer vector size nrow(df). Initial condition for subject classes.}
 
-\item{thetas}{list. Initial values for thetas/probabilites.}
+\item{domains}{list. Initial values for domains/probabilites.}
 
 \item{class_init_method}{string. Decides how 'classes' is defaulted if NULL. One of "kmodes" or "random"}
 }

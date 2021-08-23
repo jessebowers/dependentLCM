@@ -3,6 +3,10 @@
 # library(abind)
 # library(dplyr)
 
+#' Insert in place
+#' Items ids
+#' identifiability (and allow skipping of this)
+
 # TK export on scale starting 1
 
 #' dependentLCM: Dependent Latent Class Model
@@ -33,7 +37,7 @@ dependentLCM_fit <- function(
   # Hyperparameters
   ,nclass=NCLASS, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA, domain_alpha=NULL, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_proposal_swap=DOMAIN_PROPOSAL_SWAP, domain_nproposals=NULL, steps_active = STEPS_ACTIVE
   # Bayes parameters
-  , class_pi = NULL, classes = NULL, thetas = NULL
+  , class_pi = NULL, classes = NULL, domains = NULL
   # Misc
   , class_init_method = "kmodes") {
   
@@ -55,7 +59,7 @@ dependentLCM_fit <- function(
 
   bayesparams <- getStart_bayes_params(
     mat=mat, hparams=hparams
-    , class_pi = class_pi, classes = classes, thetas = thetas
+    , class_pi = class_pi, classes = classes, domains = domains
     # Misc
     , class_init_method = class_init_method
   )
@@ -83,41 +87,41 @@ dependentLCM_fit <- function(
   #
 
   # Clean up output
-  dlcm$thetas_id <- do.call(cbind, dlcm$thetas_id)
-  rownames(dlcm$thetas_id) <- c("itr", "class", "domain", "pattern_id")
-  mode(dlcm$thetas_id) <- "integer"
-  dlcm$thetas_patterns <- do.call(cbind, dlcm$thetas_patterns)
-  rownames(dlcm$thetas_patterns) <- paste0("item_", 1:(nrow(dlcm$thetas_patterns)))
-  mode(dlcm$thetas_patterns) <- "integer"
-  dlcm$thetas_probs <- unlist(dlcm$thetas_probs)
-  dlcm$thetas_accept <- do.call(function(...) abind::abind(..., along=3), dlcm$thetas_accept)
+  dlcm$domains_id <- do.call(cbind, dlcm$domains_id)
+  rownames(dlcm$domains_id) <- c("itr", "class", "domain", "pattern_id")
+  mode(dlcm$domains_id) <- "integer"
+  dlcm$domains_patterns <- do.call(cbind, dlcm$domains_patterns)
+  rownames(dlcm$domains_patterns) <- paste0("item_", 1:(nrow(dlcm$domains_patterns)))
+  mode(dlcm$domains_patterns) <- "integer"
+  dlcm$domains_lprobs <- unlist(dlcm$domains_lprobs)
+  dlcm$domains_accept <- do.call(function(...) abind::abind(..., along=3), dlcm$domains_accept)
   dlcm$class_loglik <- do.call(function(...) abind::abind(..., along=3), dlcm$class_loglik)
   
   # Supplemental
-  thetas_items <- apply(
-    dlcm$thetas_patterns > -1
+  domains_items <- apply(
+    dlcm$domains_patterns > -1
     , 2, function(x) paste0(c("", which(x), ""), collapse=",")
   )
-  thetas_nitems <- as.integer(colSums(dlcm$thetas_patterns > -1))
-  thetas_class2domain <- all_params$hparams$class2domain[dlcm$thetas_id["class",,drop=TRUE]+1]
-  thetas_domain_id <- as.data.frame(t(rbind(dlcm$thetas_id, thetas_class2domain)))
-  thetas_domain_id <- do.call(paste, thetas_domain_id) # paste rows together, faster than apply
-  dlcm$thetas_id["itr",] <- dlcm$thetas_id["itr",] + 1L # start at 1
+  domains_nitems <- as.integer(colSums(dlcm$domains_patterns > -1))
+  domains_class2domain <- all_params$hparams$class2domain[dlcm$domains_id["class",,drop=TRUE]+1]
+  domains_domain_id <- as.data.frame(t(rbind(dlcm$domains_id, domains_class2domain)))
+  domains_domain_id <- do.call(paste, domains_domain_id) # paste rows together, faster than apply
+  dlcm$domains_id["itr",] <- dlcm$domains_id["itr",] + 1L # start at 1
   
-  # Merge thetas attributes
-  dlcm$thetas <- data.frame(
-    t(dlcm$thetas_id)
-    , class2domain = thetas_class2domain
-    , prob=dlcm$thetas_probs
-    , nitems = thetas_nitems
-    , items = thetas_items
-    , t(dlcm$thetas_patterns)
+  # Merge domains attributes
+  dlcm$domains <- data.frame(
+    t(dlcm$domains_id)
+    , class2domain = domains_class2domain
+    , prob=exp(dlcm$domains_lprobs)
+    , nitems = domains_nitems
+    , items = domains_items
+    , t(dlcm$domains_patterns)
     , stringsAsFactors = FALSE
   )
-  all_params$hparams$theta_item_cols <- grep("^item_[0-9]+", colnames(dlcm$thetas))
+  all_params$hparams$domain_item_cols <- grep("^item_[0-9]+", colnames(dlcm$domains))
   
   dlcm$domains_merged <- (
-    dlcm$thetas 
+    dlcm$domains 
     %>% dplyr::filter(pattern_id==0) 
     %>% dplyr::group_by(itr, class2domain)
     %>% filter(class == min(class))
@@ -126,14 +130,14 @@ dependentLCM_fit <- function(
   ) # tk handle %>% correctly since it is from dplyr
 
   # Delete redundant info
-  dlcm$thetas_id <- NULL
-  dlcm$thetas_patterns <- NULL
-  dlcm$thetas_probs <- NULL
+  dlcm$domains_id <- NULL
+  dlcm$domains_patterns <- NULL
+  dlcm$domains_lprobs <- NULL
   dlcm$nclass2domain <- NULL
     
   datetimes <- c(datetimes, Sys.time())
-  dlcm$runtimes <- c(diff(datetimes), total=tail(datetimes,1)-datetimes[1])
-  names(dlcm$runtimes)[1:3] <- c("pre", "mcmc", "post")
+  dlcm$runtimes <- as.numeric(c(diff(datetimes), total=tail(datetimes,1)-datetimes[1]))
+  names(dlcm$runtimes) <- c("pre", "mcmc", "post", "total")
   
   return(list(hparams=all_params$hparams, mcmc=dlcm))
 }
@@ -223,12 +227,12 @@ getStart_matrix <- function(df) {
 #' @param hparams list. List of hyperparameters from getStart_hparams.
 #' @param class_pi numeric vector size nclass. Initial condition for bayes parameter pi.
 #' @param classes integer vector size nrow(df). Initial condition for subject classes.
-#' @param thetas list. Initial values for thetas/probabilites.
+#' @param domains list. Initial values for domains/probabilites.
 #' @param class_init_method string. Decides how 'classes' is defaulted if NULL. One of "kmodes" or "random"
 #' @keywords internal
 getStart_bayes_params <- function(
   mat, hparams
-  , class_pi = NULL, classes = NULL, thetas = NULL
+  , class_pi = NULL, classes = NULL, domains = NULL
   # Misc
   , class_init_method = "kmodes"
 ) {
@@ -247,13 +251,13 @@ getStart_bayes_params <- function(
   class_pi <- table(classes)+hparams$classPi_alpha
   class_pi <- class_pi / sum(class_pi)
 
-  # thetas
-  if (is.null(thetas)) {
-    thetas <- getStart_thetas(mat, classes, hparams)
+  # domains
+  if (is.null(domains)) {
+    domains <- getStart_domains(mat, classes, hparams)
   } # Future maybe allow other types of inputs
 
   return(list(
-    class_pi = class_pi, classes = classes, thetas = thetas
+    class_pi = class_pi, classes = classes, domains = domains
   ))
 }
 
@@ -282,31 +286,31 @@ getStart_class_kmodes <- function(mat, hparams, iter.max=2, ...) {
   return(klaR::kmodes(mat, hparams$nclass, iter.max=iter.max, ...)$cluster-1)
 }
 
-#' Choose starting theta values.
+#' Choose starting domain values.
 #' @param mat matrix. Raw data.
 #' @param classes integer vector. The class of each observation.
 #' @param hparams list. List of hyperparameters
 #' @keywords internal
-getStart_thetas <- function(mat, classes, hparams) {
+getStart_domains <- function(mat, classes, hparams) {
   # FUTURE: Maybe switch to internal C gibbs here? Keep this for now for validation
-  thetas_list = list()
+  domains_list = list()
   for (iclass in 0:(hparams$nclass-1)) {
-    thetas_list[[iclass+1]] <- lapply(
+    domains_list[[iclass+1]] <- lapply(
       1:hparams$nitems
       , function(icol) {
         ix = mat[classes==iclass, icol]
-        ithetas = as.vector((table(ix) + hparams$theta_alpha))
-        ithetas <- ithetas/sum(ithetas)
+        idomains = as.vector((table(ix) + hparams$domain_alpha))
+        idomains <- idomains/sum(idomains)
         iout = list(
           items=c(icol-1)
           # , item_nlevels = hparams$item_nlevels[icol] # now inferred
-          , thetas = ithetas
+          , domains = idomains
         )
         return(iout)
       }
     )
   }
-  return(thetas_list)
+  return(domains_list)
 }
 
 #' Check parameters for internal consistency
@@ -401,24 +405,19 @@ expSumLog <- function(x) {
 #' @export
 dlcm.summary <- function(dlcm, nwarmup=1000, alpha=0) {
   
-  dlcm$mcmc$thetas$item_value <- apply(
-    dlcm$mcmc$thetas[, dlcm$hparams$theta_item_cols]
+  dlcm$mcmc$domains$item_value <- apply(
+    dlcm$mcmc$domains[, dlcm$hparams$domain_item_cols]
     , 1, function(x) paste0(x[x>-1], collapse=", ")
   )
-  thetas_avg <- dlcm$mcmc$thetas %>% dplyr::filter(itr > nwarmup) %>% dplyr::group_by(class, items, item_value) %>% dplyr::summarize(n=dplyr::n(), prob=mean(prob), .groups="keep")
+  thetas_avg <- dlcm$mcmc$domains %>% dplyr::filter(itr > nwarmup) %>% dplyr::group_by(class, items, item_value) %>% dplyr::summarize(n=dplyr::n(), prob=mean(prob), .groups="keep")
   
   domain_items <- rbind(
     dlcm$mcmc$domains_merged %>% dplyr::filter(itr > nwarmup) %>% dplyr::group_by(class2domain, items=domains_merged) %>% dplyr::summarize(nitems=NA, n=dplyr::n(), all_items=TRUE, .groups="keep") %>% dplyr::arrange(-n)
-    , dlcm$mcmc$thetas %>% dplyr::filter(pattern_id==0, itr > nwarmup) %>% dplyr::group_by(class2domain, items) %>% filter(class == min(class)) %>% dplyr::summarize(nitems=max(nitems), n=dplyr::n(), all_items=FALSE, .groups="keep") %>% dplyr::arrange(-n)
+    , dlcm$mcmc$domains %>% dplyr::filter(pattern_id==0, itr > nwarmup) %>% dplyr::group_by(class2domain, items) %>% filter(class == min(class)) %>% dplyr::summarize(nitems=max(nitems), n=dplyr::n(), all_items=FALSE, .groups="keep") %>% dplyr::arrange(-n)
   )
-  domain_nitems <- table((dlcm$mcmc$thetas %>% dplyr::filter(pattern_id==0, itr > nwarmup))$nitems)
+  domain_nitems <- table((dlcm$mcmc$domains %>% dplyr::filter(pattern_id==0, itr > nwarmup))$nitems)
   
-  # domain_accept <- apply(
-  #   dlcm$thetas_accept[, , -(1:nwarmup)], 1
-  #   , function(x) list(table(x))
-  # )
-  # domain_accept <- do.call(bind_rows, domain_accept)
-  domain_accept <- table(dlcm$mcmc$thetas_accept[, , -(1:nwarmup)])
+  domain_accept <- table(dlcm$mcmc$domains_accept[, , -(1:nwarmup)])
   
   waic <- dlcm.get_waic(dlcm, itrs=nwarmup:dlcm$mcmc$maxitr, alpha=alpha)
   
@@ -457,7 +456,7 @@ dlcm.get_waic <- function(this_sim, itrs=NULL, alpha=0) {
   #
   
   theta_parameters <- (
-    this_sim$mcmc$thetas 
+    this_sim$mcmc$domains 
     %>% filter(itr %in% itrs) 
     %>% group_by(itr) 
     %>% summarize(nparams = n() - length(unique(domain))))
@@ -505,15 +504,15 @@ dlcm.get_waic <- function(this_sim, itrs=NULL, alpha=0) {
 #' @export
 theta_item_probs <- function(items, this_sim, itrs) {
   
-  itr_filter <- this_sim$mcmc$thetas$itr %in% itrs
+  itr_filter <- this_sim$mcmc$domains$itr %in% itrs
   nitr <- length(itrs)
   nitems <- length(items)
-  items_colnames <- colnames(this_sim$mcmc$thetas)[this_sim$hparams$theta_item_cols[items]]
+  items_colnames <- colnames(this_sim$mcmc$domains)[this_sim$hparams$domain_item_cols[items]]
   
   # Reduce thetas down to relevant patterns only (merging redundant patterns as necessary)
   thetas_agg <- aggregate(
     formula(paste0("prob ~ ", paste(c(items_colnames, "class", "itr"), collapse=" + ")))
-    , this_sim$mcmc$thetas[itr_filter, ]
+    , this_sim$mcmc$domains[itr_filter, ]
     , sum
   )
   thetas_agg <- thetas_agg[!(rowSums(thetas_agg[, 1:nitems, drop=FALSE]) == -nitems), ] # Remove unrelated rows
