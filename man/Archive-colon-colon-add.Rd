@@ -2,10 +2,8 @@
 % Please edit documentation in R/RcppExports.R
 \name{Archive::add}
 \alias{Archive::add}
-\title{Archive::add
-Add latest bayes parameters to the archive}
+\title{Archive::add}
 \description{
-Archive::add
 Add latest bayes parameters to the archive
 }
 \keyword{internal}

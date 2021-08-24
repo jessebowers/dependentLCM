@@ -2,10 +2,8 @@
 % Please edit documentation in R/RcppExports.R
 \name{BayesParameter::domains_next}
 \alias{BayesParameter::domains_next}
-\title{BayesParameter::domains_next
-Use metropolis algorithm to update domains. Repeat # of times set by hparams.}
+\title{BayesParameter::domains_next}
 \description{
-BayesParameter::domains_next
 Use metropolis algorithm to update domains. Repeat # of times set by hparams.
 }
 \keyword{internal}

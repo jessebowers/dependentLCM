@@ -2,10 +2,8 @@
 % Please edit documentation in R/RcppExports.R
 \name{BayesContainer::run_init}
 \alias{BayesContainer::run_init}
-\title{BayesContainer::run_init
-First initializes, and then does #nitr MCMC steps on all bayes parameters}
+\title{BayesContainer::run_init}
 \description{
-BayesContainer::run_init
 First initializes, and then does #nitr MCMC steps on all bayes parameters
 }
 \keyword{internal}

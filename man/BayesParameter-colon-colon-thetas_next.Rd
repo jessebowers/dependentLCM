@@ -2,10 +2,8 @@
 % Please edit documentation in R/RcppExports.R
 \name{BayesParameter::thetas_next}
 \alias{BayesParameter::thetas_next}
-\title{BayesParameter::thetas_next
-Do gibbs sampling to calculate thetas for each domain}
+\title{BayesParameter::thetas_next}
 \description{
-BayesParameter::thetas_next
 Do gibbs sampling to calculate thetas for each domain
 }
 \keyword{internal}

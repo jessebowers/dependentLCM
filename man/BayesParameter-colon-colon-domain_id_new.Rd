@@ -2,10 +2,8 @@
 % Please edit documentation in R/RcppExports.R
 \name{BayesParameter::domain_id_new}
 \alias{BayesParameter::domain_id_new}
-\title{BayesParameter::domain_id_new
-Find an empty domain. Return that domain's ID}
+\title{BayesParameter::domain_id_new}
 \description{
-BayesParameter::domain_id_new
 Find an empty domain. Return that domain's ID
 }
 \keyword{internal}

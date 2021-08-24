@@ -2,11 +2,8 @@
 % Please edit documentation in R/RcppExports.R
 \name{BayesParameter::domain_accept}
 \alias{BayesParameter::domain_accept}
-\title{BayesParameter::domain_accept
-In metroplis algorithm when choosing to update domains.
-We examine the proposal and decide whether to accept it.}
+\title{BayesParameter::domain_accept}
 \description{
-BayesParameter::domain_accept
 In metroplis algorithm when choosing to update domains.
 We examine the proposal and decide whether to accept it.
 }

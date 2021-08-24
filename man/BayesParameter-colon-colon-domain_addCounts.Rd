@@ -2,8 +2,7 @@
 % Please edit documentation in R/RcppExports.R
 \name{BayesParameter::domain_addCounts}
 \alias{BayesParameter::domain_addCounts}
-\title{BayesParameter::domain_addCounts
-Add given observations to counts in all of this given domains}
+\title{BayesParameter::domain_addCounts}
 \arguments{
 \item{domains}{Map of domains holding counts}
 
@@ -12,6 +11,10 @@ Add given observations to counts in all of this given domains}
 \item{reset_counts}{True if we should set all counts to zero before counting x.}
 }
 \description{
+Add given observations to counts in all of this given domains
+
 Assumes the classes of x correspond to the classes in BayesParameter.
+
+Add given observations to counts in all domains in BayesParameter
 }
 \keyword{internal}

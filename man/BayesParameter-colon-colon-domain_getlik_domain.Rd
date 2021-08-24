@@ -2,11 +2,8 @@
 % Please edit documentation in R/RcppExports.R
 \name{BayesParameter::domain_getlik_domain}
 \alias{BayesParameter::domain_getlik_domain}
-\title{BayesParameter::domain_getlik_domain
-Before observing data/other-parameters, how likely are we to put items into these particular domains?
-Some choices of domains may be more likely than other based on prior.}
+\title{BayesParameter::domain_getlik_domain}
 \description{
-BayesParameter::domain_getlik_domain
 Before observing data/other-parameters, how likely are we to put items into these particular domains?
 Some choices of domains may be more likely than other based on prior.
 }

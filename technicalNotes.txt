@@ -1,0 +1,15 @@
+# To compile:
+library(devtools)
+Sys.setenv("PKG_CXXFLAGS"="-std=c++11") # Sys.setenv("PKG_CXXFLAGS"="-std=gnu++11")
+devtools::load_all(path="~/dependentLCM", recompile = TRUE, export_all=FALSE)
+# To generate documentation (also compiles):
+library(roxygen2)
+Sys.setenv("PKG_CXXFLAGS"="-std=c++11")
+roxygen2::roxygenize("~/dependentLCM", clean=TRUE)
+# To load into library 1) compile, 2) convert to zip, 3) remove.packages() 4) install.packages(*, repos = NULL, type = "win.binary")
+# ISSUE: the above two methods compile 10X SLOWER than:
+sourceCpp("~/dependentLCM/src/dependentLCM.cpp")
+# Need to change compiler/compile options so that the package runs just as fast...
+
+Open bugs
+1) Speed with different methods of compiling

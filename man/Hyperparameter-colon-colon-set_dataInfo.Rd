@@ -2,11 +2,8 @@
 % Please edit documentation in R/RcppExports.R
 \name{Hyperparameter::set_dataInfo}
 \alias{Hyperparameter::set_dataInfo}
-\title{Hyperparameter::set_dataInfo
-Use the raw data we are modeling to set certain hparams settings (e.g. set number of items)
-Assumptions: That there are no empty levels especially at end}
+\title{Hyperparameter::set_dataInfo}
 \description{
-Hyperparameter::set_dataInfo
 Use the raw data we are modeling to set certain hparams settings (e.g. set number of items)
 Assumptions: That there are no empty levels especially at end
 }

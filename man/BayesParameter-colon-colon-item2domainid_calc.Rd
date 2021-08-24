@@ -2,11 +2,8 @@
 % Please edit documentation in R/RcppExports.R
 \name{BayesParameter::item2domainid_calc}
 \alias{BayesParameter::item2domainid_calc}
-\title{BayesParameter::item2domainid_calc
-For each item find the id for the domain it belongs to.
-If there are multiple class2domain, then multiple columns are provided (one for each)}
+\title{BayesParameter::item2domainid_calc}
 \description{
-BayesParameter::item2domainid_calc
 For each item find the id for the domain it belongs to.
 If there are multiple class2domain, then multiple columns are provided (one for each)
 }

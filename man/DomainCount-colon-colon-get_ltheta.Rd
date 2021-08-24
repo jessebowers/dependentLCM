@@ -2,13 +2,11 @@
 % Please edit documentation in R/RcppExports.R
 \name{DomainCount::get_ltheta}
 \alias{DomainCount::get_ltheta}
-\title{DomainCount::get_ltheta
-Look up the log-probability of seeing this response pattern in this domain}
+\title{DomainCount::get_ltheta}
 \arguments{
 \item{xobs}{vector of the FULL response pattern (not just the items in this domain)}
 }
 \description{
-DomainCount::get_ltheta
 Look up the log-probability of seeing this response pattern in this domain
 }
 \keyword{internal}

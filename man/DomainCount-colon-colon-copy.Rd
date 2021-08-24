@@ -2,10 +2,8 @@
 % Please edit documentation in R/RcppExports.R
 \name{DomainCount::copy}
 \alias{DomainCount::copy}
-\title{DomainCount::copy
-Creates a deep copy of this domain}
+\title{DomainCount::copy}
 \description{
-DomainCount::copy
 Creates a deep copy of this domain
 }
 \keyword{internal}

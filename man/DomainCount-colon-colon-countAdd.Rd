@@ -2,14 +2,11 @@
 % Please edit documentation in R/RcppExports.R
 \name{DomainCount::countAdd}
 \alias{DomainCount::countAdd}
-\title{DomainCount::countAdd
-Add one observation to this domain's counts.
-Counts measure the number of times each pattern appears in the data.}
+\title{DomainCount::countAdd}
 \arguments{
 \item{xobs}{One FULL response pattern (not just the items in this domain)}
 }
 \description{
-DomainCount::countAdd
 Add one observation to this domain's counts.
 Counts measure the number of times each pattern appears in the data.
 }

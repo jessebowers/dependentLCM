@@ -2,17 +2,13 @@
 % Please edit documentation in R/RcppExports.R
 \name{BayesParameter::set_class_loglik}
 \alias{BayesParameter::set_class_loglik}
-\title{BayesParameter::set_class_loglik
-For each observation what is the (log) probability of seeing its response pattern under EACH class?
-Updates corresponding property in BayesParameter instance.
-Assumes all parameters are fixed/known.}
+\title{BayesParameter::set_class_loglik}
 \arguments{
 \item{x}{Matrix of responses}
 
 \item{reset}{Whether to initialize the matrix dimensions before running}
 }
 \description{
-BayesParameter::set_class_loglik
 For each observation what is the (log) probability of seeing its response pattern under EACH class?
 Updates corresponding property in BayesParameter instance.
 Assumes all parameters are fixed/known.

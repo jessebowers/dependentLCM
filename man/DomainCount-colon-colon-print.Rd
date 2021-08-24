@@ -2,10 +2,8 @@
 % Please edit documentation in R/RcppExports.R
 \name{DomainCount::print}
 \alias{DomainCount::print}
-\title{DomainCount::print
-Prints this domain (used mainly for troubleshooting purposes)}
+\title{DomainCount::print}
 \description{
-DomainCount::print
 Prints this domain (used mainly for troubleshooting purposes)
 }
 \keyword{internal}

@@ -2,10 +2,8 @@
 % Please edit documentation in R/RcppExports.R
 \name{BayesParameter::class_pi_args}
 \alias{BayesParameter::class_pi_args}
-\title{BayesParameter::class_pi_args
-Calculate the dirichlet parameters for the posterior of pi (pi used for classes)}
+\title{BayesParameter::class_pi_args}
 \description{
-BayesParameter::class_pi_args
 Calculate the dirichlet parameters for the posterior of pi (pi used for classes)
 }
 \keyword{internal}

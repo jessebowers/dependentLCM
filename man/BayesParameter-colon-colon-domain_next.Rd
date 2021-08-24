@@ -2,11 +2,8 @@
 % Please edit documentation in R/RcppExports.R
 \name{BayesParameter::domain_next}
 \alias{BayesParameter::domain_next}
-\title{BayesParameter::domain_next
-We use a metropolis algorithm to try to update domains
-In essence we choose one item at random and either move it to another domain or swap it with an item from another domain}
+\title{BayesParameter::domain_next}
 \description{
-BayesParameter::domain_next
 We use a metropolis algorithm to try to update domains
 In essence we choose one item at random and either move it to another domain or swap it with an item from another domain
 }

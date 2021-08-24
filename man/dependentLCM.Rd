@@ -3,7 +3,4 @@
 \docType{package}
 \name{dependentLCM}
 \alias{dependentLCM}
-\title{Insert in place
-Items ids
-identifiability (and allow skipping of this)
-dependentLCM: Dependent Latent Class Model}
+\title{dependentLCM: Dependent Latent Class Model}

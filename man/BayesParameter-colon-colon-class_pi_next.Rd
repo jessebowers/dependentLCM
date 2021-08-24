@@ -2,10 +2,8 @@
 % Please edit documentation in R/RcppExports.R
 \name{BayesParameter::class_pi_next}
 \alias{BayesParameter::class_pi_next}
-\title{BayesParameter::class_pi_next
-Do gibbs sampling to generate pi (pi used for classes)}
+\title{BayesParameter::class_pi_next}
 \description{
-BayesParameter::class_pi_next
 Do gibbs sampling to generate pi (pi used for classes)
 }
 \keyword{internal}

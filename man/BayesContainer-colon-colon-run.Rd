@@ -2,10 +2,8 @@
 % Please edit documentation in R/RcppExports.R
 \name{BayesContainer::run}
 \alias{BayesContainer::run}
-\title{BayesContainer::run
-Does #nitr MCMC steps on all bayes parameters}
+\title{BayesContainer::run}
 \description{
-BayesContainer::run
 Does #nitr MCMC steps on all bayes parameters
 }
 \keyword{internal}

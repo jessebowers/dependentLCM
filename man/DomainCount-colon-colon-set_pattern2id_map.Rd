@@ -2,11 +2,8 @@
 % Please edit documentation in R/RcppExports.R
 \name{DomainCount::set_pattern2id_map}
 \alias{DomainCount::set_pattern2id_map}
-\title{DomainCount::set_pattern2id_map
-Create 'conversion vector' for converting (vector) response pattern to representative ID
-See id2pattern(.) for more details}
+\title{DomainCount::set_pattern2id_map}
 \description{
-DomainCount::set_pattern2id_map
 Create 'conversion vector' for converting (vector) response pattern to representative ID
 See id2pattern(.) for more details
 }

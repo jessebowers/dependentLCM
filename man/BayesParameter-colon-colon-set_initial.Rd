@@ -2,15 +2,11 @@
 % Please edit documentation in R/RcppExports.R
 \name{BayesParameter::set_initial}
 \alias{BayesParameter::set_initial}
-\title{BayesParameter::set_initial
-Set all BayesParameter properties
-See getStart_bayes_params(.) in dependentLCM.r for more details}
+\title{BayesParameter::set_initial}
 \description{
-BayesParameter::set_initial
 Set all BayesParameter properties
 See getStart_bayes_params(.) in dependentLCM.r for more details
 
-BayesParameter::set_initial
 Set all BayesParameter properties
 As other set_initial(.) but supports lists for R compatability
 }

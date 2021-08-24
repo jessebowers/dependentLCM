@@ -2,18 +2,14 @@
 % Please edit documentation in R/RcppExports.R
 \name{Hyperparameter::set_hparams}
 \alias{Hyperparameter::set_hparams}
-\title{Hyperparameter::set_hparams
-Set hyperparameter values
-For details see dependentLCM.r >> getStart_hparams(.)}
+\title{Hyperparameter::set_hparams}
 \arguments{
 \item{hparams_in}{list containing all arguments for Hyperparameter::set_hparams}
 }
 \description{
-Hyperparameter::set_hparams
 Set hyperparameter values
 For details see dependentLCM.r >> getStart_hparams(.)
 
-Hyperparameter::set_hparams
 Set hyperparameter values
 Same as other set_hparams but with list compatability for R
 }

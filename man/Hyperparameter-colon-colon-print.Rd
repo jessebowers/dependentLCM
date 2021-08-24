@@ -2,10 +2,8 @@
 % Please edit documentation in R/RcppExports.R
 \name{Hyperparameter::print}
 \alias{Hyperparameter::print}
-\title{Hyperparameter::print
-Print Hyperparmeter (used mainly for troubleshooting)}
+\title{Hyperparameter::print}
 \description{
-Hyperparameter::print
 Print Hyperparmeter (used mainly for troubleshooting)
 }
 \keyword{internal}

@@ -2,14 +2,11 @@
 % Please edit documentation in R/RcppExports.R
 \name{dependentLCM_fit_cpp}
 \alias{dependentLCM_fit_cpp}
-\title{dependentLCM_fit_cpp
-Does MCMC simulations for dependent LCM model
-For more details see dependentLCM_fit in dependentLCM.r}
+\title{dependentLCM_fit_cpp}
 \usage{
 dependentLCM_fit_cpp(x_in, hparams_list, params_list, nitr)
 }
 \description{
-dependentLCM_fit_cpp
 Does MCMC simulations for dependent LCM model
 For more details see dependentLCM_fit in dependentLCM.r
 }

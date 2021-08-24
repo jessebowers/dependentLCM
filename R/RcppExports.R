@@ -77,14 +77,14 @@ NULL
 
 #' @name Hyperparameter::set_hparams
 #' @title Hyperparameter::set_hparams
-#' Set hyperparameter values
+#' @description Set hyperparameter values
 #' For details see dependentLCM.r >> getStart_hparams(.)
 #' @keywords internal
 NULL
 
 #' @name Hyperparameter::set_hparams
 #' @title Hyperparameter::set_hparams
-#' Set hyperparameter values
+#' @description Set hyperparameter values
 #' Same as other set_hparams but with list compatability for R
 #' @param hparams_in list containing all arguments for Hyperparameter::set_hparams
 #' @keywords internal
@@ -92,20 +92,20 @@ NULL
 
 #' @name Hyperparameter::set_dataInfo
 #' @title Hyperparameter::set_dataInfo
-#' Use the raw data we are modeling to set certain hparams settings (e.g. set number of items)
+#' @description Use the raw data we are modeling to set certain hparams settings (e.g. set number of items)
 #' Assumptions: That there are no empty levels especially at end
 #' @keywords internal
 NULL
 
 #' @name Hyperparameter::print
 #' @title Hyperparameter::print
-#' Print Hyperparmeter (used mainly for troubleshooting)
+#' @description Print Hyperparmeter (used mainly for troubleshooting)
 #' @keywords internal
 NULL
 
 #' @name DomainCount::set_initial
 #' @title DomainCount::set_initial
-#' Set all (non-count) values for this domain
+#' @description Set all (non-count) values for this domain
 #' @param items_in Which items are in this domain?
 #' @param hyparams Hyperparmeters
 #' @param lthetas_in Log probablities of each response pattern of these items (optional)
@@ -114,14 +114,14 @@ NULL
 
 #' @name DomainCount::set_pattern2id_map
 #' @title DomainCount::set_pattern2id_map
-#' Create 'conversion vector' for converting (vector) response pattern to representative ID
+#' @description Create 'conversion vector' for converting (vector) response pattern to representative ID
 #' See id2pattern(.) for more details
 #' @keywords internal
 NULL
 
 #' @name DomainCount::set_initial
 #' @title DomainCount::set_initial
-#' As other set_initial() but with list compatibilities for R
+#' @description As other set_initial() but with list compatibilities for R
 #' @param list_domain List of all arguments for set_initial()
 #' @param hparams hyperparmeters
 #' @keywords internal
@@ -129,36 +129,37 @@ NULL
 
 #' @name DomainCount::pattern2id
 #' @title DomainCount::pattern2id
-#' Convert (vector) response pattern to representative ID
+#' @description Convert (vector) response pattern to representative ID
 #' See id2pattern(.) for more details
 #' @keywords internal
 NULL
 
 #' @name DomainCount::get_ltheta
 #' @title DomainCount::get_ltheta
-#' Look up the log-probability of seeing this response pattern in this domain
+#' @description Look up the log-probability of seeing this response pattern in this domain
 #' @param xobs vector of the FULL response pattern (not just the items in this domain)
 #' @keywords internal
 NULL
 
 #' @name DomainCount::id2pattern
 #' @title DomainCount::id2pattern
-#' Convert pattern ID to original response pattern
+#' @description Convert pattern ID to original response pattern
 #' See utilities ::id2pattern(.) for more details
 #' Differs from ::id2pattern(.) in that pattern2id_map is a cumulative compared to mapvec
+#' Assumes items are in same order as pattern2id_map;
 #' @keywords internal
 NULL
 
 #' @name DomainCount::countReset
 #' @title DomainCount::countReset
-#' Set counts to zero. 
+#' @description Set counts to zero. 
 #' Counts measure the number of times each pattern appears in the data.
 #' @keywords internal
 NULL
 
 #' @name DomainCount::countAdd
 #' @title DomainCount::countAdd
-#' Add one observation to this domain's counts.
+#' @description Add one observation to this domain's counts.
 #' Counts measure the number of times each pattern appears in the data.
 #' @param xobs One FULL response pattern (not just the items in this domain)
 #' @keywords internal
@@ -166,7 +167,7 @@ NULL
 
 #' @name DomainCount::list2domains
 #' @title DomainCount::list2domains
-#' Convert of list of list of r::domains to vector of map of cpp:domains
+#' @description Convert of list of list of r::domains to vector of map of cpp:domains
 #' Used to convert R domains to CPP domains
 #' @param list_list_domains
 #' The outermost list has one slot for each class
@@ -178,33 +179,33 @@ NULL
 
 #' @name DomainCount::copy
 #' @title DomainCount::copy
-#' Creates a deep copy of this domain
+#' @description Creates a deep copy of this domain
 #' @keywords internal
 NULL
 
 #' @name DomainCount::print
 #' @title DomainCount::print
-#' Prints this domain (used mainly for troubleshooting purposes)
+#' @description Prints this domain (used mainly for troubleshooting purposes)
 #' @keywords internal
 NULL
 
 #' @name BayesParameter::set_initial
 #' @title BayesParameter::set_initial
-#' Set all BayesParameter properties
+#' @description Set all BayesParameter properties
 #' See getStart_bayes_params(.) in dependentLCM.r for more details
 #' @keywords internal
 NULL
 
 #' @name BayesParameter::set_initial
 #' @title BayesParameter::set_initial
-#' Set all BayesParameter properties
+#' @description Set all BayesParameter properties
 #' As other set_initial(.) but supports lists for R compatability
 #' @keywords internal
 NULL
 
 #' @name BayesParameter::class_lprob
 #' @title BayesParameter::class_lprob
-#' What is the (log) probability that this response pattern was generated by this class?
+#' @description What is the (log) probability that this response pattern was generated by this class?
 #' @param xobs The response pattern we are investigation.
 #' @param xclass The class this observation is (assumed to be) in
 #' @keywords internal
@@ -212,7 +213,7 @@ NULL
 
 #' @name BayesParameter::class_lprob
 #' @title BayesParameter::class_lprob
-#' What is the (log) probability that this response pattern was generated by EACH class?
+#' @description What is the (log) probability that this response pattern was generated by EACH class?
 #' Assumes all parameters are fixed/known.
 #' @param xobs The response pattern we are investigation.
 #' @keywords internal
@@ -220,7 +221,7 @@ NULL
 
 #' @name BayesParameter::set_class_loglik
 #' @title BayesParameter::set_class_loglik
-#' For each observation what is the (log) probability of seeing its response pattern under EACH class?
+#' @description For each observation what is the (log) probability of seeing its response pattern under EACH class?
 #' Updates corresponding property in BayesParameter instance.
 #' Assumes all parameters are fixed/known.
 #' @param x Matrix of responses
@@ -230,19 +231,19 @@ NULL
 
 #' @name BayesParameter::domain_resetCounts
 #' @title BayesParameter::domain_resetCounts
-#' Reset the counts of all domains in given map
+#' @description Reset the counts of all domains in given map
 #' @keywords internal
 NULL
 
 #' @name BayesParameter::domain_resetCounts
 #' @title BayesParameter::domain_resetCounts
-#' Reset the counts in all of BayesParameter's domains
+#' @description Reset the counts in all of BayesParameter's domains
 #' @keywords internal
 NULL
 
 #' @name BayesParameter::domain_addCount
 #' @title BayesParameter::domain_addCount
-#' Add given observation to all the counts in all provided domains
+#' @description Add given observation to all the counts in all provided domains
 #' @param xobs the response pattern we are counting
 #' @param xlcass The class of this observation. Needed because different domains correspond to different classes.
 #' @param domains map of domains we wish to add this pattern to
@@ -251,7 +252,7 @@ NULL
 
 #' @name BayesParameter::domain_addCount
 #' @title BayesParameter::domain_addCount
-#' Add given observation to all the counts in all of this BayesParameter's domains
+#' @description Add given observation to all the counts in all of this BayesParameter's domains
 #' @param xobs the response pattern we are counting
 #' @param xlcass The class of this observation. Needed because different domains correspond to different classes.
 #' @keywords internal
@@ -259,7 +260,7 @@ NULL
 
 #' @name BayesParameter::domain_addCounts
 #' @title BayesParameter::domain_addCounts
-#' Add given observations to counts in all of this given domains
+#' @description Add given observations to counts in all of this given domains
 #' @param x Matrix of the response patterns
 #' @param reset_counts True if we should set all counts to zero before counting x.
 #' @param domains Map of domains holding counts
@@ -269,7 +270,7 @@ NULL
 
 #' @name BayesParameter::domain_addCounts
 #' @title BayesParameter::domain_addCounts
-#' Add given observations to counts in all domains in BayesParameter
+#' @description Add given observations to counts in all domains in BayesParameter
 #' @param x Matrix of the response patterns
 #' @param reset_counts True if we should set all counts to zero before counting x.
 #' @keywords internal
@@ -277,14 +278,14 @@ NULL
 
 #' @name BayesParameter::item2domainid_calc
 #' @title BayesParameter::item2domainid_calc
-#' For each item find the id for the domain it belongs to.
+#' @description For each item find the id for the domain it belongs to.
 #' If there are multiple class2domain, then multiple columns are provided (one for each)
 #' @keywords internal
 NULL
 
 #' @name BayesParameter::domain_getloglik_x
 #' @title BayesParameter::domain_getloglik_x
-#' For a given domain, we want to know the probability of observing a series of responses.
+#' @description For a given domain, we want to know the probability of observing a series of responses.
 #' We calculate this probability conditioning on parameters, but marginalizing over theta (and convert to log scale)
 #' @param pattern_counts The counts for each pattern in this domain (vector).
 #' @param theta_alpha Hyperparameter describing the Dirichlet concentration parameters for the theta prior.
@@ -293,44 +294,44 @@ NULL
 
 #' @name BayesParameter::domain_getlik_domain
 #' @title BayesParameter::domain_getlik_domain
-#' Before observing data/other-parameters, how likely are we to put items into these particular domains?
+#' @description Before observing data/other-parameters, how likely are we to put items into these particular domains?
 #' Some choices of domains may be more likely than other based on prior.
 #' @keywords internal
 NULL
 
 #' @name BayesParameter::domain_id_new
 #' @title BayesParameter::domain_id_new
-#' Find an empty domain. Return that domain's ID
+#' @description Find an empty domain. Return that domain's ID
 #' @keywords internal
 NULL
 
 #' @name BayesParameter::class_pi_args
 #' @title BayesParameter::class_pi_args
-#' Calculate the dirichlet parameters for the posterior of pi (pi used for classes)
+#' @description Calculate the dirichlet parameters for the posterior of pi (pi used for classes)
 #' @keywords internal
 NULL
 
 #' @name BayesParameter::class_pi_next
 #' @title BayesParameter::class_pi_next
-#' Do gibbs sampling to generate pi (pi used for classes)
+#' @description Do gibbs sampling to generate pi (pi used for classes)
 #' @keywords internal
 NULL
 
 #' @name BayesParameter::classes_next
 #' @title BayesParameter::classes_next
-#' Do gibbs sampling to calculate the class of each observation
+#' @description Do gibbs sampling to calculate the class of each observation
 #' @keywords internal
 NULL
 
 #' @name BayesParameter::thetas_next
 #' @title BayesParameter::thetas_next
-#' Do gibbs sampling to calculate thetas for each domain
+#' @description Do gibbs sampling to calculate thetas for each domain
 #' @keywords internal
 NULL
 
 #' @name BayesParameter::domain_proposal
 #' @title BayesParameter::domain_proposal
-#' Propose new domains in metropolis algorithm
+#' @description Propose new domains in metropolis algorithm
 #' Essentially we choose two domains at random and move items between them (oversimplification).
 #' We take a nonempty domain. 1) With some probability we move one of its items to an empty domain. Otherwise we choose a second nonempty domain. 2) With some probability we swap a pair of items between the two nonempty domains. 3) Otherwise we move one item from the first domain into the second.
 #' There are some restrictions including 1) We do not swap items if both domains are singletons (this would cause no change up to relabeling), and enforce maximum number of items per domain given in hparams.
@@ -339,33 +340,33 @@ NULL
 
 #' @name BayesParameter::domain_accept
 #' @title BayesParameter::domain_accept
-#' In metroplis algorithm when choosing to update domains.
+#' @description In metroplis algorithm when choosing to update domains.
 #' We examine the proposal and decide whether to accept it.
 #' @keywords internal
 NULL
 
 #' @name BayesParameter::domain_next
 #' @title BayesParameter::domain_next
-#' We use a metropolis algorithm to try to update domains
+#' @description We use a metropolis algorithm to try to update domains
 #' In essence we choose one item at random and either move it to another domain or swap it with an item from another domain
 #' @keywords internal
 NULL
 
 #' @name BayesParameter::domains_next
 #' @title BayesParameter::domains_next
-#' Use metropolis algorithm to update domains. Repeat # of times set by hparams.
+#' @description Use metropolis algorithm to update domains. Repeat # of times set by hparams.
 #' @keywords internal
 NULL
 
 #' @name Archive::set_initial
 #' @title Archive::set_initial
-#' Initializes the archive (namely reserving memory)
+#' @description Initializes the archive (namely reserving memory)
 #' @keywords internal
 NULL
 
 #' @name Archive::domains2mat
 #' @title Archive::domains2mat
-#' Helper function for Archive::add
+#' @description Helper function for Archive::add
 #' Used to convert the domains from map form to matrix form for storage
 #' Although we could make a deep copy of the domain map each time, this would be unproductive because we need it in matrix form later for R. Therfore we convert to matrix.
 #' @keywords internal
@@ -373,31 +374,31 @@ NULL
 
 #' @name Archive::add
 #' @title Archive::add
-#' Add latest bayes parameters to the archive
+#' @description Add latest bayes parameters to the archive
 #' @keywords internal
 NULL
 
 #' @name BayesContainer::set_initial
 #' @title BayesContainer::set_initial
-#' Sets all properties of BayesContainer
+#' @description Sets all properties of BayesContainer
 #' @keywords internal
 NULL
 
 #' @name BayesContainer::run
 #' @title BayesContainer::run
-#' Does #nitr MCMC steps on all bayes parameters
+#' @description Does #nitr MCMC steps on all bayes parameters
 #' @keywords internal
 NULL
 
 #' @name BayesContainer::run_init
 #' @title BayesContainer::run_init
-#' First initializes, and then does #nitr MCMC steps on all bayes parameters
+#' @description First initializes, and then does #nitr MCMC steps on all bayes parameters
 #' @keywords internal
 NULL
 
 #' @name dependentLCM_fit_cpp
 #' @title dependentLCM_fit_cpp
-#' Does MCMC simulations for dependent LCM model
+#' @description Does MCMC simulations for dependent LCM model
 #' For more details see dependentLCM_fit in dependentLCM.r
 dependentLCM_fit_cpp <- function(x_in, hparams_list, params_list, nitr) {
     .Call(`_dependentLCM_dependentLCM_fit_cpp`, x_in, hparams_list, params_list, nitr)
@@ -405,7 +406,7 @@ dependentLCM_fit_cpp <- function(x_in, hparams_list, params_list, nitr) {
 
 #' @name id2pattern
 #' @title id2pattern
-#' Convert pattern id back into its original pattern vector. Then repeat each id in xpattern.
+#' @description Convert pattern id back into its original pattern vector. Then repeat each id in xpattern.
 #' PatternID = Sum PatternVec[i] * [product^(i-1) mapvec[j]]
 #' @param xpattern Vector of ids each representing a vector
 #' @param mapvec Vector for converting id to/from vector. 

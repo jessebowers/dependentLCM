@@ -2,16 +2,13 @@
 % Please edit documentation in R/RcppExports.R
 \name{BayesParameter::domain_getloglik_x}
 \alias{BayesParameter::domain_getloglik_x}
-\title{BayesParameter::domain_getloglik_x
-For a given domain, we want to know the probability of observing a series of responses.
-We calculate this probability conditioning on parameters, but marginalizing over theta (and convert to log scale)}
+\title{BayesParameter::domain_getloglik_x}
 \arguments{
 \item{pattern_counts}{The counts for each pattern in this domain (vector).}
 
 \item{theta_alpha}{Hyperparameter describing the Dirichlet concentration parameters for the theta prior.}
 }
 \description{
-BayesParameter::domain_getloglik_x
 For a given domain, we want to know the probability of observing a series of responses.
 We calculate this probability conditioning on parameters, but marginalizing over theta (and convert to log scale)
 }

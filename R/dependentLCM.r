@@ -3,17 +3,12 @@
 # library(abind)
 # library(dplyr)
 
-#' Insert in place
-#' Items ids
-#' identifiability (and allow skipping of this)
-
-# TK export on scale starting 1
-
 #' dependentLCM: Dependent Latent Class Model
 #'
 #' @docType package
 #' @name dependentLCM
 #' @useDynLib dependentLCM, .registration = TRUE
+#' @importFrom dplyr "%>%"
 NULL
 
 NCLASS = 2

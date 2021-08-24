@@ -2,10 +2,8 @@
 % Please edit documentation in R/RcppExports.R
 \name{BayesContainer::set_initial}
 \alias{BayesContainer::set_initial}
-\title{BayesContainer::set_initial
-Sets all properties of BayesContainer}
+\title{BayesContainer::set_initial}
 \description{
-BayesContainer::set_initial
 Sets all properties of BayesContainer
 }
 \keyword{internal}

@@ -2,8 +2,7 @@
 % Please edit documentation in R/RcppExports.R
 \name{BayesParameter::domain_addCount}
 \alias{BayesParameter::domain_addCount}
-\title{BayesParameter::domain_addCount
-Add given observation to all the counts in all provided domains}
+\title{BayesParameter::domain_addCount}
 \arguments{
 \item{domains}{map of domains we wish to add this pattern to}
 
@@ -12,10 +11,8 @@ Add given observation to all the counts in all provided domains}
 \item{xlcass}{The class of this observation. Needed because different domains correspond to different classes.}
 }
 \description{
-BayesParameter::domain_addCount
 Add given observation to all the counts in all provided domains
 
-BayesParameter::domain_addCount
 Add given observation to all the counts in all of this BayesParameter's domains
 }
 \keyword{internal}

@@ -2,10 +2,8 @@
 % Please edit documentation in R/RcppExports.R
 \name{BayesParameter::classes_next}
 \alias{BayesParameter::classes_next}
-\title{BayesParameter::classes_next
-Do gibbs sampling to calculate the class of each observation}
+\title{BayesParameter::classes_next}
 \description{
-BayesParameter::classes_next
 Do gibbs sampling to calculate the class of each observation
 }
 \keyword{internal}

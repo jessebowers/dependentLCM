@@ -2,11 +2,8 @@
 % Please edit documentation in R/RcppExports.R
 \name{DomainCount::pattern2id}
 \alias{DomainCount::pattern2id}
-\title{DomainCount::pattern2id
-Convert (vector) response pattern to representative ID
-See id2pattern(.) for more details}
+\title{DomainCount::pattern2id}
 \description{
-DomainCount::pattern2id
 Convert (vector) response pattern to representative ID
 See id2pattern(.) for more details
 }

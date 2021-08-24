@@ -16,6 +16,9 @@ mapvec values of 0 produce a PatternVec values of -1 (consider -1 to be NA).}
 \description{
 Convert pattern id to pattern vector
 See other instance of id2pattern(.) for details
+
+Convert pattern id back into its original pattern vector. Then repeat each id in xpattern.
+PatternID = Sum PatternVec[i] * [product^(i-1) mapvec[j]]
 }
 \examples{
 Suppose we have a vector of length 4 which we wish to conver to an ID (this function reverses this process).

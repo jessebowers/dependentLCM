@@ -2,11 +2,8 @@
 % Please edit documentation in R/RcppExports.R
 \name{DomainCount::countReset}
 \alias{DomainCount::countReset}
-\title{DomainCount::countReset
-Set counts to zero. 
-Counts measure the number of times each pattern appears in the data.}
+\title{DomainCount::countReset}
 \description{
-DomainCount::countReset
 Set counts to zero. 
 Counts measure the number of times each pattern appears in the data.
 }

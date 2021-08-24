@@ -2,10 +2,8 @@
 % Please edit documentation in R/RcppExports.R
 \name{Archive::set_initial}
 \alias{Archive::set_initial}
-\title{Archive::set_initial
-Initializes the archive (namely reserving memory)}
+\title{Archive::set_initial}
 \description{
-Archive::set_initial
 Initializes the archive (namely reserving memory)
 }
 \keyword{internal}

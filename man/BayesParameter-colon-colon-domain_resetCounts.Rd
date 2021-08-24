@@ -2,13 +2,10 @@
 % Please edit documentation in R/RcppExports.R
 \name{BayesParameter::domain_resetCounts}
 \alias{BayesParameter::domain_resetCounts}
-\title{BayesParameter::domain_resetCounts
-Reset the counts of all domains in given map}
+\title{BayesParameter::domain_resetCounts}
 \description{
-BayesParameter::domain_resetCounts
 Reset the counts of all domains in given map
 
-BayesParameter::domain_resetCounts
 Reset the counts in all of BayesParameter's domains
 }
 \keyword{internal}

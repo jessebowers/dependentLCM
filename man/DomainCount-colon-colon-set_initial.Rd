@@ -2,8 +2,7 @@
 % Please edit documentation in R/RcppExports.R
 \name{DomainCount::set_initial}
 \alias{DomainCount::set_initial}
-\title{DomainCount::set_initial
-Set all (non-count) values for this domain}
+\title{DomainCount::set_initial}
 \arguments{
 \item{items_in}{Which items are in this domain?}
 
@@ -16,10 +15,8 @@ Set all (non-count) values for this domain}
 \item{hparams}{hyperparmeters}
 }
 \description{
-DomainCount::set_initial
 Set all (non-count) values for this domain
 
-DomainCount::set_initial
 As other set_initial() but with list compatibilities for R
 }
 \keyword{internal}

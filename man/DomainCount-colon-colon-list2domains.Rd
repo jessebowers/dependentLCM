@@ -2,9 +2,7 @@
 % Please edit documentation in R/RcppExports.R
 \name{DomainCount::list2domains}
 \alias{DomainCount::list2domains}
-\title{DomainCount::list2domains
-Convert of list of list of r::domains to vector of map of cpp:domains
-Used to convert R domains to CPP domains}
+\title{DomainCount::list2domains}
 \arguments{
 \item{list_list_domains}{The outermost list has one slot for each class
 Each class slot is a list containing individual domains (names/ids are ignored).
@@ -13,7 +11,6 @@ The lowest level is a list containing information about that individual domain}
 \item{hparams}{hyperparameters}
 }
 \description{
-DomainCount::list2domains
 Convert of list of list of r::domains to vector of map of cpp:domains
 Used to convert R domains to CPP domains
 }
