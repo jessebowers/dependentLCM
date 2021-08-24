@@ -4,17 +4,16 @@
 /*
  * OPEN ITEMS:
  * Enforce identifiability
- * Look at vector.push and note that this always creates a whole new vector which is slow. Though resizing upfront means only one copy
- * confirm proposal probability especially when both domains are of size 1 in BayesParameter::domain_proposal(.)
+ * confirm proposal probability especially when a) both domains are of size 1 in BayesParameter::domain_proposal(.), b) there is a nontrivial max items per domain
  */
 
 /*
  * FUTURE ENHANCEMENTS:
  * Allow warmup without archiving
  * Incorporate optional checks/consistency checks eg domain size, nclasses, etc
- * Look at vector.push and note that this always creates a whole new vector which is slow. Though resizing upfront means only one copy
  * post-hoc handle label switching
  * Move counts from BayesParameter::domain_accept(.) to BayesParameter::domain_proposal(.) for simplicity / more clearly defined roles
+ * Switch DomainCount.items to std::list<int> to improve speed
  */
 
 
@@ -222,6 +221,25 @@ Rcpp::IntegerVector id2pattern(int xpattern, const Rcpp::IntegerVector& mapvec) 
   return unmapped_vec;
 }
 
+
+//' @name insertSorted
+//' @title insertSorted
+//' @description Modifies x. Assumes x is sorted. Add new_value to x in correct position based on sort
+//' @param x Sorted vector of numbers
+//' @param new_value new number we wish to insert into x
+//' @keywords internal
+void insertSorted(Rcpp::IntegerVector& x, int new_value) {
+  if (TROUBLESHOOT==1){Rcpp::Rcout << "insertSorted" << "\n";}
+  int n = x.size();
+  int i;
+  for (i = 0; i < n; i++) {
+    if (new_value >= x(i)) {
+      break;
+    }
+  }
+  x.insert(i, new_value);
+  return;
+}
 
 /*****************************************************
  ****** Hyperparameters
@@ -1075,11 +1093,11 @@ domainProposalOut BayesParameter::domain_proposal(int class2domain_id, Hyperpara
   Rcpp::IntegerVector items_new2 = Rcpp::clone(out.domain_old2->items);
   if (out.item1_old > -1) {
     items_new1 = items_new1[items_new1 != out.item1_old];
-    items_new2.push_back(out.item1_old);  //tk enforce ordering
+    insertSorted(items_new2, out.item1_old);
   }
   if (out.item2_old > -1) {
     items_new2 = items_new2[items_new2 != out.item2_old];
-    items_new1.push_back(out.item2_old);  //tk enforce ordering
+    insertSorted(items_new1, out.item2_old);
   }
   // Save as domains
   if (items_new1.size() > 0) {
