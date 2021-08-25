@@ -312,13 +312,18 @@ getStart_domains <- function(mat, classes, hparams) {
 #' @param all_params list. List of parameters and hyperparameters
 #' @keywords internal
 check_params <- function(all_params) {
-  check_out = FALSE
+  is_problem = FALSE
 
   if (all_params$hparams$nclass != length(all_params$hparams$class2domain)) {
     warning("nclass~class2domain mismatch")
-    check_out = TRUE
+    is_problem = TRUE
   }
 
+  if (all_params$hparams$ndomains <= all_params$hparams$nitems) {
+    warning("Must have more domains than items") # Fewer domains theoretically ok, but not implemented in code
+    is_problem = TRUE
+  }
+  
   names(all_params$bayesparams)
 
   return(check_out)
