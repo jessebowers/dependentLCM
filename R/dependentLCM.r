@@ -17,7 +17,7 @@ DOMAIN_ALPHA_RATIO = 2
 THETA_ALPHA = 2
 DOMAIN_PROPOSAL_EMPTY = 0.3
 DOMAIN_PROPOSAL_SWAP = 0.3
-STEPS_ACTIVE = c("thetas"=TRUE, "domains"=TRUE, "thetas"=TRUE, "class_pi"=TRUE, "classes"=TRUE)
+STEPS_ACTIVE = c("thetas"=TRUE, "domains"=TRUE, "class_pi"=TRUE, "classes"=TRUE, "identifiable"=TRUE)
 
 #' Fits a bayesian dependent LCM model
 #' @param nitr integer. Number of iterations to run the bayes MCMC
@@ -151,7 +151,9 @@ dependentLCM_fit <- function(
 #' @param theta_alpha numeric. Bayes hyperparemter giving the prior for theta/probabilties.
 #' @param domain_proposal_empty numeric. Sets how often the domain metropolis proposal function pairs a nonempty domain with an empty domain.
 #' @param domain_proposal_swap numeric. Sets how often the domain metropolis proposal function swaps items between domains.
-#' @param domain_nproposals. Sets how many times the domain metropolis propsal function is called each iteration
+#' @param domain_nproposals Sets how many times the domain metropolis propsal function is called each iteration
+#' @param steps_active Named boolean vector of what actions to take during mcmc. If mcmc is skipped then initial values are kept as fixed.
+#' thetas=TRUE to do gibbs on response probabilities, domains=TRUE to do metropolis on domains, class_pi=TRUE to do gibbs on class prior, classes=TRUE to do gibbs on class membership, identifiable=TRUE to check generic identifiability conditions of domains
 #' @keywords internal
 getStart_hparams <- function(
   df=NULL, nitems=NULL
@@ -192,12 +194,18 @@ getStart_hparams <- function(
     domain_maxitems <- nitems # No restrictions
   }
 
+  # domain_nproposals
   if (is.null(domain_nproposals)) {
     domain_nproposals <- nitems
   }
+  
+  
+  # steps_active (fill in missing values)
+  steps_active_fn = STEPS_ACTIVE
+  steps_active_fn[names(steps_active)] = steps_active
 
   return(list(
-    nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_alpha=domain_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, nitems = nitems, item_nlevels = item_nlevels, nclass2domain = nclass2domain, domain_proposal_empty=domain_proposal_empty, domain_proposal_swap=domain_proposal_swap, domain_nproposals=domain_nproposals, steps_active = steps_active
+    nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_alpha=domain_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, nitems = nitems, item_nlevels = item_nlevels, nclass2domain = nclass2domain, domain_proposal_empty=domain_proposal_empty, domain_proposal_swap=domain_proposal_swap, domain_nproposals=domain_nproposals, steps_active = steps_active_fn
   ))
 }
 
@@ -324,9 +332,12 @@ check_params <- function(all_params) {
     is_problem = TRUE
   }
   
-  names(all_params$bayesparams)
-
-  return(check_out)
+  if (!setequal(names(all_params$hparams$steps_active), names(STEPS_ACTIVE))) {
+    warning("steps_active invalid")
+    is_problem = TRUE
+  }
+  
+  return(is_problem)
 }
 
 

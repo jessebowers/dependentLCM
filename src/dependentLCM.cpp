@@ -3,7 +3,6 @@
 
 /*
  * OPEN ITEMS:
- * Enforce identifiability
  * confirm proposal probability especially when a) both domains are of size 1 in BayesParameter::domain_proposal(.), b) there is a nontrivial max items per domain
  */
 
@@ -14,7 +13,7 @@
  * post-hoc handle label switching
  * Move counts from BayesParameter::domain_accept(.) to BayesParameter::domain_proposal(.) for simplicity / more clearly defined roles
  * Switch DomainCount.items to std::list<int> to improve speed
- * Convert maxiter to hparams attribute in BayesParameter::get_superdomains(int maxitr=100)
+ * Convert maxiter to hparams attribute in adjmat_to_equal(Rcpp::IntegerMatrix adjmat, int maxitr = 100)
  */
 
 
@@ -22,7 +21,7 @@
  ****** UTILITIES
  *****************************************************/
 
-int TROUBLESHOOT = 0;
+int TROUBLESHOOT = 0; // global constant. TROUBLESHOOT=1 to print troubleshooting information
 
 //' @name colMax
 //' @title colMax
@@ -242,6 +241,17 @@ void insertSorted(Rcpp::IntegerVector& x, int new_value) {
   return;
 }
 
+//' @name mmult
+//' @title mmult
+//' @description Multiply two matrixes
+//' @keywords internal
+Rcpp::IntegerMatrix mmult(Rcpp::IntegerMatrix& m1, Rcpp::IntegerMatrix& m2) {
+  if (TROUBLESHOOT==1){Rcpp::Rcout << "mmult" << "\n";}
+  Rcpp::Environment base("package:base");
+  Rcpp::Function mat_Mult = base["%*%"]; // Steals from R::%*%.
+  return(mat_Mult(m1, m2));
+}
+
 //' @name equal_to_adjmat
 //' @title equal_to_adjmat
 //' @description Convert equivalence classes into a (graph theory style) adjacency matrix.
@@ -250,6 +260,7 @@ void insertSorted(Rcpp::IntegerVector& x, int new_value) {
 //' Each index represents a separate item and indexes with the same value are in the same equivalence class.
 //' @keywords internal
 Rcpp::IntegerMatrix equal_to_adjmat(Rcpp::IntegerVector eqclass_vec) {
+  if (TROUBLESHOOT==1){Rcpp::Rcout << "equal_to_adjmat" << "\n";}
   int n = eqclass_vec.size();
   Rcpp::IntegerMatrix adjmat = Rcpp::IntegerMatrix(n, n);
   
@@ -261,15 +272,81 @@ Rcpp::IntegerMatrix equal_to_adjmat(Rcpp::IntegerVector eqclass_vec) {
   return  adjmat; 
 }
 
-//' @name mmult
-//' @title mmult
-//' @description Multiply two matrixes
+//' @name helper_compare_adjmat
+//' @title helper_compare_adjmat
+//' @description Helper function. Returns true if (m1>0) == (m2>0) in all cells.
+//' In other words returns true if both adjacency matrixes have the same connections (ignoring # of possible routes)
 //' @keywords internal
-Rcpp::IntegerMatrix mmult(Rcpp::IntegerMatrix& m1, Rcpp::IntegerMatrix& m2) {
-  Rcpp::Environment base("package:base");
-  Rcpp::Function mat_Mult = base["%*%"]; // Steals from R::%*%.
-  return(mat_Mult(m1, m2));
+bool helper_compare_adjmat(Rcpp::IntegerMatrix& m1, Rcpp::IntegerMatrix& m2) {
+  if (TROUBLESHOOT==1){Rcpp::Rcout << "helper_compare_adjmat" << "\n";}
+  int nrow = m1.nrow(); // m2 assumed to be of same size
+  int ncol = m1.ncol(); // m2 assumed to be of same size
+  
+  int is_same = true;
+  for (int irow=0; irow < nrow; irow++) {
+    for (int icol=0; icol < ncol; icol++) {
+      if ((m1(irow, icol) > 0) != (m2(irow, icol) > 0)) {
+        is_same = false;
+        break;
+      }
+    }
+  }
+  
+  return is_same;
 }
+
+//' @name adjmat_to_equal
+//' @title adjmat_to_equal
+//' @description Take a (graph theory) adjacency matrix and build equivalence classes.
+//' Two nodes are in the same class if there is a path between them.
+//' Returns vector. Each position represents a node and nodes with the same value are part of the same equivalence class.
+//' Implicitally assumes that edges are bidirectional (a path in one direction leads to a path in the other)
+//' @param adjmat Matrix identifying which nodes are neighbors (are linked).
+//' @param maxiter Integer giving the maximum number of attempts to connect two nodes.
+//' @keywords internal
+Rcpp::IntegerVector adjmat_to_equal(Rcpp::IntegerMatrix adjmat, int maxitr = 100) {
+  if (TROUBLESHOOT==1){Rcpp::Rcout << "adjmat_to_equal" << "\n";}
+  
+  int nitems = adjmat.nrow();
+  
+  // Find all linked nodes
+  Rcpp::IntegerMatrix adjmat_new;
+  for (int i=0; i < maxitr; i++) { // max just to prevent infinite loops
+    adjmat_new = mmult(adjmat, adjmat);
+    if (helper_compare_adjmat(adjmat, adjmat_new)==true) {
+      // no changes
+      break;
+    }
+    adjmat = adjmat_new;
+  }
+  
+  // Convert to equivalence class vector
+  Rcpp::IntegerVector equal_classes = Rcpp::IntegerVector(nitems);
+  for (int iitem = 0; iitem < nitems; iitem++) {
+    for (int jitem = 0; jitem < nitems; jitem++) {
+      if (adjmat(iitem, jitem) > 0) {
+        equal_classes(iitem) = jitem; // Should be same across equivalence class
+        break;
+      }
+    }
+  }
+  
+  return equal_classes;
+}
+
+//' @name product
+//' @title product
+//' @description Multiply all elements of x together
+//' @keywords internal
+int product(Rcpp::IntegerVector x) {
+  int n = x.size();
+  int agg = 1;
+  for (int i=0; i<n; i++) {
+    agg *= x[i];
+  }
+  return agg;
+}
+
 
 /*****************************************************
  ****** Hyperparameters
@@ -617,7 +694,7 @@ void DomainCount::print() {
   Rcpp::Rcout << "domain.counts:" << counts << "\n";
 }
 
-// Example blank domain. CONSTANT - DO NOT MODIFY!
+// Example blank domain. GLOBAL CONSTANT - DO NOT MODIFY!
 DomainCount BLANK_DOMAIN;
 
 
@@ -689,7 +766,8 @@ public:
   int nitems_calc() {return domains[0].begin()->second.nitems_calc();};
   Rcpp::IntegerMatrix item2domainid_calc(Hyperparameter& hparams);
   int domain_id_new(int class2domain_id, Hyperparameter& hparams);
-  Rcpp::IntegerVector get_superdomains(int maxitr=100);
+  Rcpp::IntegerVector get_superdomains();
+  bool is_identifiable(Hyperparameter hparams);
   
 public:
   Rcpp::NumericVector class_pi_args(Hyperparameter& hparams);
@@ -938,34 +1016,12 @@ float BayesParameter::domain_getlik_domain(Hyperparameter& hparams) {
   return 1; // Assume flat prior
 }
 
-//' @name helper_compare_adjmat
-//' @title helper_compare_adjmat
-//' @description Helper function. Returns true if (m1>0) == (m2>0) in all cells.
-//' In other words returns true if both adjacency matrixes have the same connections (ignoring # of possible routes)
-//' @keywords internal
-bool helper_compare_adjmat(Rcpp::IntegerMatrix& m1, Rcpp::IntegerMatrix& m2) {
-  int nrow = m1.nrow(); // m2 assumed to be of same size
-  int ncol = m1.ncol(); // m2 assumed to be of same size
-  
-  int is_same = true;
-  for (int irow=0; irow < nrow; irow++) {
-    for (int icol=0; icol < ncol; icol++) {
-      if ((m1(irow, icol) > 0) != (m2(irow, icol) > 0)) {
-        is_same = false;
-        break;
-      }
-    }
-  }
-  
-  return is_same;
-}
-
 //' @name BayesParameter::get_superdomains
 //' @title BayesParameter::get_superdomains
 //' @description Merge overlapping domains from different class2domainid
 //' @keywords internal
-Rcpp::IntegerVector BayesParameter::get_superdomains(int maxitr) {
-  
+Rcpp::IntegerVector BayesParameter::get_superdomains() {
+  if (TROUBLESHOOT==1){Rcpp::Rcout << "get_superdomains" << "\n";}
   int nitems = item2domainid.nrow();
   int nclass2domain = item2domainid.ncol();
   int i;
@@ -975,34 +1031,105 @@ Rcpp::IntegerVector BayesParameter::get_superdomains(int maxitr) {
     return Rcpp::IntegerVector(item2domainid.column(0));
   }
   
+  // Find connections across class2domain
   Rcpp::IntegerMatrix adjmat = Rcpp::IntegerMatrix(nitems, nitems);
   for (i=0; i < nclass2domain; i++) {
     adjmat += equal_to_adjmat(item2domainid.column(i));
     // Can we make faster by ignoring singleton domains?
   }
   
-  Rcpp::IntegerMatrix adjmat_new;
-  for (i=0; i < maxitr; i++) { // max just to prevent infinite loops
-    adjmat_new = mmult(adjmat, adjmat);
-    if (helper_compare_adjmat(adjmat, adjmat_new)==true) {
-      // no changes
-      break;
-    }
-    adjmat = adjmat_new;
-  }
-  
-  // Convert to equivalence class vector
-  Rcpp::IntegerVector item2superdomainid = Rcpp::IntegerVector(nitems);
-  for (int iitem = 0; iitem < nitems; iitem++) {
-    for (int jitem = 0; jitem < nitems; jitem++) {
-      if (adjmat(iitem, jitem) > 0) {
-        item2superdomainid(iitem) = jitem; // Should be same across equivalence class
-        break;
-      }
-    }
-  }
+  // Merge linked nodes
+  Rcpp::IntegerVector item2superdomainid = adjmat_to_equal(adjmat);
   
   return item2superdomainid;
+}
+
+//' @name BayesParameter::is_identifiable
+//' @title BayesParameter::is_identifiable
+//' @description Check if choice of domains is generically identifiable
+//' Uses greedy algorithm. May fail in some cases, but is deterministic (if bad then consistently conservative for that choice of domains)
+//' See Allman paper (DOI:10.1214/09-AOS689 Theorem 4.) for criteria used: min(patterns1,nclass)+min(patterns2,nclass)+min(patterns3,nclass) > 2*nclass+2
+//' @keywords internal
+bool BayesParameter::is_identifiable(Hyperparameter hparams) {
+  if (TROUBLESHOOT==1){Rcpp::Rcout << "is_identifiable" << "\n";}
+  
+  if (hparams.steps_active["identifiable"]==false) {
+    // checking identifiability turned off
+    return true;
+  }
+  
+  Rcpp::IntegerVector item2superdomainid = get_superdomains(); // Identify domains which must be grouped together
+  
+  int i;
+  int domain_id;
+  int nitems = item2superdomainid.size();
+  int goal = 2*hparams.nclass + 2;
+  
+  // count patterns
+  std::map<int, int> pattern_counts_map;
+  for (i=0; i < nitems; i++) {
+    domain_id = item2superdomainid(i);
+    if (pattern_counts_map.count(domain_id)==0) {
+      pattern_counts_map[domain_id] = product(hparams.item_nlevels[item2superdomainid==domain_id]);
+      pattern_counts_map[domain_id] = minimum(pattern_counts_map[domain_id], hparams.nclass); // Beyond hparams.nclass not relevent. Don't necessarily need to do this
+    }
+  }
+  
+  // convert map to vector
+  int ndomains = pattern_counts_map.size();
+  Rcpp::IntegerVector pattern_counts = Rcpp::IntegerVector(ndomains);
+  std::map<int,int>::iterator map_itr;
+  std::map<int,int>::const_iterator map_end = pattern_counts_map.end();
+  i = 0;
+  for (map_itr = pattern_counts_map.begin(); map_itr != map_end; map_itr++) {
+    pattern_counts[i] = map_itr->second; // Add number of patterns
+    i += 1;
+  }
+  pattern_counts.sort(true); // descending
+  
+  // greedy search
+  Rcpp::IntegerVector tripart = Rcpp::IntegerVector(3, 0);
+  int best_index;
+  int best_value;
+  int best_diff;
+  int new_value;
+  int new_diff;
+  int tripart_sum = 0;
+  for (i=0; i<ndomains; i++) {
+    
+    // Find best group for i'th domain
+    best_index = 0;
+    best_value = 0;
+    best_diff = 0;
+    for (int j=0; j<3; j++) {
+      
+      if (tripart[j] > 0) {
+        new_value = tripart[j] *  pattern_counts[i];
+      } else {
+        new_value = 0 + pattern_counts[i];
+      }
+      new_value = minimum(new_value, hparams.nclass);
+      new_diff = new_value - tripart[j];
+      
+      if (new_diff > best_diff) {
+        best_index = j;
+        best_value = new_value;
+        best_diff = new_diff;
+      }
+      
+    }
+    
+    // Add to chosen group
+    tripart[best_index] = best_value;
+    tripart_sum += best_diff; // same as tripart.sum()
+    
+    if (tripart_sum >= goal) {
+      break; // no need to continue
+    }
+    
+  }
+  
+  return (tripart_sum >= goal);
 }
 
 //' @name BayesParameter::domain_id_new
@@ -1348,8 +1475,8 @@ int BayesParameter::domain_next(int class2domain_id, const Rcpp::IntegerMatrix& 
         | (proposal.domain_new2.ndomainitems_calc() > hparams.domain_maxitems)) {
     // Over the max items per domain, reject
     accept = -2;
-  } else if (false) {
-    // Identifiability restrictions violated. tk need to implement
+  } else if (is_identifiable(hparams)==false) {
+    // Identifiability restrictions violated
     accept = -2;
   }
   if (accept != 0) {
@@ -1666,4 +1793,3 @@ Rcpp::IntegerMatrix id2pattern(const Rcpp::IntegerVector& xpattern, const Rcpp::
   
   return unmapped_mat; 
 }
-
