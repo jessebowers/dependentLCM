@@ -1,6 +1,10 @@
 // [[Rcpp::plugins(cpp11)]]
-#include <chrono>
 #include <Rcpp.h>
+
+#define TROUBLESHOOT 0
+#if TROUBLESHOOT > 0
+#include <chrono>
+#endif
 
 /*
  * OPEN ITEMS:
@@ -21,8 +25,10 @@
  ****** TROUBLESHOOT
  *****************************************************/
 
+#if TROUBLESHOOT > 0
+
+// globals
 typedef std::chrono::time_point<std::chrono::high_resolution_clock> ttime;
-int TROUBLESHOOT = 0;
 unsigned long long int _trouble_id = 0;
 std::map<unsigned long long int, ttime> _trouble_start_times;
 std::vector<std::string> trouble_function_names = {"colMax", "rDirichlet", "rCategorical", "count_unique", "lbeta", "beta", "which", "count_integers", "map_get", "minimum", "id2pattern", "insertSorted", "mmult", "equal_to_adjmat", "helper_compare_adjmat", "adjmat_to_equal", "Hyperparameter::set_hparams", "Hyperparameter::set_dataInfo", "Hyperparameter::print", "DomainCount::set_initial", "DomainCount::set_pattern2id_map", "DomainCount::pattern2id", "DomainCount::get_ltheta", "DomainCount::id2pattern", "DomainCount::countAdd", "DomainCount::list2domains", "DomainCount::copy", "DomainCount::print", "BayesParameter::set_initial", "BayesParameter::class_lprob", "BayesParameter::set_class_loglik", "BayesParameter::domain_resetCounts", "BayesParameter::domain_addCount", "BayesParameter::domain_addCounts", "BayesParameter::item2domainid_calc", "BayesParameter::domain_getloglik_x", "BayesParameter::domain_getlik_domain", "get_superdomains", "is_identifiable", "BayesParameter::domain_id_new", "BayesParameter::class_pi_args", "BayesParameter::class_pi_next", "BayesParameter::classes_next", "BayesParameter::thetas_next", "BayesParameter::domain_proposal", "BayesParameter::domain_accept", "BayesParameter::domain_next", "BayesParameter::domains_next", "Archive::set_initial", "Archive::domains2mat", "Archive::add", "BayesContainer::set_initial", "BayesContainer::run", "BayesContainer::run_init", "dependentLCM_fit_cpp"};
@@ -30,18 +36,14 @@ Rcpp::NumericVector _trouble_runtimes = Rcpp::NumericVector::create();
 Rcpp::IntegerVector _trouble_runcounts = Rcpp::IntegerVector::create();
 
 unsigned long long int trouble_start(std::string function_name) {
-  if (TROUBLESHOOT==0){return 0;}
-  
   if (TROUBLESHOOT==1){Rcpp::Rcout << function_name << "\n";}
   _trouble_runcounts(function_name) = _trouble_runcounts(function_name) + 1;
   _trouble_id += 1;
   _trouble_start_times[_trouble_id] = std::chrono::high_resolution_clock::now();
-  
   return _trouble_id;
 }
 
 void trouble_end(unsigned long long int trouble_id, std::string function_name) {
-  if (TROUBLESHOOT==0){return;}
   ttime end_time = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double, std::milli> ms_double = end_time - _trouble_start_times[trouble_id];
   _trouble_runtimes(function_name) = _trouble_runtimes(function_name) + ms_double.count();
@@ -49,8 +51,6 @@ void trouble_end(unsigned long long int trouble_id, std::string function_name) {
 }
 
 void trouble_init() {
-  if (TROUBLESHOOT==0){return;}
-  
   _trouble_id = 0;
   
   // Reset times&counts
@@ -61,13 +61,17 @@ void trouble_init() {
     _trouble_runcounts(trouble_function_names[i]) = 0;
   }
 }
+#endif
 
 Rcpp::List trouble_list() {
-  if (TROUBLESHOOT==0){return Rcpp::List::create();}
+#if TROUBLESHOOT > 0
   return Rcpp::List::create(
     Rcpp::Named("runtimes") = _trouble_runtimes
-    , Rcpp::Named("runcounts") = _trouble_runcounts
+  , Rcpp::Named("runcounts") = _trouble_runcounts
   );
+#else
+  return Rcpp::List::create();
+#endif
 }
 
 /*****************************************************
@@ -79,8 +83,10 @@ Rcpp::List trouble_list() {
 //' @description Get the max of each column column of matrix
 //' @keywords internal
 Rcpp::IntegerVector colMax(const Rcpp::IntegerMatrix& x) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "colMax";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   Rcpp::IntegerVector max = x(0, Rcpp::_);
   
   for (int irow=1; irow < x.nrow(); irow++) {
@@ -91,7 +97,9 @@ Rcpp::IntegerVector colMax(const Rcpp::IntegerMatrix& x) {
     }
   }
   
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
   return max;
 }
 
@@ -101,8 +109,10 @@ Rcpp::IntegerVector colMax(const Rcpp::IntegerMatrix& x) {
 //' @param deltas vector of dirichlet concentration parameters
 //' @keywords internal
 Rcpp::NumericVector rDirichlet(const Rcpp::NumericVector& deltas) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "rDirichlet";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   int C = deltas.size();
   Rcpp::NumericVector Xgamma(C);
   
@@ -111,7 +121,9 @@ Rcpp::NumericVector rDirichlet(const Rcpp::NumericVector& deltas) {
     Xgamma(c) = R::rgamma(deltas(c), 1.0);
     //Xgamma(c) = Rcpp::rgamma(1, deltas(c), scale = 1.0);
   }
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
   return Xgamma / sum(Xgamma);
 }
 
@@ -121,8 +133,10 @@ Rcpp::NumericVector rDirichlet(const Rcpp::NumericVector& deltas) {
 //' @param probs Vector of probabilities of each category from 0 to probs.size()-1. Should sum to 1.
 //' @keywords internal
 int rCategorical(const Rcpp::NumericVector& probs) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "rCategorical";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   int n = probs.size();
   float unif = R::runif(0, 1);
   
@@ -130,12 +144,16 @@ int rCategorical(const Rcpp::NumericVector& probs) {
   for (int i = 0; i < n; i++) {
     cutoff += probs(i);
     if (unif < cutoff) {
+#if TROUBLESHOOT > 0
       trouble_end(trouble_id, trouble_function_name);
+#endif
       return i;
     }
   }
   
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
   return probs.size()-1; // unif~1, or sum(probs)<<1
 }
 
@@ -144,10 +162,14 @@ int rCategorical(const Rcpp::NumericVector& probs) {
 //' @description Count number of unique values in vector
 //' @keywords internal
 int count_unique(const Rcpp::IntegerVector& x) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "count_unique";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   std::unordered_set<int> xset(x.begin(), x.end());
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
   return xset.size();
 }
 
@@ -157,12 +179,16 @@ int count_unique(const Rcpp::IntegerVector& x) {
 //' Log(Beta(alphas)) = Log([product Gamma(alpha_i)] / Gamma(sum(alphas)))
 //' @keywords internal
 float lbeta(const Rcpp::NumericVector& alpha) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "lbeta";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   float log_gamma_total = std::lgamma(Rcpp::sum(alpha));
   float log_gammas = Rcpp::sum(Rcpp::lgamma(alpha));
   
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
   return (log_gammas - log_gamma_total);
 }
 
@@ -172,9 +198,13 @@ float lbeta(const Rcpp::NumericVector& alpha) {
 //' Beta(alphas) = [product Gamma(alpha_i)] / Gamma(sum(alphas))
 //' @keywords internal
 float beta(const Rcpp::NumericVector& alpha) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "beta";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
   return std::exp(lbeta(alpha));
 }
 
@@ -183,8 +213,10 @@ float beta(const Rcpp::NumericVector& alpha) {
 //' @description Give the (integer) indices where vector is true
 //' @keywords internal
 Rcpp::IntegerVector which(const Rcpp::LogicalVector& x) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "which";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   int n = x.size();
   std::list<int> out; // linked list for fast append
   
@@ -194,7 +226,9 @@ Rcpp::IntegerVector which(const Rcpp::LogicalVector& x) {
     }
   }
   
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
   return Rcpp::wrap(out);
 }
 
@@ -204,8 +238,10 @@ Rcpp::IntegerVector which(const Rcpp::LogicalVector& x) {
 //' @description For each unique value of x, count the number of times that value appears
 //' @keywords internal
 std::map<int,  int> count_integers(const Rcpp::IntegerVector& x) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "count_integers";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   std::map<int,  int> counts_map;
   int i;
   int nx = x.size();
@@ -226,7 +262,9 @@ std::map<int,  int> count_integers(const Rcpp::IntegerVector& x) {
   //   i += 1;
   // }
   
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
   return counts_map;
 }
 
@@ -239,16 +277,22 @@ std::map<int,  int> count_integers(const Rcpp::IntegerVector& x) {
 //' @keywords internal
 template <typename K, typename V>
 V map_get(const  std::map <K,V> & map, const K & key, const V & defaultvalue ) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "map_get";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   
   typename std::map<K,V>::const_iterator iter = map.find( key );
   if ( iter == map.end() ) {
+#if TROUBLESHOOT > 0
     trouble_end(trouble_id, trouble_function_name);
+#endif
     return defaultvalue;
   }
   else {
+#if TROUBLESHOOT > 0
     trouble_end(trouble_id, trouble_function_name);
+#endif
     return iter->second;
   }
 }
@@ -259,13 +303,19 @@ V map_get(const  std::map <K,V> & map, const K & key, const V & defaultvalue ) {
 //' @keywords internal
 template <typename T>
 T minimum(const T x1, const T x2) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "minimum";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   if (x1 < x2) {
+#if TROUBLESHOOT > 0
     trouble_end(trouble_id, trouble_function_name);
+#endif
     return x1;
   } else {
+#if TROUBLESHOOT > 0
     trouble_end(trouble_id, trouble_function_name);
+#endif
     return x2;
   }
 }
@@ -276,8 +326,10 @@ T minimum(const T x1, const T x2) {
 //' See other instance of id2pattern(.) for details
 //' @keywords internal
 Rcpp::IntegerVector id2pattern(int xpattern, const Rcpp::IntegerVector& mapvec) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "id2pattern";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   int nmapvec = mapvec.size();
   Rcpp::IntegerVector unmapped_vec = Rcpp::IntegerVector(nmapvec);
   
@@ -293,7 +345,9 @@ Rcpp::IntegerVector id2pattern(int xpattern, const Rcpp::IntegerVector& mapvec) 
     unmapped_vec[i] = xpattern % idivisor;
     xpattern = (int)xpattern / idivisor; // Compiler should know not to recalculate?
   }
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
   return unmapped_vec;
 }
 
@@ -305,8 +359,10 @@ Rcpp::IntegerVector id2pattern(int xpattern, const Rcpp::IntegerVector& mapvec) 
 //' @param new_value new number we wish to insert into x
 //' @keywords internal
 void insertSorted(Rcpp::IntegerVector& x, int new_value) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "insertSorted";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   int n = x.size();
   int i;
   for (i = 0; i < n; i++) {
@@ -315,7 +371,9 @@ void insertSorted(Rcpp::IntegerVector& x, int new_value) {
     }
   }
   x.insert(i, new_value);
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
   return;
 }
 
@@ -324,11 +382,15 @@ void insertSorted(Rcpp::IntegerVector& x, int new_value) {
 //' @description Multiply two matrixes
 //' @keywords internal
 Rcpp::IntegerMatrix mmult(Rcpp::IntegerMatrix& m1, Rcpp::IntegerMatrix& m2) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "mmult";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   Rcpp::Environment base("package:base");
   Rcpp::Function mat_Mult = base["%*%"]; // Steals from R::%*%.
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
   return(mat_Mult(m1, m2));
 }
 
@@ -340,8 +402,10 @@ Rcpp::IntegerMatrix mmult(Rcpp::IntegerMatrix& m1, Rcpp::IntegerMatrix& m2) {
 //' Each index represents a separate item and indexes with the same value are in the same equivalence class.
 //' @keywords internal
 Rcpp::IntegerMatrix equal_to_adjmat(Rcpp::IntegerVector eqclass_vec) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "equal_to_adjmat";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   int n = eqclass_vec.size();
   Rcpp::IntegerMatrix adjmat = Rcpp::IntegerMatrix(n, n);
   
@@ -350,7 +414,9 @@ Rcpp::IntegerMatrix equal_to_adjmat(Rcpp::IntegerVector eqclass_vec) {
     // Can we speed up by processing all of the same class at once?
   }
   
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
   return  adjmat; 
 }
 
@@ -360,8 +426,10 @@ Rcpp::IntegerMatrix equal_to_adjmat(Rcpp::IntegerVector eqclass_vec) {
 //' In other words returns true if both adjacency matrixes have the same connections (ignoring # of possible routes)
 //' @keywords internal
 bool helper_compare_adjmat(Rcpp::IntegerMatrix& m1, Rcpp::IntegerMatrix& m2) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "helper_compare_adjmat";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   int nrow = m1.nrow(); // m2 assumed to be of same size
   int ncol = m1.ncol(); // m2 assumed to be of same size
   
@@ -375,7 +443,9 @@ bool helper_compare_adjmat(Rcpp::IntegerMatrix& m1, Rcpp::IntegerMatrix& m2) {
     }
   }
   
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
   return is_same;
 }
 
@@ -389,8 +459,10 @@ bool helper_compare_adjmat(Rcpp::IntegerMatrix& m1, Rcpp::IntegerMatrix& m2) {
 //' @param maxiter Integer giving the maximum number of attempts to connect two nodes.
 //' @keywords internal
 Rcpp::IntegerVector adjmat_to_equal(Rcpp::IntegerMatrix adjmat, int maxitr = 100) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "adjmat_to_equal";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   
   int nitems = adjmat.nrow();
   
@@ -416,7 +488,9 @@ Rcpp::IntegerVector adjmat_to_equal(Rcpp::IntegerMatrix adjmat, int maxitr = 100
     }
   }
   
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
   return equal_classes;
 }
 
@@ -487,8 +561,10 @@ void Hyperparameter::set_hparams(
   , float domain_proposal_swap_in
   , int domain_nproposals_in
   , Rcpp::LogicalVector steps_active_in) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "Hyperparameter::set_hparams";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   ndomains = ndomains_in;
   nclass = nclass_in;
   class2domain = class2domain_in;
@@ -503,7 +579,9 @@ void Hyperparameter::set_hparams(
   
   // Inferred
   nclass2domain = nclass2domain_calc();
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
 }
 
 //' @name Hyperparameter::set_hparams
@@ -513,8 +591,10 @@ void Hyperparameter::set_hparams(
 //' @param hparams_in list containing all arguments for Hyperparameter::set_hparams
 //' @keywords internal
 void Hyperparameter::set_hparams(Rcpp::List hparams_in) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "Hyperparameter::set_hparams";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   int ndomains = hparams_in("ndomains");
   int nclass = hparams_in("nclass");
   Rcpp::IntegerVector class2domain = hparams_in("class2domain");
@@ -528,7 +608,9 @@ void Hyperparameter::set_hparams(Rcpp::List hparams_in) {
   Rcpp::LogicalVector steps_active = hparams_in("steps_active");
   
   set_hparams(ndomains, nclass, class2domain, classPi_alpha, domain_alpha, domain_maxitems, theta_alpha, domain_proposal_empty, domain_proposal_swap, domain_nproposals, steps_active);
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
 }
 
 //' @name Hyperparameter::set_dataInfo
@@ -537,12 +619,16 @@ void Hyperparameter::set_hparams(Rcpp::List hparams_in) {
 //' Assumptions: That there are no empty levels especially at end
 //' @keywords internal
 void Hyperparameter::set_dataInfo(const Rcpp::IntegerMatrix& x) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "Hyperparameter::set_dataInfo";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   item_nlevels = colMax(x) + 1; // length(0:n) = n+1
   nobs = x.nrow();
   nitem = nitem_calc();
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
 }
 
 //' @name Hyperparameter::print
@@ -550,8 +636,10 @@ void Hyperparameter::set_dataInfo(const Rcpp::IntegerMatrix& x) {
 //' @description Print Hyperparmeter (used mainly for troubleshooting)
 //' @keywords internal
 void Hyperparameter::print() {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "Hyperparameter::print";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   Rcpp::Rcout << "hparams.ndomains:" << ndomains << "\n";
   Rcpp::Rcout << "hparams.nclass:" << nclass << "\n";
   Rcpp::Rcout << "hparams.class2domain:" << class2domain << "\n";
@@ -566,7 +654,9 @@ void Hyperparameter::print() {
   Rcpp::Rcout << "hparams.nclass2domain:" << nclass2domain << "\n";
   Rcpp::Rcout << "hparams.nitem:" << nitem << "\n";
   Rcpp::Rcout << "hparams.steps_active:" << steps_active << "\n";
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
 }
 
 
@@ -613,8 +703,10 @@ public:
 //' @param lthetas_in Log probablities of each response pattern of these items (optional)
 //' @keywords internal
 void DomainCount::set_initial(Rcpp::IntegerVector& items_in, Hyperparameter& hparams, const Rcpp::NumericVector& lthetas_in) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "DomainCount::set_initial";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   items = items_in;
   
   set_pattern2id_map(hparams);
@@ -625,7 +717,9 @@ void DomainCount::set_initial(Rcpp::IntegerVector& items_in, Hyperparameter& hpa
   } else {
     lthetas = Rcpp::NumericVector(npatterns);
   }
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
 }
 
 //' @name DomainCount::set_pattern2id_map
@@ -634,8 +728,10 @@ void DomainCount::set_initial(Rcpp::IntegerVector& items_in, Hyperparameter& hpa
 //' See id2pattern(.) for more details
 //' @keywords internal
 void DomainCount::set_pattern2id_map(Hyperparameter& hparams) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "DomainCount::set_pattern2id_map";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   // Side effect. Sets npatterns
   pattern2id_map = Rcpp::NumericVector(hparams.nitem);
   pattern2id_map.fill(0);
@@ -649,7 +745,9 @@ void DomainCount::set_pattern2id_map(Hyperparameter& hparams) {
   }
   
   npatterns = cumprod_current; // Should match npatterns = lthetas.size() and product(item_nlevels[theseItems])
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
 }
 
 //' @name DomainCount::set_initial
@@ -659,12 +757,16 @@ void DomainCount::set_pattern2id_map(Hyperparameter& hparams) {
 //' @param hparams hyperparmeters
 //' @keywords internal
 void DomainCount::set_initial(Rcpp::List list_domain, Hyperparameter& hparams) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "DomainCount::set_initial";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   Rcpp::NumericVector lthetas_in =  Rcpp::log(list_domain["domains"]);
   Rcpp::IntegerVector items_in = list_domain["items"];
   set_initial(items_in, hparams, lthetas_in);
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
 }
 
 //' @name DomainCount::pattern2id
@@ -673,9 +775,13 @@ void DomainCount::set_initial(Rcpp::List list_domain, Hyperparameter& hparams) {
 //' See id2pattern(.) for more details
 //' @keywords internal
 int DomainCount::pattern2id(Rcpp::IntegerMatrix::ConstRow xobs) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "DomainCount::pattern2id";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
   return Rcpp::sum(xobs * pattern2id_map);
 }
 
@@ -685,9 +791,13 @@ int DomainCount::pattern2id(Rcpp::IntegerMatrix::ConstRow xobs) {
 //' @param xobs vector of the FULL response pattern (not just the items in this domain)
 //' @keywords internal
 double DomainCount::get_ltheta(Rcpp::IntegerMatrix::ConstRow xobs) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "DomainCount::get_ltheta";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
   return lthetas(pattern2id(xobs));
 }
 
@@ -699,8 +809,10 @@ double DomainCount::get_ltheta(Rcpp::IntegerMatrix::ConstRow xobs) {
 //' Assumes items are in same order as pattern2id_map;
 //' @keywords internal
 Rcpp::IntegerVector DomainCount::id2pattern(int id) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "DomainCount::id2pattern";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   Rcpp::IntegerVector pattern(nitems_calc(), -1);
   
   int i_item;
@@ -719,7 +831,9 @@ Rcpp::IntegerVector DomainCount::id2pattern(int id) {
     id = id - i_value * i_divisor;
   }
   
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
   return pattern;
 }
 
@@ -729,11 +843,15 @@ Rcpp::IntegerVector DomainCount::id2pattern(int id) {
 //' Counts measure the number of times each pattern appears in the data.
 //' @keywords internal
 void DomainCount::countReset() {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "DomainCount::id2pattern";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   counts = Rcpp::IntegerVector(npatterns);
   counts.fill(0);
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
 }
 
 //' @name DomainCount::countAdd
@@ -743,10 +861,14 @@ void DomainCount::countReset() {
 //' @param xobs One FULL response pattern (not just the items in this domain)
 //' @keywords internal
 void DomainCount::countAdd(Rcpp::IntegerMatrix::ConstRow xobs) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "DomainCount::countAdd";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   counts[pattern2id(xobs)] += 1;
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
 }
 
 //' @name DomainCount::list2domains
@@ -760,8 +882,10 @@ void DomainCount::countAdd(Rcpp::IntegerMatrix::ConstRow xobs) {
 //' @param hparams hyperparameters
 //' @keywords internal
 std::vector<std::map<int,  DomainCount> > DomainCount::list2domains(Rcpp::List list_list_domains, Hyperparameter& hparams) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "DomainCount::list2domains";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   std::vector<std::map<int,  DomainCount> > domains;
   domains.resize(list_list_domains.length());
   
@@ -774,7 +898,9 @@ std::vector<std::map<int,  DomainCount> > DomainCount::list2domains(Rcpp::List l
     }
   };
   
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
   return domains;
 }
 
@@ -783,15 +909,19 @@ std::vector<std::map<int,  DomainCount> > DomainCount::list2domains(Rcpp::List l
 //' @description Creates a deep copy of this domain
 //' @keywords internal
 DomainCount DomainCount::copy() {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "DomainCount::copy";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   DomainCount newDomain;
   newDomain.lthetas = Rcpp::clone(lthetas);
   newDomain.items = Rcpp::clone(items);
   newDomain.pattern2id_map = Rcpp::clone(pattern2id_map);
   newDomain.npatterns = npatterns;
   newDomain.counts = Rcpp::clone(counts);
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
   return newDomain;
 }
 
@@ -800,14 +930,18 @@ DomainCount DomainCount::copy() {
 //' @description Prints this domain (used mainly for troubleshooting purposes)
 //' @keywords internal
 void DomainCount::print() {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "DomainCount::print";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   Rcpp::Rcout << "domain.lthetas:" << lthetas << "\n";
   Rcpp::Rcout << "domain.items:" << items << "\n";
   Rcpp::Rcout << "domain.pattern2id_map:" << pattern2id_map << "\n";
   Rcpp::Rcout << "domain.npatterns:" << npatterns << "\n";
   Rcpp::Rcout << "domain.counts:" << counts << "\n";
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
 }
 
 // Example blank domain. GLOBAL CONSTANT - DO NOT MODIFY!
@@ -906,8 +1040,10 @@ public:
 //' See getStart_bayes_params(.) in dependentLCM.r for more details
 //' @keywords internal
 void BayesParameter::set_initial(Rcpp::NumericVector class_pi_in, Rcpp::IntegerVector classes_in, std::vector<std::map<int,  DomainCount> > domains_in, Hyperparameter& hparams) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "BayesParameter::set_initial";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   class_pi = class_pi_in;
   classes = classes_in;
   domains = domains_in;
@@ -915,7 +1051,9 @@ void BayesParameter::set_initial(Rcpp::NumericVector class_pi_in, Rcpp::IntegerV
   domains_accept = Rcpp::IntegerMatrix(hparams.domain_nproposals, hparams.nclass2domain);
   domains_accept.fill(-1);
   class_loglik = Rcpp::NumericMatrix(hparams.nclass, hparams.nobs); // initialize with all zeroes
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
 }
 
 //' @name BayesParameter::set_initial
@@ -924,14 +1062,18 @@ void BayesParameter::set_initial(Rcpp::NumericVector class_pi_in, Rcpp::IntegerV
 //' As other set_initial(.) but supports lists for R compatability
 //' @keywords internal
 void BayesParameter::set_initial(Rcpp::List list_bparam, Hyperparameter& hparams) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "BayesParameter::set_initial";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   Rcpp::NumericVector class_pi_in = list_bparam("class_pi");
   Rcpp::IntegerVector classes_in = list_bparam("classes");
   Rcpp::List list_domains_in = list_bparam("domains");
   std::vector<std::map<int,  DomainCount> > domains_in = DomainCount::list2domains(list_domains_in, hparams);
   set_initial(class_pi_in, classes_in, domains_in, hparams);
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
 }
 
 //' @name BayesParameter::class_lprob
@@ -941,8 +1083,10 @@ void BayesParameter::set_initial(Rcpp::List list_bparam, Hyperparameter& hparams
 //' @param xclass The class this observation is (assumed to be) in
 //' @keywords internal
 float BayesParameter::class_lprob(Rcpp::IntegerMatrix::ConstRow xobs, int xclass) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "BayesParameter::class_lprob";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   float lprob = 1;
   std::map<int,  DomainCount>::iterator domain_iter;
   std::map<int,  DomainCount>::const_iterator domain_end = domains[xclass].end();
@@ -952,7 +1096,9 @@ float BayesParameter::class_lprob(Rcpp::IntegerMatrix::ConstRow xobs, int xclass
     lprob += domain_iter->second.get_ltheta(xobs);
   }
   
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
   return lprob;
 }
 
@@ -963,14 +1109,18 @@ float BayesParameter::class_lprob(Rcpp::IntegerMatrix::ConstRow xobs, int xclass
 //' @param xobs The response pattern we are investigation.
 //' @keywords internal
 Rcpp::NumericVector BayesParameter::class_lprob(Rcpp::IntegerMatrix::ConstRow xobs) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "BayesParameter::class_lprob";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   Rcpp::NumericVector lprobs = Rcpp::NumericVector(nclass_calc());
   
   for (int i=0; i < nclass_calc(); i++) {
     lprobs[i] = class_lprob(xobs, i);
   }
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
   return lprobs;
 }
 
@@ -983,8 +1133,10 @@ Rcpp::NumericVector BayesParameter::class_lprob(Rcpp::IntegerMatrix::ConstRow xo
 //' @param reset Whether to initialize the matrix dimensions before running
 //' @keywords internal
 void BayesParameter::set_class_loglik(const Rcpp::IntegerMatrix& x, bool reset) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "BayesParameter::set_class_loglik";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   // One column per observation and row per class. Get conditional likelihood
   
   int xnrow = x.nrow();
@@ -997,7 +1149,9 @@ void BayesParameter::set_class_loglik(const Rcpp::IntegerMatrix& x, bool reset) 
   for (int i = 0; i < xnrow; i++) {
     class_loglik.column(i) = class_lprob(x.row(i));
   }
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
 }
 
 //' @name BayesParameter::domain_resetCounts
@@ -1005,8 +1159,10 @@ void BayesParameter::set_class_loglik(const Rcpp::IntegerMatrix& x, bool reset) 
 //' @description Reset the counts of all domains in given map
 //' @keywords internal
 void BayesParameter::domain_resetCounts(std::vector<std::map<int,  DomainCount> >& domains) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "BayesParameter::domain_resetCounts";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   int nclass = nclass_calc();
   std::map<int,  DomainCount>::iterator domain_iter;
   std::map<int,  DomainCount>::const_iterator domain_end;
@@ -1017,7 +1173,9 @@ void BayesParameter::domain_resetCounts(std::vector<std::map<int,  DomainCount> 
       domain_iter->second.countReset();
     }
   }
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
 }
 
 //' @name BayesParameter::domain_resetCounts
@@ -1025,10 +1183,14 @@ void BayesParameter::domain_resetCounts(std::vector<std::map<int,  DomainCount> 
 //' @description Reset the counts in all of BayesParameter's domains
 //' @keywords internal
 void BayesParameter::domain_resetCounts() {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "BayesParameter::domain_resetCounts";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   domain_resetCounts(domains);
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
 }
 
 //' @name BayesParameter::domain_addCount
@@ -1039,15 +1201,19 @@ void BayesParameter::domain_resetCounts() {
 //' @param domains map of domains we wish to add this pattern to
 //' @keywords internal
 void BayesParameter::domain_addCount(Rcpp::IntegerMatrix::ConstRow xobs, int xclass, std::vector<std::map<int,  DomainCount> >& domains) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "BayesParameter::domain_addCount";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   std::map<int,  DomainCount>::iterator domain_iter;
   std::map<int,  DomainCount>::const_iterator domain_end;
   domain_end = domains[xclass].end();
   for (domain_iter = domains[xclass].begin(); domain_iter!=domain_end; ++domain_iter) {
     domain_iter->second.countAdd(xobs);
   }
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
 }
 
 //' @name BayesParameter::domain_addCount
@@ -1057,10 +1223,14 @@ void BayesParameter::domain_addCount(Rcpp::IntegerMatrix::ConstRow xobs, int xcl
 //' @param xlcass The class of this observation. Needed because different domains correspond to different classes.
 //' @keywords internal
 void BayesParameter::domain_addCount(Rcpp::IntegerMatrix::ConstRow xobs, int xclass) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "BayesParameter::domain_addCount";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   domain_addCount(xobs, xclass, domains);
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
 }
 
 //' @name BayesParameter::domain_addCounts
@@ -1072,8 +1242,10 @@ void BayesParameter::domain_addCount(Rcpp::IntegerMatrix::ConstRow xobs, int xcl
 //' @description Assumes the classes of x correspond to the classes in BayesParameter.
 //' @keywords internal
 void BayesParameter::domain_addCounts(const Rcpp::IntegerMatrix& x, const Rcpp::IntegerVector& classes, bool reset_counts, std::vector<std::map<int,  DomainCount> >& domains) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "BayesParameter::domain_addCounts";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   
   if (reset_counts == true) {
     domain_resetCounts(domains);
@@ -1082,7 +1254,9 @@ void BayesParameter::domain_addCounts(const Rcpp::IntegerMatrix& x, const Rcpp::
   for (int obs_id=0; obs_id < nobs; obs_id++) {
     domain_addCount(x.row(obs_id), classes[obs_id], domains);
   }
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
 }
 
 //' @name BayesParameter::domain_addCounts
@@ -1092,10 +1266,14 @@ void BayesParameter::domain_addCounts(const Rcpp::IntegerMatrix& x, const Rcpp::
 //' @param reset_counts True if we should set all counts to zero before counting x.
 //' @keywords internal
 void BayesParameter::domain_addCounts(const Rcpp::IntegerMatrix& x, bool reset_counts) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "BayesParameter::domain_addCounts";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   domain_addCounts(x, classes, reset_counts, domains);
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
 }
 
 //' @name BayesParameter::item2domainid_calc
@@ -1104,8 +1282,10 @@ void BayesParameter::domain_addCounts(const Rcpp::IntegerMatrix& x, bool reset_c
 //' If there are multiple class2domain, then multiple columns are provided (one for each)
 //' @keywords internal
 Rcpp::IntegerMatrix BayesParameter::item2domainid_calc(Hyperparameter& hparams) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "BayesParameter::item2domainid_calc";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   
   Rcpp::IntegerMatrix out = Rcpp::IntegerMatrix(hparams.nitem, hparams.nclass2domain);
   
@@ -1126,7 +1306,9 @@ Rcpp::IntegerMatrix BayesParameter::item2domainid_calc(Hyperparameter& hparams) 
     
   }
   
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
   return out;
 }
 
@@ -1138,14 +1320,20 @@ Rcpp::IntegerMatrix BayesParameter::item2domainid_calc(Hyperparameter& hparams) 
 //' @param theta_alpha Hyperparameter describing the Dirichlet concentration parameters for the theta prior.
 //' @keywords internal
 float BayesParameter::domain_getloglik_x(const Rcpp::IntegerVector& pattern_counts, float theta_alpha) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "BayesParameter::domain_getloglik_x";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   if (pattern_counts.size() == 0) {
+#if TROUBLESHOOT > 0
     trouble_end(trouble_id, trouble_function_name);
+#endif
     return 0; // log(1)
   }
   
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
   return lbeta(Rcpp::as<Rcpp::NumericVector> (pattern_counts) + theta_alpha);
 }
 
@@ -1155,9 +1343,13 @@ float BayesParameter::domain_getloglik_x(const Rcpp::IntegerVector& pattern_coun
 //' Some choices of domains may be more likely than other based on prior.
 //' @keywords internal
 float BayesParameter::domain_getlik_domain(Hyperparameter& hparams) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "BayesParameter::domain_getlik_domain";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
   return 1; // Assume flat prior
 }
 
@@ -1166,15 +1358,19 @@ float BayesParameter::domain_getlik_domain(Hyperparameter& hparams) {
 //' @description Merge overlapping domains from different class2domainid
 //' @keywords internal
 Rcpp::IntegerVector BayesParameter::get_superdomains() {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "get_superdomains";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   int nitems = item2domainid.nrow();
   int nclass2domain = item2domainid.ncol();
   int i;
   
   if (nclass2domain == 1) {
     // Nothing to merge. Return item to domain associations
+#if TROUBLESHOOT > 0
     trouble_end(trouble_id, trouble_function_name);
+#endif
     return Rcpp::IntegerVector(item2domainid.column(0));
   }
   
@@ -1188,7 +1384,9 @@ Rcpp::IntegerVector BayesParameter::get_superdomains() {
   // Merge linked nodes
   Rcpp::IntegerVector item2superdomainid = adjmat_to_equal(adjmat);
   
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
   return item2superdomainid;
 }
 
@@ -1199,12 +1397,16 @@ Rcpp::IntegerVector BayesParameter::get_superdomains() {
 //' See Allman paper (DOI:10.1214/09-AOS689 Theorem 4.) for criteria used: min(patterns1,nclass)+min(patterns2,nclass)+min(patterns3,nclass) > 2*nclass+2
 //' @keywords internal
 bool BayesParameter::is_identifiable(Hyperparameter hparams) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "is_identifiable";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   
   if (hparams.steps_active["identifiable"]==false) {
     // checking identifiability turned off
+#if TROUBLESHOOT > 0
     trouble_end(trouble_id, trouble_function_name);
+#endif
     return true;
   }
   
@@ -1279,7 +1481,9 @@ bool BayesParameter::is_identifiable(Hyperparameter hparams) {
     
   }
   
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
   return (tripart_sum >= goal);
 }
 
@@ -1288,8 +1492,10 @@ bool BayesParameter::is_identifiable(Hyperparameter hparams) {
 //' @description Find an empty domain. Return that domain's ID
 //' @keywords internal
 int BayesParameter::domain_id_new(int class2domain_id, Hyperparameter& hparams) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "BayesParameter::domain_id_new";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   
   int domain_id = -1;
   int domain_class = which(hparams.class2domain == class2domain_id)[0];
@@ -1306,7 +1512,9 @@ int BayesParameter::domain_id_new(int class2domain_id, Hyperparameter& hparams) 
     Rcpp::warning("BayesParameter::domain_id_new:: No empty domain found");
   }
   
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
   return domain_id;
 }
 
@@ -1320,8 +1528,10 @@ int BayesParameter::domain_id_new(int class2domain_id, Hyperparameter& hparams) 
 //' @description Calculate the dirichlet parameters for the posterior of pi (pi used for classes)
 //' @keywords internal
 Rcpp::NumericVector BayesParameter::class_pi_args(Hyperparameter& hparams) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "BayesParameter::class_pi_args";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   
   Rcpp::NumericVector args = Rcpp::clone(hparams.classPi_alpha);  // Prevent overwrites. Maybe instead remove & from input
   
@@ -1333,7 +1543,9 @@ Rcpp::NumericVector BayesParameter::class_pi_args(Hyperparameter& hparams) {
     args(*classes_itr) += 1;
   }
   
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
   return(args);
 }
 
@@ -1342,12 +1554,16 @@ Rcpp::NumericVector BayesParameter::class_pi_args(Hyperparameter& hparams) {
 //' @description Do gibbs sampling to generate pi (pi used for classes)
 //' @keywords internal
 void BayesParameter::class_pi_next(Hyperparameter& hparams) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "BayesParameter::class_pi_next";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   
   Rcpp::NumericVector args = class_pi_args(hparams);
   class_pi = rDirichlet(args);
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
 }
 
 //' @name BayesParameter::classes_next
@@ -1355,8 +1571,10 @@ void BayesParameter::class_pi_next(Hyperparameter& hparams) {
 //' @description Do gibbs sampling to calculate the class of each observation
 //' @keywords internal
 void BayesParameter::classes_next(const Rcpp::IntegerMatrix& x) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "BayesParameter::classes_next";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   
   set_class_loglik(x);
   
@@ -1369,7 +1587,9 @@ void BayesParameter::classes_next(const Rcpp::IntegerMatrix& x) {
     class_args = class_args / Rcpp::sum(class_args);
     classes(i) = rCategorical(class_args);
   }
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
 }
 
 //' @name BayesParameter::thetas_next
@@ -1377,8 +1597,10 @@ void BayesParameter::classes_next(const Rcpp::IntegerMatrix& x) {
 //' @description Do gibbs sampling to calculate thetas for each domain
 //' @keywords internal
 void BayesParameter::thetas_next(const Rcpp::IntegerMatrix& x, Hyperparameter& hparams) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "BayesParameter::thetas_next";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   
   std::map<int,  DomainCount>::iterator domain_iter;
   std::map<int,  DomainCount>::const_iterator domain_end;
@@ -1393,7 +1615,9 @@ void BayesParameter::thetas_next(const Rcpp::IntegerMatrix& x, Hyperparameter& h
       idomain->lthetas = Rcpp::log(rDirichlet(iprob));
     }
   }
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
 }
 
 //' @name BayesParameter::domain_proposal
@@ -1404,8 +1628,10 @@ void BayesParameter::thetas_next(const Rcpp::IntegerMatrix& x, Hyperparameter& h
 //' There are some restrictions including 1) We do not swap items if both domains are singletons (this would cause no change up to relabeling), and enforce maximum number of items per domain given in hparams.
 //' @keywords internal
 domainProposalOut BayesParameter::domain_proposal(int class2domain_id, Hyperparameter& hparams) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "BayesParameter::domain_proposal";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   domainProposalOut out;
   out.swap_type = -100;
   out.domain_id1 = -1;
@@ -1551,7 +1777,9 @@ domainProposalOut BayesParameter::domain_proposal(int class2domain_id, Hyperpara
       * 1 // Choose to transfer my only item
     );
   }
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
   return out;
 }
 
@@ -1561,8 +1789,10 @@ domainProposalOut BayesParameter::domain_proposal(int class2domain_id, Hyperpara
 //' We examine the proposal and decide whether to accept it.
 //' @keywords internal
 domainAcceptOut BayesParameter::domain_accept(const Rcpp::IntegerMatrix& x, domainProposalOut& proposal, Hyperparameter& hparams) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "BayesParameter::domain_accept";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   
   domainAcceptOut out;
   
@@ -1604,7 +1834,9 @@ domainAcceptOut BayesParameter::domain_accept(const Rcpp::IntegerMatrix& x, doma
   out.log_cutoff = out.loglik_new - out.loglik_old + std::log(proposal.forwardProb) - std::log(proposal.backwardProb);
   out.accept = int( out.log_cutoff > std::log(out.unif) );
   
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
   return out;
 }
 
@@ -1614,8 +1846,10 @@ domainAcceptOut BayesParameter::domain_accept(const Rcpp::IntegerMatrix& x, doma
 //' In essence we choose one item at random and either move it to another domain or swap it with an item from another domain
 //' @keywords internal
 int BayesParameter::domain_next(int class2domain_id, const Rcpp::IntegerMatrix& x, Hyperparameter& hparams) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "BayesParameter::domain_next";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   
   /***
    *** Propose
@@ -1631,7 +1865,9 @@ int BayesParameter::domain_next(int class2domain_id, const Rcpp::IntegerMatrix& 
   if (proposal.domain_id1 == proposal.domain_id2) {
     // No change
     accept = 2;
+#if TROUBLESHOOT > 0
     trouble_end(trouble_id, trouble_function_name);
+#endif
     return accept;
   }
   if (proposal.domain_old1->ndomainitems_calc() + proposal.domain_old2->ndomainitems_calc() <= 1) {
@@ -1647,7 +1883,9 @@ int BayesParameter::domain_next(int class2domain_id, const Rcpp::IntegerMatrix& 
     accept = -2;
   }
   if (accept != 0) {
+#if TROUBLESHOOT > 0
     trouble_end(trouble_id, trouble_function_name);
+#endif
     return accept;
   }
   
@@ -1663,7 +1901,9 @@ int BayesParameter::domain_next(int class2domain_id, const Rcpp::IntegerMatrix& 
    ***/
   
   if (accept == 0) {
+#if TROUBLESHOOT > 0
     trouble_end(trouble_id, trouble_function_name);
+#endif
     return accept; // Change nothing
   }
   
@@ -1689,7 +1929,9 @@ int BayesParameter::domain_next(int class2domain_id, const Rcpp::IntegerMatrix& 
       domains[iclass].erase(proposal.domain_id2);
     }
   }
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
   return accept; // Is true
 }
 
@@ -1698,15 +1940,19 @@ int BayesParameter::domain_next(int class2domain_id, const Rcpp::IntegerMatrix& 
 //' @description Use metropolis algorithm to update domains. Repeat # of times set by hparams.
 //' @keywords internal
 void BayesParameter::domains_next(const Rcpp::IntegerMatrix& x, Hyperparameter& hparams) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "BayesParameter::domains_next";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   
   for (int iclass2domain=0; iclass2domain < hparams.nclass2domain; iclass2domain++) {
     for (int i=0; i < hparams.domain_nproposals; i++) {
       domains_accept(i, iclass2domain) = domain_next(iclass2domain, x, hparams);
     }
   }
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
 }
 
 
@@ -1740,8 +1986,10 @@ public:
 //' @description Initializes the archive (namely reserving memory)
 //' @keywords internal
 void Archive::set_initial(int nclasses, int nobs, int nitems, int maxiter_in) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "Archive::set_initial";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   next_itr = 0;
   maxitr = maxiter_in;
   
@@ -1753,7 +2001,9 @@ void Archive::set_initial(int nclasses, int nobs, int nitems, int maxiter_in) {
   domains_lprobs.resize(maxiter_in);
   domains_accept.resize(maxiter_in);
   class_loglik.resize(maxiter_in);
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
 }
 
 //' @name Archive::domains2mat
@@ -1763,8 +2013,10 @@ void Archive::set_initial(int nclasses, int nobs, int nitems, int maxiter_in) {
 //' Although we could make a deep copy of the domain map each time, this would be unproductive because we need it in matrix form later for R. Therfore we convert to matrix.
 //' @keywords internal
 void Archive::domains2mat(BayesParameter& params, int itr, Rcpp::IntegerMatrix& out_domains_id, Rcpp::IntegerMatrix& out_domains_patterns, Rcpp::NumericVector& out_domains_lprobs) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "Archive::domains2mat";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   
   std::map<int,  DomainCount>::iterator domain_iter;
   std::map<int,  DomainCount>::const_iterator domain_end;
@@ -1815,7 +2067,9 @@ void Archive::domains2mat(BayesParameter& params, int itr, Rcpp::IntegerMatrix& 
     }
   }
   
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
 }
 
 //' @name Archive::add
@@ -1823,15 +2077,19 @@ void Archive::domains2mat(BayesParameter& params, int itr, Rcpp::IntegerMatrix& 
 //' @description Add latest bayes parameters to the archive
 //' @keywords internal
 void Archive::add(BayesParameter& aparams) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "Archive::add";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   
   // Iterations are added by column for speed
   // Currently assumes fixed number of iterations. For flexible iterations std::list allows for easier extension.
   
   if (next_itr >= maxitr) {
     Rcpp::warning("Archive::add:: Max storage reached");
+#if TROUBLESHOOT > 0
     trouble_end(trouble_id, trouble_function_name);
+#endif
     return; // Exit Early. Maybe in future resize or error, but not necessary now
   }
   
@@ -1842,7 +2100,9 @@ void Archive::add(BayesParameter& aparams) {
   domains_accept[next_itr] = Rcpp::clone(aparams.domains_accept);
   class_loglik[next_itr] = Rcpp::clone(aparams.class_loglik);
   next_itr += 1;
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
 }
 
 
@@ -1868,14 +2128,18 @@ public:
 //' @description Sets all properties of BayesContainer
 //' @keywords internal
 void BayesContainer::set_initial(const Rcpp::IntegerMatrix& x_in, Rcpp::List hparams_list, Rcpp::List params_list, int maxitr) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "BayesContainer::set_initial";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   x = x_in;
   hparams.set_hparams(hparams_list);
   hparams.set_dataInfo(x_in);
   params.set_initial(params_list, hparams);
   archive.set_initial(hparams.nclass, hparams.nobs, hparams.nitem, maxitr);
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
 }
 
 //' @name BayesContainer::run
@@ -1883,8 +2147,10 @@ void BayesContainer::set_initial(const Rcpp::IntegerMatrix& x_in, Rcpp::List hpa
 //' @description Does #nitr MCMC steps on all bayes parameters
 //' @keywords internal
 void BayesContainer::run(int niter) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "BayesContainer::run";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   for (int i=0; i < niter; i++) {
     
     if ((hparams.steps_active["thetas"]==true)
@@ -1905,7 +2171,9 @@ void BayesContainer::run(int niter) {
     }
     archive.add(params);
   }
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
 }
 
 //' @name BayesContainer::run_init
@@ -1914,11 +2182,15 @@ void BayesContainer::run(int niter) {
 //' @keywords internal
 void BayesContainer::run_init(const Rcpp::IntegerMatrix& x_in, Rcpp::List hparams_list, Rcpp::List params_list
                                 , int nitr) {
+#if TROUBLESHOOT > 0
   std::string trouble_function_name = "BayesContainer::run_init";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   set_initial(x_in, hparams_list, params_list, nitr);
   run(nitr);
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
 }
 
 
@@ -1933,12 +2205,16 @@ void BayesContainer::run_init(const Rcpp::IntegerMatrix& x_in, Rcpp::List hparam
 // [[Rcpp::export]]
 Rcpp::List dependentLCM_fit_cpp(Rcpp::IntegerMatrix& x_in, Rcpp::List hparams_list, Rcpp::List params_list
                                   , int nitr) {
+#if TROUBLESHOOT > 0
   trouble_init();
   std::string trouble_function_name = "dependentLCM_fit_cpp";
   unsigned long long int trouble_id = trouble_start(trouble_function_name);
+#endif
   BayesContainer bcontainer;
   bcontainer.run_init(x_in, hparams_list, params_list, nitr);
+#if TROUBLESHOOT > 0
   trouble_end(trouble_id, trouble_function_name);
+#endif
   return Rcpp::List::create(
     Rcpp::Named("class_pi") = bcontainer.archive.class_pi
     , Rcpp::Named("classes") = bcontainer.archive.classes
