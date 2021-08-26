@@ -1,7 +1,7 @@
 // [[Rcpp::plugins(cpp11)]]
 #include <Rcpp.h>
 
-#define TROUBLESHOOT 2
+#define TROUBLESHOOT 0
 
 #if TROUBLESHOOT > 0
 #include <chrono>
@@ -33,7 +33,7 @@ typedef std::chrono::time_point<std::chrono::high_resolution_clock> ttime;
 // define globals
 unsigned long long int _trouble_id = 0;
 std::map<unsigned long long int, ttime> _trouble_start_times;
-std::vector<std::string> trouble_function_names = {"colMax", "rDirichlet", "rCategorical", "count_unique", "lbeta", "beta", "which", "count_integers", "map_get", "minimum", "id2pattern", "insertSorted", "mmult", "equal_to_adjmat", "helper_compare_adjmat", "adjmat_to_equal", "Hyperparameter::set_hparams", "Hyperparameter::set_dataInfo", "Hyperparameter::print", "DomainCount::set_initial", "DomainCount::set_pattern2id_map", "DomainCount::pattern2id", "DomainCount::get_ltheta", "DomainCount::id2pattern", "DomainCount::countAdd", "DomainCount::list2domains", "DomainCount::copy", "DomainCount::print", "BayesParameter::set_initial", "BayesParameter::class_lprob", "BayesParameter::set_class_loglik", "BayesParameter::domain_resetCounts", "BayesParameter::domain_addCount", "BayesParameter::domain_addCounts", "BayesParameter::item2domainid_calc", "BayesParameter::domain_getloglik_x", "BayesParameter::domain_getlik_domain", "get_superdomains", "is_identifiable", "BayesParameter::domain_id_new", "BayesParameter::class_pi_args", "BayesParameter::class_pi_next", "BayesParameter::classes_next", "BayesParameter::thetas_next", "BayesParameter::domain_proposal", "BayesParameter::domain_accept", "BayesParameter::domain_next", "BayesParameter::domains_next", "Archive::set_initial", "Archive::domains2mat", "Archive::add", "BayesContainer::set_initial", "BayesContainer::run", "BayesContainer::run_init", "dependentLCM_fit_cpp"};
+std::vector<std::string> trouble_function_names = {"colMax", "rDirichlet", "rCategorical", "count_unique", "lbeta", "which", "count_integers", "map_get", "minimum", "id2pattern", "insertSorted", "mmult", "equal_to_adjmat", "helper_compare_adjmat", "adjmat_to_equal", "Hyperparameter::set_hparams", "Hyperparameter::set_dataInfo", "Hyperparameter::print", "DomainCount::set_initial", "DomainCount::set_pattern2id_map", "DomainCount::pattern2id", "DomainCount::get_ltheta", "DomainCount::id2pattern", "DomainCount::countAdd", "DomainCount::list2domains", "DomainCount::copy", "DomainCount::print", "BayesParameter::set_initial", "BayesParameter::class_lprob", "BayesParameter::set_class_loglik", "BayesParameter::domain_resetCounts", "BayesParameter::domain_addCount", "BayesParameter::domain_addCounts", "BayesParameter::item2domainid_calc", "BayesParameter::domain_getloglik_x", "BayesParameter::domain_getlik_domain", "get_superdomains", "is_identifiable", "BayesParameter::domain_id_new", "BayesParameter::class_pi_args", "BayesParameter::class_pi_next", "BayesParameter::classes_next", "BayesParameter::thetas_next", "BayesParameter::domain_proposal", "BayesParameter::domain_accept", "BayesParameter::domain_next", "BayesParameter::domains_next", "Archive::set_initial", "Archive::domains2mat", "Archive::add", "BayesContainer::set_initial", "BayesContainer::run", "BayesContainer::run_init", "dependentLCM_fit_cpp"};
 Rcpp::NumericVector _trouble_runtimes = Rcpp::NumericVector::create();
 Rcpp::IntegerVector _trouble_runcounts = Rcpp::IntegerVector::create();
 
@@ -194,17 +194,6 @@ float lbeta(const Rcpp::NumericVector& alpha) {
   
   TROUBLE_END;
   return (log_gammas - log_gamma_total);
-}
-
-//' @name beta
-//' @title beta
-//' @description Calculate the beta function
-//' Beta(alphas) = [product Gamma(alpha_i)] / Gamma(sum(alphas))
-//' @keywords internal
-float beta(const Rcpp::NumericVector& alpha) {
-  TROUBLE_START(("beta"));
-  TROUBLE_END;
-  return std::exp(lbeta(alpha));
 }
 
 //' @name which
