@@ -83,7 +83,7 @@ dependentLCM_fit <- function(
 
   # Clean up output
   dlcm$domains_id <- do.call(cbind, dlcm$domains_id)
-  rownames(dlcm$domains_id) <- c("itr", "class", "domain", "pattern_id")
+  rownames(dlcm$domains_id) <- c("itr", "class", "domain", "pattern_id", "items_id")
   mode(dlcm$domains_id) <- "integer"
   dlcm$domains_patterns <- do.call(cbind, dlcm$domains_patterns)
   rownames(dlcm$domains_patterns) <- paste0("item_", 1:(nrow(dlcm$domains_patterns)))
@@ -115,7 +115,7 @@ dependentLCM_fit <- function(
   )
   all_params$hparams$domain_item_cols <- grep("^item_[0-9]+", colnames(dlcm$domains))
   
-  dlcm$domains_merged <- (
+  dlcm$domains_merged <- as.data.frame(
     dlcm$domains 
     %>% dplyr::filter(pattern_id==0) 
     %>% dplyr::group_by(itr, class2domain)
@@ -422,18 +422,17 @@ dlcm.summary <- function(dlcm, nwarmup=1000, alpha=0) {
   )
   thetas_avg <- dlcm$mcmc$domains %>% dplyr::filter(itr > nwarmup) %>% dplyr::group_by(class, items, item_value) %>% dplyr::summarize(n=dplyr::n(), prob=mean(prob), .groups="keep")
   
-  domain_items <- rbind(
-    dlcm$mcmc$domains_merged %>% dplyr::filter(itr > nwarmup) %>% dplyr::group_by(class2domain, items=domains_merged) %>% dplyr::summarize(nitems=NA, n=dplyr::n(), all_items=TRUE, .groups="keep") %>% dplyr::arrange(-n)
-    , dlcm$mcmc$domains %>% dplyr::filter(pattern_id==0, itr > nwarmup) %>% dplyr::group_by(class2domain, items) %>% filter(class == min(class)) %>% dplyr::summarize(nitems=max(nitems), n=dplyr::n(), all_items=FALSE, .groups="keep") %>% dplyr::arrange(-n)
-  )
-  domain_nitems <- table((dlcm$mcmc$domains %>% dplyr::filter(pattern_id==0, itr > nwarmup))$nitems)
+  domain_items_all <- dlcm$mcmc$domains_merged %>% dplyr::filter(itr > nwarmup) %>% dplyr::group_by(class2domain, items=domains_merged) %>% dplyr::summarize(n=dplyr::n(), .groups="keep") %>% dplyr::arrange(-n)
+  domain_items <- dlcm$mcmc$domains %>% dplyr::filter(pattern_id==0, itr > nwarmup) %>% dplyr::group_by(class2domain, items) %>% filter(class == min(class)) %>% dplyr::summarize(nitems=max(nitems), n=dplyr::n(), .groups="keep") %>% dplyr::arrange(-n)
+  
+  # domain_nitems <- table((dlcm$mcmc$domains %>% dplyr::filter(pattern_id==0, itr > nwarmup))$nitems)
   
   domain_accept <- table(dlcm$mcmc$domains_accept[, , -(1:nwarmup)])
   
   waic <- dlcm.get_waic(dlcm, itrs=nwarmup:dlcm$mcmc$maxitr, alpha=alpha)
   
   return(list(
-    "thetas_avg"=thetas_avg, "domain_items"=domain_items, "domain_nitems"=domain_nitems, "domain_accept"=domain_accept, "waic"=waic
+    "thetas_avg"=thetas_avg, "domain_items"=domain_items, "domain_items_all"=domain_items_all, "domain_accept"=domain_accept, "waic"=waic
   ))
 }
 
@@ -470,7 +469,7 @@ dlcm.get_waic <- function(this_sim, itrs=NULL, alpha=0) {
     this_sim$mcmc$domains 
     %>% filter(itr %in% itrs) 
     %>% group_by(itr) 
-    %>% summarize(nparams = n() - length(unique(domain))))
+    %>% summarize(nparams = n() - length(unique(domain)), .groups="keep"))
   likelihoods$nparameters <- (
     unlist(theta_parameters[match(likelihoods$itr, theta_parameters$itr), "nparams"])
     + this_sim$hparams$nclass-1 # class pis

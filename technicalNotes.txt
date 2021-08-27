@@ -22,5 +22,4 @@ sourceCpp("~/dependentLCM/src/dependentLCM.cpp")
  * Allow warmup without archiving, in R allow multiple chains
  * Incorporate optional checks/consistency checks eg domain size, nclasses, etc
  * post-hoc handle label switching
- * Convert maxiter to hparams attribute in adjmat_to_equal(Rcpp::IntegerMatrix adjmat, int maxitr = 100)
  */

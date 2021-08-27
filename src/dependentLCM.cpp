@@ -1,7 +1,7 @@
 // [[Rcpp::plugins(cpp11)]]
 #include <Rcpp.h>
 
-#define TROUBLESHOOT 2
+#define TROUBLESHOOT 0
 
 #if TROUBLESHOOT > 0
 #include <chrono>
@@ -54,12 +54,11 @@ void trouble_init() {
   _trouble_id = 0;
   
   // Reset times&counts
-  _trouble_runtimes = Rcpp::NumericVector();
-  _trouble_runcounts = Rcpp::IntegerVector();
-  for (int i=0; i<trouble_function_names.size(); i++) {
-    _trouble_runtimes(trouble_function_names[i]) = 0;
-    _trouble_runcounts(trouble_function_names[i]) = 0;
-  }
+  int nfuns = int(trouble_function_names.size());
+  _trouble_runtimes = Rcpp::NumericVector(nfuns);
+  _trouble_runcounts = Rcpp::IntegerVector(nfuns);
+  _trouble_runtimes.names() = trouble_function_names;
+  _trouble_runcounts.names() = trouble_function_names;
 }
 
 // Wrap troubleshooting functions for compiler
@@ -425,6 +424,13 @@ int product(Rcpp::IntegerVector x) {
   return agg;
 }
 
+//' @name powl
+//' @title powl
+//' @description calculate x^p power on integers
+//' @keywords internal
+int powl(int x, int p) {
+  return int(std::pow(double(x), double(p))+0.5);
+}
 
 /*****************************************************
  ****** Hyperparameters
@@ -589,6 +595,7 @@ public:
 public:
   int ndomainitems_calc() {return items.size();}; // number of items in this domain
   int nitems_calc() {return pattern2id_map.size();}; // number of items in the data
+  int itemsid_calc();
   DomainCount copy();
   void print();
 };
@@ -781,6 +788,21 @@ DomainCount DomainCount::copy() {
   return newDomain;
 }
 
+//' @name DomainCount::itemsid_calc
+//' @title DomainCount::itemsid_calc
+//' @description Convert domain.items into an integer id describing the items in this domain
+//' @keywords internal
+int DomainCount::itemsid_calc() {
+  TROUBLE_START(("DomainCount::itemsid_calc"));
+  int n = ndomainitems_calc();
+  int sum = 0;
+  for (int i=0; i < n; i++) {
+    sum += powl(2,items[i]); // not optimized for speed. improve by storing vector of 2^k in hparams. Maybe save this to avoid recalculating too
+  }
+  TROUBLE_END;
+  return sum;
+}
+
 //' @name DomainCount::print
 //' @title DomainCount::print
 //' @description Prints this domain (used mainly for troubleshooting purposes)
@@ -867,7 +889,7 @@ public:
   int nitems_calc() {return domains[0].begin()->second.nitems_calc();};
   Rcpp::IntegerMatrix item2domainid_calc(Hyperparameter& hparams);
   int domain_id_new(int class2domain_id, Hyperparameter& hparams);
-  Rcpp::IntegerVector get_superdomains();
+  Rcpp::IntegerVector get_superdomains(Hyperparameter& hparams);
   bool is_identifiable(Hyperparameter hparams);
   
 public:
@@ -1136,7 +1158,7 @@ float BayesParameter::domain_getlik_domain(Hyperparameter& hparams) {
 //' @title BayesParameter::get_superdomains
 //' @description Merge overlapping domains from different class2domainid
 //' @keywords internal
-Rcpp::IntegerVector BayesParameter::get_superdomains() {
+Rcpp::IntegerVector BayesParameter::get_superdomains(Hyperparameter& hparams) {
   TROUBLE_START(("get_superdomains"));
   int nitems = item2domainid.nrow();
   int nclass2domain = item2domainid.ncol();
@@ -1156,7 +1178,7 @@ Rcpp::IntegerVector BayesParameter::get_superdomains() {
   }
   
   // Merge linked nodes
-  Rcpp::IntegerVector item2superdomainid = adjmat_to_equal(adjmat);
+  Rcpp::IntegerVector item2superdomainid = adjmat_to_equal(adjmat, hparams.nitem);
   
   TROUBLE_END;
   return item2superdomainid;
@@ -1171,13 +1193,14 @@ Rcpp::IntegerVector BayesParameter::get_superdomains() {
 bool BayesParameter::is_identifiable(Hyperparameter hparams) {
   TROUBLE_START(("is_identifiable"));
   
-  if (hparams.steps_active["identifiable"]==false) {
-    // checking identifiability turned off
+  if ((hparams.steps_active["identifiable"]==false) // identifiability turned off
+        | (hparams.nclass == 1) // 1 class always identifiable (under weak conditions)
+  ) {
     TROUBLE_END;
     return true;
   }
   
-  Rcpp::IntegerVector item2superdomainid = get_superdomains(); // Identify domains which must be grouped together
+  Rcpp::IntegerVector item2superdomainid = get_superdomains(hparams); // Identify domains which must be grouped together
   
   int i;
   int domain_id;
@@ -1683,7 +1706,7 @@ class Archive {
 public:
   Rcpp::NumericMatrix class_pi;
   Rcpp::IntegerMatrix classes;
-  std::vector<Rcpp::IntegerMatrix> domains_id; // Row for iter, classid,  clique_id, pattern_id
+  std::vector<Rcpp::IntegerMatrix> domains_id; // Row for iter, classid,  domain_id, pattern_id, items_id
   std::vector<Rcpp::IntegerMatrix> domains_patterns; // Row per item
   std::vector<Rcpp::NumericVector> domains_lprobs;
   std::vector<Rcpp::IntegerMatrix> domains_accept;
@@ -1732,6 +1755,7 @@ void Archive::domains2mat(BayesParameter& params, int itr, Rcpp::IntegerMatrix& 
   DomainCount *idomain;
   int i_npatterns;
   int idomain_id;
+  int iitems_id;
   int ithis_pattern_id;
   int i;
   // misc
@@ -1749,7 +1773,7 @@ void Archive::domains2mat(BayesParameter& params, int itr, Rcpp::IntegerMatrix& 
       npatterns += idomain->npatterns;
     }
   }
-  out_domains_id = Rcpp::IntegerMatrix(4, npatterns); // Row for iter, classid,  domain_id, pattern_id
+  out_domains_id = Rcpp::IntegerMatrix(5, npatterns); // Row for iter, classid,  domain_id, pattern_id, items_id
   out_domains_patterns = Rcpp::IntegerMatrix(nitems, npatterns);
   out_domains_lprobs = Rcpp::NumericVector(npatterns);
   
@@ -1761,12 +1785,14 @@ void Archive::domains2mat(BayesParameter& params, int itr, Rcpp::IntegerMatrix& 
       idomain = &(domain_iter->second);
       i_npatterns = idomain->npatterns;
       idomain_id = domain_iter->first;
+      iitems_id = domain_iter->second.itemsid_calc();
       for (i = 0; i < i_npatterns; i++) {
         // Save info
         out_domains_id(0, ithis_pattern_id) = itr;
         out_domains_id(1, ithis_pattern_id) = iclass;
         out_domains_id(2, ithis_pattern_id) = idomain_id;
         out_domains_id(3, ithis_pattern_id) = i;
+        out_domains_id(4, ithis_pattern_id) = iitems_id;
         out_domains_patterns.column(ithis_pattern_id) = idomain->id2pattern(i);
         out_domains_lprobs(ithis_pattern_id) = idomain->lthetas(i);
         
