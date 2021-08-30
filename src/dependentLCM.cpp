@@ -65,14 +65,12 @@ void trouble_init() {
 #define TROUBLE_START(str) std::string trouble_function_name = str; unsigned long long int trouble_id = trouble_start(trouble_function_name);
 #define TROUBLE_END trouble_end(trouble_id, trouble_function_name);
 #define TROUBLE_INIT trouble_init();
-#define RETURN(x) trouble_end(trouble_id, trouble_function_name); return x;
 
 #else
 // else if TROUBLSHOOT=0 then ignore these functions
 #define TROUBLE_START(str)
 #define TROUBLE_END
 #define TROUBLE_INIT
-#define RETURN(x) return x;
 
 #endif
 
@@ -110,7 +108,7 @@ Rcpp::IntegerVector colMax(const Rcpp::IntegerMatrix& x) {
     }
   }
   
-  RETURN (max);
+  TROUBLE_END; return max;
 }
 
 //' @name rDirichlet
@@ -128,7 +126,7 @@ Rcpp::NumericVector rDirichlet(const Rcpp::NumericVector& deltas) {
     Xgamma(c) = R::rgamma(deltas(c), 1.0);
     //Xgamma(c) = Rcpp::rgamma(1, deltas(c), scale = 1.0);
   }
-  RETURN (Xgamma / sum(Xgamma));
+  TROUBLE_END; return (Xgamma / sum(Xgamma));
 }
 
 //' @name rCategorical
@@ -145,12 +143,11 @@ int rCategorical(const Rcpp::NumericVector& probs) {
   for (int i = 0; i < n; i++) {
     cutoff += probs(i);
     if (unif < cutoff) {
-      TROUBLE_END;
-      RETURN (i);
+      TROUBLE_END; return i;
     }
   }
   
-  RETURN (probs.size()-1); // unif~1, or sum(probs)<<1
+  TROUBLE_END; return (probs.size()-1); // unif~1, or sum(probs)<<1
 }
 
 //' @name count_unique
@@ -160,7 +157,7 @@ int rCategorical(const Rcpp::NumericVector& probs) {
 int count_unique(const Rcpp::IntegerVector& x) {
   TROUBLE_START(("count_unique"));
   std::unordered_set<int> xset(x.begin(), x.end());
-  RETURN (xset.size());
+  TROUBLE_END; return xset.size();
 }
 
 //' @name lbeta
@@ -173,7 +170,7 @@ float lbeta(const Rcpp::NumericVector& alpha) {
   float log_gamma_total = std::lgamma(Rcpp::sum(alpha));
   float log_gammas = Rcpp::sum(Rcpp::lgamma(alpha));
   
-  RETURN (log_gammas - log_gamma_total);
+  TROUBLE_END; return (log_gammas - log_gamma_total);
 }
 
 //' @name which
@@ -191,7 +188,7 @@ Rcpp::IntegerVector which(const Rcpp::LogicalVector& x) {
     }
   }
   
-  RETURN (Rcpp::wrap(out));
+  TROUBLE_END; return Rcpp::wrap(out);
 }
 
 
@@ -221,7 +218,7 @@ std::map<int,  int> count_integers(const Rcpp::IntegerVector& x) {
   //   i += 1;
   // }
   
-  RETURN (counts_map);
+  TROUBLE_END; return counts_map;
 }
 
 //' @name map_get
@@ -237,10 +234,10 @@ V map_get(const  std::map <K,V> & map, const K & key, const V & defaultvalue ) {
   
   typename std::map<K,V>::const_iterator iter = map.find( key );
   if ( iter == map.end() ) {
-    RETURN (defaultvalue);
+    TROUBLE_END; return defaultvalue;
   }
   else {
-    RETURN (iter->second);
+    TROUBLE_END; return iter->second;
   }
 }
 
@@ -252,9 +249,9 @@ template <typename T>
 T minimum(const T x1, const T x2) {
   TROUBLE_START(("minimum"));
   if (x1 < x2) {
-    RETURN (x1);
+    TROUBLE_END; return x1;
   } else {
-    RETURN (x2);
+    TROUBLE_END; return x2;
   }
 }
 
@@ -280,7 +277,7 @@ Rcpp::IntegerVector id2pattern(int xpattern, const Rcpp::IntegerVector& mapvec) 
     unmapped_vec[i] = xpattern % idivisor;
     xpattern = (int)xpattern / idivisor; // Compiler should know not to recalculate?
   }
-  RETURN (unmapped_vec);
+  TROUBLE_END; return unmapped_vec;
 }
 
 
@@ -300,8 +297,7 @@ void insertSorted(Rcpp::IntegerVector& x, int new_value) {
     }
   }
   x.insert(i, new_value);
-  TROUBLE_END;
-  return;
+  TROUBLE_END; return;
 }
 
 //' @name mmult
@@ -312,8 +308,7 @@ Rcpp::IntegerMatrix mmult(Rcpp::IntegerMatrix& m1, Rcpp::IntegerMatrix& m2) {
   TROUBLE_START(("mmult"));
   Rcpp::Environment base("package:base");
   Rcpp::Function mat_Mult = base["%*%"]; // Steals from R::%*%.
-  TROUBLE_END;
-  RETURN (mat_Mult(m1, m2));
+  TROUBLE_END; return mat_Mult(m1, m2);
 }
 
 //' @name equal_to_adjmat
@@ -333,7 +328,7 @@ Rcpp::IntegerMatrix equal_to_adjmat(Rcpp::IntegerVector eqclass_vec) {
     // Can we speed up by processing all of the same class at once?
   }
   
-  RETURN (adjmat);
+  TROUBLE_END; return adjmat;
 }
 
 //' @name helper_compare_adjmat
@@ -356,7 +351,7 @@ bool helper_compare_adjmat(Rcpp::IntegerMatrix& m1, Rcpp::IntegerMatrix& m2) {
     }
   }
   
-  RETURN (is_same);
+  TROUBLE_END; return is_same;
 }
 
 //' @name adjmat_to_equal
@@ -395,7 +390,7 @@ Rcpp::IntegerVector adjmat_to_equal(Rcpp::IntegerMatrix adjmat, int maxitr = 100
     }
   }
   
-  RETURN (equal_classes);
+  TROUBLE_END; return equal_classes;
 }
 
 //' @name product
@@ -409,7 +404,7 @@ int product(Rcpp::IntegerVector x) {
   for (int i=0; i<n; i++) {
     agg *= x[i];
   }
-  RETURN (agg);
+  TROUBLE_END; return agg;
 }
 
 //' @name powl
@@ -418,7 +413,7 @@ int product(Rcpp::IntegerVector x) {
 //' @keywords internal
 int powl(int x, int p) {
   TROUBLE_START(("powl"));
-  RETURN (int(std::pow(double(x), double(p))+0.5));
+  TROUBLE_END; return int(std::pow(double(x), double(p))+0.5);
 }
 
 /*****************************************************
@@ -627,8 +622,7 @@ void DomainCount::set_pattern2id_map(Hyperparameter& hparams) {
   
   if (ndomainitems==0) {
     npatterns = 0;
-    TROUBLE_END;
-    return;
+    TROUBLE_END; return;
   }
   
   int cumprod_current = 1;
@@ -664,7 +658,7 @@ void DomainCount::set_initial(Rcpp::List list_domain, Hyperparameter& hparams) {
 //' @keywords internal
 int DomainCount::pattern2id(Rcpp::IntegerMatrix::ConstRow xobs) {
   TROUBLE_START(("DomainCount::pattern2id"));
-  RETURN (Rcpp::sum(xobs * pattern2id_map));
+  TROUBLE_END; return Rcpp::sum(xobs * pattern2id_map);
 }
 
 //' @name DomainCount::get_ltheta
@@ -674,7 +668,7 @@ int DomainCount::pattern2id(Rcpp::IntegerMatrix::ConstRow xobs) {
 //' @keywords internal
 double DomainCount::get_ltheta(Rcpp::IntegerMatrix::ConstRow xobs) {
   TROUBLE_START(("DomainCount::get_ltheta"));
-  RETURN (lthetas(pattern2id(xobs)));
+  TROUBLE_END; return lthetas(pattern2id(xobs));
 }
 
 //' @name DomainCount::id2pattern
@@ -704,7 +698,7 @@ Rcpp::IntegerVector DomainCount::id2pattern(int id) {
     id = id - i_value * i_divisor;
   }
   
-  RETURN (pattern);
+  TROUBLE_END; return pattern;
 }
 
 //' @name DomainCount::countReset
@@ -754,7 +748,7 @@ std::vector<std::map<int,  DomainCount> > DomainCount::list2domains(Rcpp::List l
     }
   };
   
-  RETURN (domains);
+  TROUBLE_END; return domains;
 }
 
 //' @name DomainCount::copy
@@ -769,7 +763,7 @@ DomainCount DomainCount::copy() {
   newDomain.pattern2id_map = Rcpp::clone(pattern2id_map);
   newDomain.npatterns = npatterns;
   newDomain.counts = Rcpp::clone(counts);
-  RETURN (newDomain);
+  TROUBLE_END; return newDomain;
 }
 
 //' @name DomainCount::itemsid_calc
@@ -783,7 +777,7 @@ int DomainCount::itemsid_calc() {
   for (int i=0; i < n; i++) {
     sum += powl(2,items[i]); // not optimized for speed. improve by storing vector of 2^k in hparams. Maybe save this to avoid recalculating too
   }
-  RETURN (sum);
+  TROUBLE_END; return sum;
 }
 
 //' @name DomainCount::print
@@ -940,7 +934,7 @@ float BayesParameter::class_lprob(Rcpp::IntegerMatrix::ConstRow xobs, int xclass
     lprob += domain_iter->second.get_ltheta(xobs);
   }
   
-  RETURN (lprob);
+  TROUBLE_END; return lprob;
 }
 
 //' @name BayesParameter::class_lprob
@@ -956,7 +950,7 @@ Rcpp::NumericVector BayesParameter::class_lprob(Rcpp::IntegerMatrix::ConstRow xo
   for (int i=0; i < nclass_calc(); i++) {
     lprobs[i] = class_lprob(xobs, i);
   }
-  RETURN (lprobs);
+  TROUBLE_END; return lprobs;
 }
 
 //' @name BayesParameter::set_class_loglik
@@ -1103,7 +1097,7 @@ Rcpp::IntegerMatrix BayesParameter::item2domainid_calc(Hyperparameter& hparams) 
     
   }
   
-  RETURN (out);
+  TROUBLE_END; return out;
 }
 
 //' @name BayesParameter::domain_getloglik_x
@@ -1116,10 +1110,10 @@ Rcpp::IntegerMatrix BayesParameter::item2domainid_calc(Hyperparameter& hparams) 
 float BayesParameter::domain_getloglik_x(const Rcpp::IntegerVector& pattern_counts, float theta_alpha) {
   TROUBLE_START(("BayesParameter::domain_getloglik_x"));
   if (pattern_counts.size() == 0) {
-    RETURN (0); // log(1)
+    TROUBLE_END; return 0; // log(1)
   }
   
-  RETURN (lbeta(Rcpp::as<Rcpp::NumericVector> (pattern_counts) + theta_alpha));
+  TROUBLE_END; return lbeta(Rcpp::as<Rcpp::NumericVector> (pattern_counts) + theta_alpha);
 }
 
 //' @name BayesParameter::domain_getlik_domain
@@ -1129,7 +1123,7 @@ float BayesParameter::domain_getloglik_x(const Rcpp::IntegerVector& pattern_coun
 //' @keywords internal
 float BayesParameter::domain_getlik_domain(Hyperparameter& hparams) {
   TROUBLE_START(("BayesParameter::domain_getlik_domain"));
-  RETURN (1); // Assume flat prior
+  TROUBLE_END; return 1; // Assume flat prior
 }
 
 //' @name BayesParameter::get_superdomains
@@ -1144,7 +1138,7 @@ Rcpp::IntegerVector BayesParameter::get_superdomains(Hyperparameter& hparams) {
   
   if (nclass2domain == 1) {
     // Nothing to merge. Return item to domain associations
-    RETURN (Rcpp::IntegerVector(item2domainid.column(0)));
+    TROUBLE_END; return Rcpp::IntegerVector(item2domainid.column(0));
   }
   
   // Find connections across class2domain
@@ -1157,7 +1151,7 @@ Rcpp::IntegerVector BayesParameter::get_superdomains(Hyperparameter& hparams) {
   // Merge linked nodes
   Rcpp::IntegerVector item2superdomainid = adjmat_to_equal(adjmat, hparams.nitem);
   
-  RETURN (item2superdomainid);
+  TROUBLE_END; return item2superdomainid;
 }
 
 //' @name BayesParameter::is_identifiable
@@ -1172,7 +1166,7 @@ bool BayesParameter::is_identifiable(Hyperparameter hparams) {
   if ((hparams.steps_active["identifiable"]==false) // identifiability turned off
         | (hparams.nclass == 1) // 1 class always identifiable (under weak conditions)
   ) {
-    RETURN (true);
+    TROUBLE_END; return true;
   }
   
   Rcpp::IntegerVector item2superdomainid = get_superdomains(hparams); // Identify domains which must be grouped together
@@ -1246,7 +1240,7 @@ bool BayesParameter::is_identifiable(Hyperparameter hparams) {
     
   }
   
-  RETURN (tripart_sum >= goal);
+  TROUBLE_END; return (tripart_sum >= goal);
 }
 
 //' @name BayesParameter::domain_id_new
@@ -1271,7 +1265,7 @@ int BayesParameter::domain_id_new(int class2domain_id, Hyperparameter& hparams) 
     Rcpp::warning("BayesParameter::domain_id_new:: No empty domain found");
   }
   
-  RETURN (domain_id);
+  TROUBLE_END; return domain_id;
 }
 
 
@@ -1296,7 +1290,7 @@ Rcpp::NumericVector BayesParameter::class_pi_args(Hyperparameter& hparams) {
     args(*classes_itr) += 1;
   }
   
-  RETURN (args);
+  TROUBLE_END; return args;
 }
 
 //' @name BayesParameter::class_pi_next
@@ -1524,7 +1518,7 @@ domainProposalOut BayesParameter::domain_proposal(int class2domain_id, Hyperpara
     proposal.domains_new[iclass][proposal.domain_id2] = proposal.domain_new2.copy();
   }
   
-  RETURN (proposal);
+  TROUBLE_END; return proposal;
 }
 
 //' @name BayesParameter::domain_accept
@@ -1563,7 +1557,7 @@ domainAcceptOut BayesParameter::domain_accept(const Rcpp::IntegerMatrix& x, doma
   out.log_cutoff = out.loglik_new - out.loglik_old + std::log(proposal.forwardProb) - std::log(proposal.backwardProb);
   out.accept = int( out.log_cutoff > std::log(out.unif) );
   
-  RETURN (out);
+  TROUBLE_END; return out;
 }
 
 //' @name BayesParameter::domain_next
@@ -1588,7 +1582,7 @@ int BayesParameter::domain_next(int class2domain_id, const Rcpp::IntegerMatrix& 
   if (proposal.domain_id1 == proposal.domain_id2) {
     // No change
     accept = 2;
-    RETURN (accept);
+    TROUBLE_END; return accept;
   }
   if (proposal.domain_old1->ndomainitems_calc() + proposal.domain_old2->ndomainitems_calc() <= 1) {
     // No change up to reordering of domains. Do not bother changing
@@ -1603,7 +1597,7 @@ int BayesParameter::domain_next(int class2domain_id, const Rcpp::IntegerMatrix& 
     accept = -2;
   }
   if (accept != 0) {
-    RETURN (accept);
+    TROUBLE_END; return accept;
   }
   
   /***
@@ -1619,7 +1613,7 @@ int BayesParameter::domain_next(int class2domain_id, const Rcpp::IntegerMatrix& 
    ***/
   
   if (accept == 0) {
-    RETURN (accept); // Change nothing
+    TROUBLE_END; return accept; // Change nothing
   }
   
   if (proposal.item1_old > -1) {
@@ -1644,7 +1638,7 @@ int BayesParameter::domain_next(int class2domain_id, const Rcpp::IntegerMatrix& 
       domains[iclass].erase(proposal.domain_id2);
     }
   }
-  RETURN (accept); // Is true
+  TROUBLE_END; return accept; // Is true
 }
 
 //' @name BayesParameter::domains_next
@@ -1792,8 +1786,7 @@ void Archive::add(BayesParameter& aparams) {
   
   if (next_itr >= maxitr) {
     Rcpp::warning("Archive::add:: Max storage reached");
-    TROUBLE_END;
-    return; // Exit Early. Maybe in future resize or error, but not necessary now
+    TROUBLE_END; return; // Exit Early. Maybe in future resize or error, but not necessary now
   }
   
   class_pi.column(next_itr) = aparams.class_pi;
@@ -1895,18 +1888,18 @@ Rcpp::List dependentLCM_fit_cpp(Rcpp::IntegerMatrix& x_in, Rcpp::List hparams_li
   TROUBLE_START(("dependentLCM_fit_cpp"));
   BayesContainer bcontainer;
   bcontainer.run_init(x_in, hparams_list, params_list, nitr);
-  RETURN (Rcpp::List::create(
+  TROUBLE_END; return Rcpp::List::create(
       Rcpp::Named("class_pi") = bcontainer.archive.class_pi
-            , Rcpp::Named("classes") = bcontainer.archive.classes
-            , Rcpp::Named("domains_id") = wrap(bcontainer.archive.domains_id)
-            , Rcpp::Named("domains_patterns") = wrap(bcontainer.archive.domains_patterns)
-            , Rcpp::Named("domains_lprobs") = wrap(bcontainer.archive.domains_lprobs)
-            , Rcpp::Named("next_itr") = bcontainer.archive.next_itr
-            , Rcpp::Named("maxitr") = bcontainer.archive.maxitr
-            , Rcpp::Named("domains_accept") = bcontainer.archive.domains_accept
-            , Rcpp::Named("class_loglik") = bcontainer.archive.class_loglik
-            , Rcpp::Named("troubleshooting") = trouble_list()
-  ));
+    , Rcpp::Named("classes") = bcontainer.archive.classes
+    , Rcpp::Named("domains_id") = wrap(bcontainer.archive.domains_id)
+    , Rcpp::Named("domains_patterns") = wrap(bcontainer.archive.domains_patterns)
+    , Rcpp::Named("domains_lprobs") = wrap(bcontainer.archive.domains_lprobs)
+    , Rcpp::Named("next_itr") = bcontainer.archive.next_itr
+    , Rcpp::Named("maxitr") = bcontainer.archive.maxitr
+    , Rcpp::Named("domains_accept") = bcontainer.archive.domains_accept
+    , Rcpp::Named("class_loglik") = bcontainer.archive.class_loglik
+    , Rcpp::Named("troubleshooting") = trouble_list()
+  );
 }
 
 //' @name id2pattern
