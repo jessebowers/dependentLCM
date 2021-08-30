@@ -1481,9 +1481,11 @@ domainProposalOut BayesParameter::domain_proposal(int class2domain_id, Hyperpara
    */
   
   if (proposal.swap_type == 0) {
-    // swap. Probabilities the same (not necessarily =1, but the same)
-    proposal.forwardProb = 1;
-    proposal.backwardProb = 1;
+    // swap. Rest of probabilities equal in either direction
+    proposal.forwardProb = ((proposal.domain_old1->ndomainitems_calc() > 1) ?
+                              (1 - hparams.domain_proposal_empty) : 1); // No split;
+    proposal.backwardProb = ((proposal.domain_new1.ndomainitems_calc() > 1) ?
+                               (1 - hparams.domain_proposal_empty) : 1); // No split;
   }
   
   if (proposal.swap_type == 1) {
