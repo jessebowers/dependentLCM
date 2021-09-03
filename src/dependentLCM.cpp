@@ -1827,7 +1827,7 @@ void BayesContainer::set_initial(const Rcpp::IntegerMatrix& x_in, Rcpp::List hpa
   hparams.set_hparams(hparams_list);
   hparams.set_dataInfo(x_in);
   params.set_initial(params_list, hparams);
-  archive.set_initial(hparams.nclass, hparams.nobs, hparams.nitem, maxitr, hparams.domain_nproposals, hparams.nclass2domain);
+  archive.set_initial(hparams.nclass, hparams.nobs, hparams.nitem, maxitr+1, hparams.domain_nproposals, hparams.nclass2domain);
   TROUBLE_END;
 }
 
@@ -1837,6 +1837,9 @@ void BayesContainer::set_initial(const Rcpp::IntegerMatrix& x_in, Rcpp::List hpa
 //' @keywords internal
 void BayesContainer::run(int niter) {
   TROUBLE_START(("BayesContainer::run"));
+  
+  archive.add(params); // save initial value
+  
   for (int i=0; i < niter; i++) {
     
     if ((hparams.steps_active["thetas"]==true)
