@@ -49,7 +49,7 @@ dependentLCM_fit <- function(
   hparams <- getStart_hparams(
     df=mat
     # Hyperparameters
-    ,nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_alpha=domain_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, domain_proposal_empty=domain_proposal_empty, domain_proposal_swap=domain_proposal_swap, domain_nproposals=domain_nproposals, steps_active = steps_active
+    ,nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_alpha=domain_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, domain_proposal_empty=domain_proposal_empty, domain_proposal_swap=domain_proposal_swap, domain_nproposals=domain_nproposals, steps_active=steps_active
   )
 
   bayesparams <- getStart_bayes_params(
@@ -164,7 +164,7 @@ dependentLCM_fit <- function(
 getStart_hparams <- function(
   df=NULL, nitems=NULL
   # Hyperparameters
-  ,nclass=NCLASS, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA, domain_alpha=NULL, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_proposal_swap=DOMAIN_PROPOSAL_SWAP, domain_nproposals=NULL, steps_active = STEPS_ACTIVE
+  ,nclass=NCLASS, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA, domain_alpha=NULL, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_proposal_swap=DOMAIN_PROPOSAL_SWAP, domain_nproposals=NULL, steps_active=STEPS_ACTIVE
 ) {
   # Purpose: Add default hyperparameters
 
@@ -237,7 +237,7 @@ getStart_matrix <- function(df) {
 #' @param class_pi numeric vector size nclass. Initial condition for bayes parameter pi.
 #' @param classes integer vector size nrow(df). Initial condition for subject classes.
 #' @param domains list. Initial values for domains/probabilites.
-#' @param class_init_method string. Decides how 'classes' is defaulted if NULL. One of "kmodes" or "random"
+#' @param class_init_method string. Decides how 'classes' is defaulted if NULL. One of "kmodes" or "random" or "random_centers"
 #' @keywords internal
 getStart_bayes_params <- function(
   mat, hparams
@@ -254,11 +254,16 @@ getStart_bayes_params <- function(
     if (class_init_method=="random") {
       classes <- getStart_class_random(mat, hparams)
     }
+    if (class_init_method=="random_centers") {
+      classes <- getStart_class_random_centers(mat, hparams)
+    }
   }
 
   # class_pi
-  class_pi <- table(classes)+hparams$classPi_alpha
-  class_pi <- class_pi / sum(class_pi)
+  if (is.null(class_pi)) {
+    class_pi <- table(classes)+hparams$classPi_alpha
+    class_pi <- class_pi / sum(class_pi)
+  }
 
   # domains
   if (is.null(domains)) {
@@ -293,6 +298,37 @@ getStart_class_random <- function(mat, hparams) {
 #' @keywords internal
 getStart_class_kmodes <- function(mat, hparams, iter.max=2, ...) {
   return(klaR::kmodes(mat, hparams$nclass, iter.max=iter.max, ...)$cluster-1)
+}
+
+#' Choose nclass random centers and put observations in their nearest center
+#' @param mat matrix. Raw data.
+#' @param hparams list. List of hyperparameters
+#' @keywords internal
+getStart_class_random_centers <- function(mat, hparams) {
+  nobs <- dim(mat)[1]
+  nclass <- hparams$nclass
+  attempts <- 3
+  
+  possible_centers <- mat # lazy copy (fast)
+  centers <- matrix(data=NA, nrow=nclass, ncol(mat))
+  distance <- matrix(data=NA, nrow=nobs, ncol=nclass)
+  
+  # Get centers
+  centers[1,] <-possible_centers[sample.int(n=nrow(possible_centers)
+                                            , size=1),]
+  distance[,1] = rowSums(sweep(mat, 1, centers[1,], FUN="=="))
+  for (i in seq_len(nclass-1)+1) {
+    # choose the center farthest from the current centers
+    min_dist <- apply(distance, 1, min, na.rm=TRUE)
+    center_inds <- which(min_dist==min(min_dist))
+    centers[i,] <- possible_centers[sample(center_inds, size=1),]
+    distance[,i] = rowSums(sweep(mat, 1, centers[i,], FUN="=="))
+  }
+  
+  # Associate observation to nearest class
+  classes <- apply(distance, 1, FUN=function(idist) sample(which(idist==min(idist)),1))
+  
+  return(classes-1)
 }
 
 #' Choose starting domain values.
@@ -340,6 +376,11 @@ check_params <- function(all_params) {
   
   if (!setequal(names(all_params$hparams$steps_active), names(STEPS_ACTIVE))) {
     warning("steps_active invalid")
+    is_problem = TRUE
+  }
+  
+  if (max(all_params$bayesparams$classes) > all_params$hparams$nclass) {
+    warning("classes > nclass")
     is_problem = TRUE
   }
   
