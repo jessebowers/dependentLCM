@@ -36,7 +36,7 @@ dependentLCM_fit <- function(
   # Misc
   , class_init_method = "kmodes") {
   
-  datetimes <- c(Sys.time())
+  datetimes <- c("fun_start"=Sys.time())
   
   #
   # Set starting values
@@ -73,9 +73,9 @@ dependentLCM_fit <- function(
   # Run MCMC
   #
   
-  datetimes <- c(datetimes, Sys.time())
+  datetimes <- c(datetimes, "mcmc_start"=Sys.time())
   dlcm = dependentLCM_fit_cpp(x=(all_params$mat),hparams_list=all_params$hparams, params_list=all_params$bayesparams, nitr=nitr)
-  datetimes <- c(datetimes, Sys.time())
+  datetimes <- c(datetimes, "mcmc_end"=Sys.time())
   
   #
   # Post Processing
@@ -92,6 +92,12 @@ dependentLCM_fit <- function(
   dlcm$domains_accept <- do.call(function(...) abind::abind(..., along=3), dlcm$domains_accept)
   dlcm$class_loglik <- do.call(function(...) abind::abind(..., along=3), dlcm$class_loglik)
   
+  # name
+  dlcm$class_pi <- set_dimnames(dlcm$class_pi, c("class", "itr"))
+  dlcm$classes <- set_dimnames(dlcm$classes, c("obs", "itr"))
+  dlcm$domains_accept <- set_dimnames(dlcm$domains_accept, c(NULL, NULL, "itr"))
+  dlcm$class_loglik <- set_dimnames(dlcm$class_loglik, c("class", "obs", "itr"))
+
   # Supplemental
   domains_items <- apply(
     dlcm$domains_patterns > -1
@@ -130,7 +136,7 @@ dependentLCM_fit <- function(
   dlcm$domains_lprobs <- NULL
   dlcm$nclass2domain <- NULL
     
-  datetimes <- c(datetimes, Sys.time())
+  datetimes <- c(datetimes, "fun_end"=Sys.time())
   dlcm$runtimes <- as.numeric(c(diff(datetimes), total=tail(datetimes,1)-datetimes[1]))
   names(dlcm$runtimes) <- c("pre", "mcmc", "post", "total")
   
@@ -398,6 +404,26 @@ expSumLog <- function(x) {
   # Handle precision: log(e^a+e^b+e^c) = log(a * (1+e^(b-a)+e^(c-1))) = log(a) + log(1+e^(b-a)+e^(c-1)))
   xmax <- max(x)
   return(xmax + log(sum(exp(x-xmax))))
+}
+
+#' @description Names each axis of your array by naming each row/column axisName#
+#' @param xarray The array you wish to name the axis of
+#' @param axis_names The name of each axis of this array
+set_dimnames <- function(xarray, axis_names) {
+  dimnames(xarray) <- lapply(
+    seq_along(axis_names)
+    , function(iaxis) {
+      iaxis_name <- axis_names[iaxis]
+      if (is.null(iaxis_name)) {
+        return(null)
+      }
+      paste0(
+        iaxis_name
+        , seq_len(dim(xarray)[iaxis])
+      )
+    }
+  )
+  return(xarray)
 }
 
 ##############
