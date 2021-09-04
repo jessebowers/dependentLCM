@@ -27,20 +27,19 @@ Rcpp::IntegerVector _trouble_runcounts = Rcpp::IntegerVector::create();
 //' @param function_name name of the function in question
 //' @returns An ID identifying this specific execution of this specific function
 unsigned long long int trouble_start(std::string function_name) {
-  if (TROUBLESHOOT==1) {
-    // Print progress (good for troubleshooting fatal errors when paired with R::sink)
-    Rcpp::Rcout << function_name << " START"<< "\n";
-    return 0;
-  }
-  if (TROUBLESHOOT==2) {
-    // Track runtime
-    _trouble_runcounts(function_name) = _trouble_runcounts(function_name) + 1;
-    _trouble_id += 1;
-    _trouble_start_times[_trouble_id] = std::chrono::high_resolution_clock::now();
-    return _trouble_id;
-  }
-  
+#if TROUBLESHOOT==1
+  // Print progress (good for troubleshooting fatal errors when paired with R::sink)
+  Rcpp::Rcout << function_name << " START"<< "\n";
   return 0;
+#elif TROUBLESHOOT==2
+  // Track runtime
+  _trouble_runcounts(function_name) = _trouble_runcounts(function_name) + 1;
+  _trouble_id += 1;
+  _trouble_start_times[_trouble_id] = std::chrono::high_resolution_clock::now();
+  return _trouble_id;
+#else
+  return 0;
+#endif
 }
 
 //' @name trouble_end
@@ -49,17 +48,16 @@ unsigned long long int trouble_start(std::string function_name) {
 //' @param trouble_id ID identifying the executing of the current function taken from trouble_start
 //' @param function_name name of the current function
 void trouble_end(unsigned long long int trouble_id, std::string function_name) {
-  if (TROUBLESHOOT==1){
-    // Print progress (good for troubleshooting fatal errors when paired with R::sink)
-    Rcpp::Rcout << function_name << " END"<< "\n";
-  }
-  if (TROUBLESHOOT==2) {
-    // Track runtime
-    ttime end_time = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double, std::milli> ms_double = end_time - _trouble_start_times[trouble_id];
-    _trouble_runtimes(function_name) = _trouble_runtimes(function_name) + ms_double.count();
-    _trouble_start_times.erase(trouble_id);
-  }
+#if TROUBLESHOOT==1
+  // Print progress (good for troubleshooting fatal errors when paired with R::sink)
+  Rcpp::Rcout << function_name << " END"<< "\n";
+#elif TROUBLESHOOT==2
+  // Track runtime
+  ttime end_time = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double, std::milli> ms_double = end_time - _trouble_start_times[trouble_id];
+  _trouble_runtimes(function_name) = _trouble_runtimes(function_name) + ms_double.count();
+  _trouble_start_times.erase(trouble_id);
+#endif
 }
 
 //' @name trouble_init
@@ -307,7 +305,7 @@ void insertSorted(Rcpp::IntegerVector& x, int new_value) {
   int n = x.size();
   int i;
   for (i = 0; i < n; i++) {
-    if (new_value >= x(i)) {
+    if (new_value <= x(i)) {
       break;
     }
   }
