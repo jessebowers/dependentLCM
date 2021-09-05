@@ -52,7 +52,7 @@ void trouble_init() {
 // define globals
 unsigned long long int _trouble_id = 0;
 std::map<unsigned long long int, ttime> _trouble_start_times;
-std::vector<std::string> trouble_function_names = {"colMax", "rDirichlet", "rCategorical", "count_unique", "lbeta", "which", "count_integers", "map_get", "minimum", "id2pattern", "insertSorted", "mmult", "equal_to_adjmat", "helper_compare_adjmat", "adjmat_to_equal", "product", "powl", "Hyperparameter::set_hparams #V1", "Hyperparameter::set_hparams #V2", "Hyperparameter::set_dataInfo", "Hyperparameter::print", "DomainCount::set_initial #V1", "DomainCount::set_pattern2id_map", "DomainCount::set_initial #V2", "DomainCount::pattern2id", "DomainCount::get_ltheta", "DomainCount::id2pattern #V1", "DomainCount::id2pattern #V2", "DomainCount::countAdd", "DomainCount::list2domains", "DomainCount::copy", "DomainCount::itemsid_calc", "DomainCount::print", "BayesParameter::set_initial #V1", "BayesParameter::set_initial #V2", "BayesParameter::class_lprob #V1", "BayesParameter::class_lprob #V2", "BayesParameter::set_class_loglik", "BayesParameter::domain_resetCounts #V1", "BayesParameter::domain_resetCounts #V2", "BayesParameter::domain_addCount #V1", "BayesParameter::domain_addCount #V2", "BayesParameter::domain_addCounts #V1", "BayesParameter::domain_addCounts #V2", "BayesParameter::item2domainid_calc", "DomainCount::getloglik_x", "BayesParameter::domain_getlik_domain", "get_superdomains", "is_identifiable", "BayesParameter::domain_id_new", "BayesParameter::class_pi_args", "BayesParameter::class_pi_next", "BayesParameter::classes_next", "BayesParameter::thetas_next", "BayesParameter::domain_proposal", "BayesParameter::domain_accept", "BayesParameter::domain_next", "BayesParameter::domains_next", "Archive::set_initial", "Archive::domains2mat", "Archive::add", "BayesContainer::set_initial", "BayesContainer::run", "BayesContainer::run_init", "dependentLCM_fit_cpp", "theta_alpha_constant", "theta_alpha_linear", "theta_alpha_log"};
+std::vector<std::string> trouble_function_names = {"colMax", "rDirichlet", "rCategorical", "count_unique", "lbeta", "which", "count_integers", "map_get", "minimum", "id2pattern", "insertSorted", "mmult", "equal_to_adjmat", "helper_compare_adjmat", "adjmat_to_equal", "product", "powl", "Hyperparameter::set_hparams #V1", "Hyperparameter::set_hparams #V2", "Hyperparameter::set_dataInfo", "Hyperparameter::print", "DomainCount::set_initial #V1", "DomainCount::set_pattern2id_map", "DomainCount::set_initial #V2", "DomainCount::pattern2id", "DomainCount::get_ltheta", "DomainCount::id2pattern #V1", "DomainCount::id2pattern #V2", "DomainCount::countAdd", "DomainCount::list2domains", "DomainCount::copy", "DomainCount::itemsid_calc", "DomainCount::print", "BayesParameter::set_initial #V1", "BayesParameter::set_initial #V2", "BayesParameter::class_lprob #V1", "BayesParameter::class_lprob #V2", "BayesParameter::set_class_loglik", "BayesParameter::domain_resetCounts #V1", "BayesParameter::domain_resetCounts #V2", "BayesParameter::domain_addCount #V1", "BayesParameter::domain_addCount #V2", "BayesParameter::domain_addCounts #V1", "BayesParameter::domain_addCounts #V2", "BayesParameter::item2domainid_calc", "DomainCount::getloglik_x", "BayesParameter::domain_getlik_domain", "get_superdomains", "is_identifiable #V1", "is_identifiable #V2", "BayesParameter::domain_id_new", "BayesParameter::class_pi_args", "BayesParameter::class_pi_next", "BayesParameter::classes_next", "BayesParameter::thetas_next", "BayesParameter::domain_proposal", "BayesParameter::domain_accept", "BayesParameter::domain_next", "BayesParameter::domains_next", "Archive::set_initial", "Archive::domains2mat", "Archive::add", "BayesContainer::set_initial", "BayesContainer::run", "BayesContainer::run_init", "dependentLCM_fit_cpp", "theta_alpha_constant", "theta_alpha_linear", "theta_alpha_log"};
 Rcpp::NumericVector _trouble_runtimes = Rcpp::NumericVector::create();
 Rcpp::IntegerVector _trouble_runcounts = Rcpp::IntegerVector::create();
 
@@ -875,8 +875,9 @@ DomainCount BLANK_DOMAIN;
  ****** Helpers for Bayes Parameters
  *****************************************************/
 
-// Output for BayesParameter::domainProposal(.)
+// Output for BayesParameter::domain_proposal(.)
 struct domainProposalOut {
+  int class2domain_id;
   int swap_type; // -100 undecided, 2 split/put item into empty domain, 0 swap/exchange items between 2 domains, 1 transfer/put item from one domain into another
   int domain_id1;
   int domain_id2;
@@ -892,7 +893,7 @@ struct domainProposalOut {
   std::vector<std::map<int,  DomainCount> > domains_new;
 };
 
-// Output for BayesParameter::domainAccept(.)
+// Output for BayesParameter::domain_accept(.)
 struct domainAcceptOut {
   float loglik_old;
   float loglik_new;
@@ -900,12 +901,6 @@ struct domainAcceptOut {
   float log_cutoff;
   bool accept;
 };
-
-// Output for BayesParameter::domainPropProb(.)
-struct domainPropProbOut {
-  Rcpp::NumericVector domain_probs;
-  std::map<int,  int> domainitem_counts;
-}; // List and tuples not working here so using struct
 
 
 /*****************************************************
@@ -946,8 +941,9 @@ public:
   int nobs_calc() {return classes.size();};
   Rcpp::IntegerMatrix item2domainid_calc(Hyperparameter& hparams);
   int domain_id_new(int class2domain_id, Hyperparameter& hparams);
-  Rcpp::IntegerVector get_superdomains(Hyperparameter& hparams);
-  bool is_identifiable(Hyperparameter hparams);
+  static Rcpp::IntegerVector get_superdomains(Rcpp::IntegerMatrix& item2domainid, Hyperparameter& hparams);
+  static bool is_identifiable(Rcpp::IntegerVector& item2superdomainid, Hyperparameter& hparams);
+  bool is_identifiable(domainProposalOut& proposal, Hyperparameter& hparams);
   
 public:
   Rcpp::NumericVector class_pi_args(Hyperparameter& hparams);
@@ -1191,8 +1187,10 @@ float BayesParameter::domain_getlik_domain(Hyperparameter& hparams) {
 //' @name BayesParameter::get_superdomains
 //' @title BayesParameter::get_superdomains
 //' @description Merge overlapping domains from different class2domainid
+//' @param item2domainid Each colum describes what items must be grouped together for this item2domainid
+//' @param hparams hyperparameters
 //' @keywords internal
-Rcpp::IntegerVector BayesParameter::get_superdomains(Hyperparameter& hparams) {
+Rcpp::IntegerVector BayesParameter::get_superdomains(Rcpp::IntegerMatrix& item2domainid, Hyperparameter& hparams) {
   TROUBLE_START(("get_superdomains"));
   int nitems = item2domainid.nrow();
   int nclass2domain = item2domainid.ncol();
@@ -1221,17 +1219,17 @@ Rcpp::IntegerVector BayesParameter::get_superdomains(Hyperparameter& hparams) {
 //' @description Check if choice of domains is generically identifiable
 //' Uses greedy algorithm. May fail in some cases, but is deterministic (if bad then consistently conservative for that choice of domains)
 //' See Allman paper (DOI:10.1214/09-AOS689 Theorem 4.) for criteria used: min(patterns1,nclass)+min(patterns2,nclass)+min(patterns3,nclass) > 2*nclass+2
+//' @param item2superdomainid Vector describing which items must be grouped together
+//' @param hparams hyperparameters
 //' @keywords internal
-bool BayesParameter::is_identifiable(Hyperparameter hparams) {
-  TROUBLE_START(("is_identifiable"));
+bool BayesParameter::is_identifiable(Rcpp::IntegerVector& item2superdomainid, Hyperparameter& hparams) {
+  TROUBLE_START(("is_identifiable #V2"));
   
   if ((hparams.steps_active["identifiable"]==false) // identifiability turned off
         | (hparams.nclass == 1) // 1 class always identifiable (under weak conditions)
   ) {
     TROUBLE_END; return true;
   }
-  
-  Rcpp::IntegerVector item2superdomainid = get_superdomains(hparams); // Identify domains which must be grouped together
   
   int i;
   int domain_id;
@@ -1303,6 +1301,39 @@ bool BayesParameter::is_identifiable(Hyperparameter hparams) {
   }
   
   TROUBLE_END; return (tripart_sum >= goal);
+}
+
+//' @name BayesParameter::is_identifiable
+//' @title BayesParameter::is_identifiable
+//' @description Check if choice of domains is generically identifiable under proposal
+//' @param proposal The candidate changes to domains we are evaluating
+//' @param hparams hyperparameters
+//' @keywords internal
+bool BayesParameter::is_identifiable(domainProposalOut& proposal, Hyperparameter& hparams) {
+  TROUBLE_START(("is_identifiable #V2"));
+  
+  // maybe do early checks here to quit early (e.g. identifiability off, single class)
+  
+  // Apply proposal
+  Rcpp::IntegerMatrix item2domainid_proposed = Rcpp::clone(item2domainid);
+  int last_id = Rcpp::max(item2domainid_proposed);
+  DomainCount *idomain;
+  for (int i=0; i<2; i++) {
+    if (i == 0) {
+      idomain = &proposal.domain_new1;
+    } else if (i == 1) {
+      idomain = &proposal.domain_new2;
+    }
+    for (int j=0; j<idomain->items.size(); j++) {
+      item2domainid_proposed(idomain->items[j], proposal.class2domain_id) = last_id+1 + i;
+    }
+  }
+  
+  // Check identifiability of proposal
+  Rcpp::IntegerVector item2superdomainid_proposed = get_superdomains(item2domainid_proposed, hparams);
+  bool identifiable = is_identifiable(item2superdomainid_proposed, hparams);
+  
+  TROUBLE_END; return identifiable ;
 }
 
 //' @name BayesParameter::domain_id_new
@@ -1420,6 +1451,7 @@ void BayesParameter::thetas_next(const Rcpp::IntegerMatrix& x, Hyperparameter& h
 domainProposalOut BayesParameter::domain_proposal(int class2domain_id, Hyperparameter& hparams) {
   TROUBLE_START(("BayesParameter::domain_proposal"));
   domainProposalOut proposal;
+  proposal.class2domain_id = class2domain_id;
   proposal.swap_type = -100; // -100 indicates swap_type undecided/null
   proposal.domain_id1 = -1;
   proposal.domain_id2 = -1;
@@ -1661,7 +1693,7 @@ int BayesParameter::domain_next(int class2domain_id, const Rcpp::IntegerMatrix& 
         | (proposal.domain_new2.ndomainitems_calc() > hparams.domain_maxitems)) {
     // Over the max items per domain, reject
     accept = -2;
-  } else if (is_identifiable(hparams)==false) {
+  } else if (is_identifiable(proposal, hparams)==false) {
     // Identifiability restrictions violated
     accept = -2;
   }
