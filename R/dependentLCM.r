@@ -42,17 +42,17 @@ dependentLCM_fit <- function(
   #
   # Set starting values
   #
-
+  
   if (is.null(mat)) {
     mat <- getStart_matrix(df)
   }
-
+  
   hparams <- getStart_hparams(
     df=mat
     # Hyperparameters
     ,nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_alpha=domain_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, domain_proposal_empty=domain_proposal_empty, domain_proposal_swap=domain_proposal_swap, domain_nproposals=domain_nproposals, steps_active=steps_active, theta_alpha_funname=theta_alpha_funname
   )
-
+  
   bayesparams <- getStart_bayes_params(
     mat=mat, hparams=hparams
     , class_pi = class_pi, classes = classes, domains = domains
@@ -65,11 +65,11 @@ dependentLCM_fit <- function(
     , hparams = hparams
     , bayesparams = bayesparams
   )
-
+  
   if (check_params(all_params)) {
     stop()
   }
-
+  
   #
   # Run MCMC
   #
@@ -81,7 +81,7 @@ dependentLCM_fit <- function(
   #
   # Post Processing
   #
-
+  
   # Clean up output
   dlcm$domains_id <- do.call(cbind, dlcm$domains_id)
   rownames(dlcm$domains_id) <- c("itr", "class", "domain", "pattern_id", "items_id")
@@ -98,7 +98,7 @@ dependentLCM_fit <- function(
   dlcm$classes <- set_dimnames(dlcm$classes, c("obs", "itr"))
   dlcm$domains_accept <- set_dimnames(dlcm$domains_accept, c(NULL, NULL, "itr"))
   dlcm$class_loglik <- set_dimnames(dlcm$class_loglik, c("class", "obs", "itr"))
-
+  
   # Supplemental
   domains_items <- apply(
     dlcm$domains_patterns > -1
@@ -130,13 +130,13 @@ dependentLCM_fit <- function(
     %>% dplyr::arrange(-nitems, items)
     %>% dplyr::summarize(domains_merged=paste(items, collapse="|"), .groups="keep")
   ) # tk handle %>% correctly since it is from dplyr
-
+  
   # Delete redundant info
   dlcm$domains_id <- NULL
   dlcm$domains_patterns <- NULL
   dlcm$domains_lprobs <- NULL
   dlcm$nclass2domain <- NULL
-    
+  
   datetimes <- c(datetimes, "fun_end"=Sys.time())
   dlcm$runtimes <- as.numeric(c(diff(datetimes), total=tail(datetimes,1)-datetimes[1]))
   names(dlcm$runtimes) <- c("pre", "mcmc", "post", "total")
@@ -172,39 +172,39 @@ getStart_hparams <- function(
   ,nclass=NCLASS, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA, domain_alpha=NULL, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_proposal_swap=DOMAIN_PROPOSAL_SWAP, domain_nproposals=NULL, steps_active=STEPS_ACTIVE, theta_alpha_funname = THETA_ALPHA_FUNNAME
 ) {
   # Purpose: Add default hyperparameters
-
+  
   if (is.null(nitems)) {
     nitems <- dim(df)[2]
   }
   item_nlevels <- apply(df, 2, max)+1
-
+  
   # ndomains
   if (is.null(ndomains)){
     ndomains <- 100*nitems # Many more domains than items
   }
-
+  
   # class2domain
   if (is.null(class2domain)) {
     class2domain <- rep(0, nclass) # all classes use same domains
   }
   class2domain <- as.integer(factor(class2domain))-1 # Make sequential starting at 0
   nclass2domain <- length(unique(class2domain))
-
+  
   # classPi_alpha
   if (length(classPi_alpha)==1) {
     classPi_alpha <- rep(classPi_alpha, nclass)
   }
-
+  
   # domain_alpha
   if (is.null(domain_alpha)) {
     domain_alpha <- nitems * DOMAIN_ALPHA_RATIO
   }
-
+  
   # domain_maxitems
   if (is.null(domain_maxitems)) {
     domain_maxitems <- nitems # No restrictions
   }
-
+  
   # domain_nproposals
   if (is.null(domain_nproposals)) {
     domain_nproposals <- nitems
@@ -214,7 +214,7 @@ getStart_hparams <- function(
   # steps_active (fill in missing values)
   steps_active_fn = STEPS_ACTIVE
   steps_active_fn[names(steps_active)] = steps_active
-
+  
   return(list(
     nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_alpha=domain_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, nitems = nitems, item_nlevels = item_nlevels, nclass2domain = nclass2domain, domain_proposal_empty=domain_proposal_empty, domain_proposal_swap=domain_proposal_swap, domain_nproposals=domain_nproposals, steps_active = steps_active_fn, theta_alpha_funname = theta_alpha_funname
   ))
@@ -224,7 +224,7 @@ getStart_hparams <- function(
 #' @keywords internal
 getStart_matrix <- function(df) {
   # Purpose: Convert to factor in integer form (0:k-1) and remove NA rows
-
+  
   df <- as.data.frame(df)
   for (i in 1:ncol(df)) {
     df[, i] <- as.integer(factor(df[, i])) - 1
@@ -232,7 +232,7 @@ getStart_matrix <- function(df) {
   df <- as.matrix(df)
   df <- na.omit(df)
   mode(df) <- "integer"
-
+  
   return(df)
 }
 
@@ -250,7 +250,7 @@ getStart_bayes_params <- function(
   # Misc
   , class_init_method = "kmodes"
 ) {
-
+  
   # classes
   if (is.null(classes)) {
     if (class_init_method=="kmodes") {
@@ -263,18 +263,18 @@ getStart_bayes_params <- function(
       classes <- getStart_class_random_centers(mat, hparams)
     }
   }
-
+  
   # class_pi
   if (is.null(class_pi)) {
     class_pi <- table(classes)+hparams$classPi_alpha
     class_pi <- class_pi / sum(class_pi)
   }
-
+  
   # domains
   if (is.null(domains)) {
     domains <- getStart_domains(mat, classes, hparams)
   } # Future maybe allow other types of inputs
-
+  
   return(list(
     class_pi = class_pi, classes = classes, domains = domains
   ))
@@ -289,11 +289,11 @@ getStart_class_random <- function(mat, hparams) {
   class_pi <- hparams$classPi_alpha / sum(hparams$classPi_alpha)
   nobs <- dim(mat)[1]
   classes <- sample(0:(hparams$nclass-1), size=nobs, replace=TRUE, prob=class_pi)
-
+  
   # Ensure every class shows up atleast once:
   ids <- sample.int(nobs, hparams$nclass)
   classes[ids] <- 0:(hparams$nclass-1)
-
+  
   return(classes)
 }
 
@@ -368,12 +368,12 @@ getStart_domains <- function(mat, classes, hparams) {
 #' @keywords internal
 check_params <- function(all_params) {
   is_problem = FALSE
-
+  
   if (all_params$hparams$nclass != length(all_params$hparams$class2domain)) {
     warning("nclass~class2domain mismatch")
     is_problem = TRUE
   }
-
+  
   if (all_params$hparams$ndomains <= all_params$hparams$nitems) {
     warning("Must have more domains than items") # Fewer domains theoretically ok, but not implemented in code
     is_problem = TRUE
@@ -660,11 +660,11 @@ theta_item_probs <- function(items, this_sim, itrs) {
 #' }
 #' @export
 simulate_lcm <- function(n, pis, thetas) {
-
+  
   nclasses <- length(pis)
   classes <- apply(rmultinom(n, 1, pis), 2, function(x) which(x==1))
-
-
+  
+  
   if (class(thetas) == "matrix") {
     responses <- sapply(
       classes
@@ -684,7 +684,7 @@ simulate_lcm <- function(n, pis, thetas) {
     }
     responses <- responses - 1
   }
-
+  
   return(list(classes=classes, responses=responses))
 }
 

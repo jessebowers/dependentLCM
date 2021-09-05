@@ -947,7 +947,7 @@ public:
   void thetas_next(const Rcpp::IntegerMatrix& x, Hyperparameter& hparams);
   
 public:
-  static float domain_getloglik_x(const Rcpp::IntegerVector& pattern_counts, float theta_alpha);
+  static float domain_getloglik_x(const Rcpp::IntegerVector& pattern_counts, Hyperparameter& hparams);
   static float domain_getlik_domain(Hyperparameter& hparams);
   domainProposalOut domain_proposal(int class2domain_id, Hyperparameter& hparams);
   domainAcceptOut domain_accept(const Rcpp::IntegerMatrix& x, domainProposalOut& proposal, Hyperparameter& hparams);
@@ -1177,13 +1177,15 @@ Rcpp::IntegerMatrix BayesParameter::item2domainid_calc(Hyperparameter& hparams) 
 //' @param pattern_counts The counts for each pattern in this domain (vector).
 //' @param theta_alpha Hyperparameter describing the Dirichlet concentration parameters for the theta prior.
 //' @keywords internal
-float BayesParameter::domain_getloglik_x(const Rcpp::IntegerVector& pattern_counts, float theta_alpha) {
+float BayesParameter::domain_getloglik_x(const Rcpp::IntegerVector& pattern_counts, Hyperparameter& hparams) {
   TROUBLE_START(("BayesParameter::domain_getloglik_x"));
   if (pattern_counts.size() == 0) {
     TROUBLE_END; return 0; // log(1)
   }
   
-  TROUBLE_END; return lbeta(Rcpp::as<Rcpp::NumericVector> (pattern_counts) + theta_alpha);
+  TROUBLE_END; return lbeta(Rcpp::as<Rcpp::NumericVector> (pattern_counts) 
+                              + hparams.theta_alpha_fun(hparams.theta_alpha, pattern_counts.size()) 
+  );
 }
 
 //' @name BayesParameter::domain_getlik_domain
@@ -1610,16 +1612,16 @@ domainAcceptOut BayesParameter::domain_accept(const Rcpp::IntegerMatrix& x, doma
     iclass = proposal.domain_classes[i];
     
     if (domains[iclass].count(proposal.domain_id1) > 0) { // should always be true
-      out.loglik_old += domain_getloglik_x(domains[iclass][proposal.domain_id1].counts, hparams.theta_alpha);
+      out.loglik_old += domain_getloglik_x(domains[iclass][proposal.domain_id1].counts, hparams);
     }
     if (domains[iclass].count(proposal.domain_id2) > 0) {
-      out.loglik_old += domain_getloglik_x(domains[iclass][proposal.domain_id2].counts, hparams.theta_alpha);
+      out.loglik_old += domain_getloglik_x(domains[iclass][proposal.domain_id2].counts, hparams);
     }
     if (proposal.domains_new[iclass].count(proposal.domain_id1) > 0) {
-      out.loglik_new += domain_getloglik_x(proposal.domains_new[iclass][proposal.domain_id1].counts, hparams.theta_alpha);
+      out.loglik_new += domain_getloglik_x(proposal.domains_new[iclass][proposal.domain_id1].counts, hparams);
     }
     if (proposal.domains_new[iclass].count(proposal.domain_id2) > 0) { // should always be true
-      out.loglik_new += domain_getloglik_x(proposal.domains_new[iclass][proposal.domain_id2].counts, hparams.theta_alpha);
+      out.loglik_new += domain_getloglik_x(proposal.domains_new[iclass][proposal.domain_id2].counts, hparams);
     }
   }
   
