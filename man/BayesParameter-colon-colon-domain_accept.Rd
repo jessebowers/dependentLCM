@@ -6,5 +6,6 @@
 \description{
 In metroplis algorithm when choosing to update domains.
 We examine the proposal and decide whether to accept it.
+ASSUMPTIONS domain_addCounts has been run on proposal.domains_new
 }
 \keyword{internal}

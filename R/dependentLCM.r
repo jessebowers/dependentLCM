@@ -18,6 +18,7 @@ THETA_ALPHA = 2
 DOMAIN_PROPOSAL_EMPTY = 0.3
 DOMAIN_PROPOSAL_SWAP = 0.3
 STEPS_ACTIVE = c("thetas"=TRUE, "domains"=TRUE, "class_pi"=TRUE, "classes"=TRUE, "identifiable"=TRUE)
+THETA_ALPHA_FUNNAME = "log"
 
 #' Fits a bayesian dependent LCM model
 #' @param nitr integer. Number of iterations to run the bayes MCMC
@@ -30,7 +31,7 @@ dependentLCM_fit <- function(
   # Data
   , df=NULL, mat=NULL
   # Hyperparameters
-  ,nclass=NCLASS, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA, domain_alpha=NULL, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_proposal_swap=DOMAIN_PROPOSAL_SWAP, domain_nproposals=NULL, steps_active = STEPS_ACTIVE
+  ,nclass=NCLASS, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA, domain_alpha=NULL, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_proposal_swap=DOMAIN_PROPOSAL_SWAP, domain_nproposals=NULL, steps_active = STEPS_ACTIVE, theta_alpha_funname = THETA_ALPHA_FUNNAME
   # Bayes parameters
   , class_pi = NULL, classes = NULL, domains = NULL
   # Misc
@@ -49,7 +50,7 @@ dependentLCM_fit <- function(
   hparams <- getStart_hparams(
     df=mat
     # Hyperparameters
-    ,nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_alpha=domain_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, domain_proposal_empty=domain_proposal_empty, domain_proposal_swap=domain_proposal_swap, domain_nproposals=domain_nproposals, steps_active=steps_active
+    ,nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_alpha=domain_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, domain_proposal_empty=domain_proposal_empty, domain_proposal_swap=domain_proposal_swap, domain_nproposals=domain_nproposals, steps_active=steps_active, theta_alpha_funname=theta_alpha_funname
   )
 
   bayesparams <- getStart_bayes_params(
@@ -160,11 +161,15 @@ dependentLCM_fit <- function(
 #' @param domain_nproposals Sets how many times the domain metropolis propsal function is called each iteration
 #' @param steps_active Named boolean vector of what actions to take during mcmc. If mcmc is skipped then initial values are kept as fixed.
 #' thetas=TRUE to do gibbs on response probabilities, domains=TRUE to do metropolis on domains, class_pi=TRUE to do gibbs on class prior, classes=TRUE to do gibbs on class membership, identifiable=TRUE to check generic identifiability conditions of domains
+#' @param theta_alpha_funname Decides the prior for theta as domains get merged. 
+#' "constant" for theta~Dirichlet(rep(theta_alpha, size))
+#' "linear" for theta~Dirichlet(rep(2*theta_alpha/size, size))
+#' "log" for theta~Dirichlet(rep(log(2)*theta_alpha/log(size), size))
 #' @keywords internal
 getStart_hparams <- function(
   df=NULL, nitems=NULL
   # Hyperparameters
-  ,nclass=NCLASS, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA, domain_alpha=NULL, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_proposal_swap=DOMAIN_PROPOSAL_SWAP, domain_nproposals=NULL, steps_active=STEPS_ACTIVE
+  ,nclass=NCLASS, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA, domain_alpha=NULL, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_proposal_swap=DOMAIN_PROPOSAL_SWAP, domain_nproposals=NULL, steps_active=STEPS_ACTIVE, theta_alpha_funname = THETA_ALPHA_FUNNAME
 ) {
   # Purpose: Add default hyperparameters
 
@@ -211,7 +216,7 @@ getStart_hparams <- function(
   steps_active_fn[names(steps_active)] = steps_active
 
   return(list(
-    nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_alpha=domain_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, nitems = nitems, item_nlevels = item_nlevels, nclass2domain = nclass2domain, domain_proposal_empty=domain_proposal_empty, domain_proposal_swap=domain_proposal_swap, domain_nproposals=domain_nproposals, steps_active = steps_active_fn
+    nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_alpha=domain_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, nitems = nitems, item_nlevels = item_nlevels, nclass2domain = nclass2domain, domain_proposal_empty=domain_proposal_empty, domain_proposal_swap=domain_proposal_swap, domain_nproposals=domain_nproposals, steps_active = steps_active_fn, theta_alpha_funname = theta_alpha_funname
   ))
 }
 
@@ -450,6 +455,7 @@ expSumLog <- function(x) {
 #' @description Names each axis of your array by naming each row/column axisName#
 #' @param xarray The array you wish to name the axis of
 #' @param axis_names The name of each axis of this array
+#' @keywords internal
 set_dimnames <- function(xarray, axis_names) {
   dimnames(xarray) <- lapply(
     seq_along(axis_names)

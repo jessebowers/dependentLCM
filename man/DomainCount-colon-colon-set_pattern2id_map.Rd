@@ -6,5 +6,6 @@
 \description{
 Create 'conversion vector' for converting (vector) response pattern to representative ID
 See id2pattern(.) for more details
+Side effect. Sets npatterns
 }
 \keyword{internal}

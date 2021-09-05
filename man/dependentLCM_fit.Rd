@@ -19,6 +19,7 @@ dependentLCM_fit(
   domain_proposal_swap = DOMAIN_PROPOSAL_SWAP,
   domain_nproposals = NULL,
   steps_active = STEPS_ACTIVE,
+  theta_alpha_funname = THETA_ALPHA_FUNNAME,
   class_pi = NULL,
   classes = NULL,
   domains = NULL,
@@ -50,13 +51,23 @@ dependentLCM_fit(
 
 \item{domain_proposal_swap}{numeric. Sets how often the domain metropolis proposal function swaps items between domains.}
 
+\item{domain_nproposals}{Sets how many times the domain metropolis propsal function is called each iteration}
+
+\item{steps_active}{Named boolean vector of what actions to take during mcmc. If mcmc is skipped then initial values are kept as fixed.
+thetas=TRUE to do gibbs on response probabilities, domains=TRUE to do metropolis on domains, class_pi=TRUE to do gibbs on class prior, classes=TRUE to do gibbs on class membership, identifiable=TRUE to check generic identifiability conditions of domains}
+
+\item{theta_alpha_funname}{Decides the prior for theta as domains get merged. 
+"constant" for theta~Dirichlet(rep(theta_alpha, size))
+"linear" for theta~Dirichlet(rep(2*theta_alpha/size, size))
+"log" for theta~Dirichlet(rep(log(2)*theta_alpha/log(size), size))}
+
 \item{class_pi}{numeric vector size nclass. Initial condition for bayes parameter pi.}
 
 \item{classes}{integer vector size nrow(df). Initial condition for subject classes.}
 
 \item{domains}{list. Initial values for domains/probabilites.}
 
-\item{class_init_method}{string. Decides how 'classes' is defaulted if NULL. One of "kmodes" or "random"}
+\item{class_init_method}{string. Decides how 'classes' is defaulted if NULL. One of "kmodes" or "random" or "random_centers"}
 
 \item{cleanup}{boolean. TRUE to delete some redundant data from output}
 }

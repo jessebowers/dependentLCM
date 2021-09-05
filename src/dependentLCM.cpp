@@ -3,7 +3,7 @@
 
 #define TROUBLESHOOT 0
 
-#if TROUBLESHOOT > 0
+#if TROUBLESHOOT == 2
 #include <chrono>
 typedef std::chrono::time_point<std::chrono::high_resolution_clock> ttime;
 #endif
@@ -17,7 +17,7 @@ typedef std::chrono::time_point<std::chrono::high_resolution_clock> ttime;
 // define globals
 unsigned long long int _trouble_id = 0;
 std::map<unsigned long long int, ttime> _trouble_start_times;
-std::vector<std::string> trouble_function_names = {"colMax", "rDirichlet", "rCategorical", "count_unique", "lbeta", "which", "count_integers", "map_get", "minimum", "id2pattern", "insertSorted", "mmult", "equal_to_adjmat", "helper_compare_adjmat", "adjmat_to_equal", "product", "powl", "Hyperparameter::set_hparams #V1", "Hyperparameter::set_hparams #V2", "Hyperparameter::set_dataInfo", "Hyperparameter::print", "DomainCount::set_initial #V1", "DomainCount::set_pattern2id_map", "DomainCount::set_initial #V2", "DomainCount::pattern2id", "DomainCount::get_ltheta", "DomainCount::id2pattern #V1", "DomainCount::id2pattern #V2", "DomainCount::countAdd", "DomainCount::list2domains", "DomainCount::copy", "DomainCount::itemsid_calc", "DomainCount::print", "BayesParameter::set_initial #V1", "BayesParameter::set_initial #V2", "BayesParameter::class_lprob #V1", "BayesParameter::class_lprob #V2", "BayesParameter::set_class_loglik", "BayesParameter::domain_resetCounts #V1", "BayesParameter::domain_resetCounts #V2", "BayesParameter::domain_addCount #V1", "BayesParameter::domain_addCount #V2", "BayesParameter::domain_addCounts #V1", "BayesParameter::domain_addCounts #V2", "BayesParameter::item2domainid_calc", "BayesParameter::domain_getloglik_x", "BayesParameter::domain_getlik_domain", "get_superdomains", "is_identifiable", "BayesParameter::domain_id_new", "BayesParameter::class_pi_args", "BayesParameter::class_pi_next", "BayesParameter::classes_next", "BayesParameter::thetas_next", "BayesParameter::domain_proposal", "BayesParameter::domain_accept", "BayesParameter::domain_next", "BayesParameter::domains_next", "Archive::set_initial", "Archive::domains2mat", "Archive::add", "BayesContainer::set_initial", "BayesContainer::run", "BayesContainer::run_init", "dependentLCM_fit_cpp"};
+std::vector<std::string> trouble_function_names = {"colMax", "rDirichlet", "rCategorical", "count_unique", "lbeta", "which", "count_integers", "map_get", "minimum", "id2pattern", "insertSorted", "mmult", "equal_to_adjmat", "helper_compare_adjmat", "adjmat_to_equal", "product", "powl", "Hyperparameter::set_hparams #V1", "Hyperparameter::set_hparams #V2", "Hyperparameter::set_dataInfo", "Hyperparameter::print", "DomainCount::set_initial #V1", "DomainCount::set_pattern2id_map", "DomainCount::set_initial #V2", "DomainCount::pattern2id", "DomainCount::get_ltheta", "DomainCount::id2pattern #V1", "DomainCount::id2pattern #V2", "DomainCount::countAdd", "DomainCount::list2domains", "DomainCount::copy", "DomainCount::itemsid_calc", "DomainCount::print", "BayesParameter::set_initial #V1", "BayesParameter::set_initial #V2", "BayesParameter::class_lprob #V1", "BayesParameter::class_lprob #V2", "BayesParameter::set_class_loglik", "BayesParameter::domain_resetCounts #V1", "BayesParameter::domain_resetCounts #V2", "BayesParameter::domain_addCount #V1", "BayesParameter::domain_addCount #V2", "BayesParameter::domain_addCounts #V1", "BayesParameter::domain_addCounts #V2", "BayesParameter::item2domainid_calc", "BayesParameter::domain_getloglik_x", "BayesParameter::domain_getlik_domain", "get_superdomains", "is_identifiable", "BayesParameter::domain_id_new", "BayesParameter::class_pi_args", "BayesParameter::class_pi_next", "BayesParameter::classes_next", "BayesParameter::thetas_next", "BayesParameter::domain_proposal", "BayesParameter::domain_accept", "BayesParameter::domain_next", "BayesParameter::domains_next", "Archive::set_initial", "Archive::domains2mat", "Archive::add", "BayesContainer::set_initial", "BayesContainer::run", "BayesContainer::run_init", "dependentLCM_fit_cpp", "theta_alpha_constant", "theta_alpha_linear", "theta_alpha_log"};
 Rcpp::NumericVector _trouble_runtimes = Rcpp::NumericVector::create();
 Rcpp::IntegerVector _trouble_runcounts = Rcpp::IntegerVector::create();
 
@@ -429,6 +429,51 @@ int powl(int x, int p) {
   TROUBLE_END; return int(std::pow(double(x), double(p))+0.5);
 }
 
+
+/*****************************************************
+ ****** Helpers for Hyperparameters
+ *****************************************************/
+
+//' @name theta_alpha_functions
+//' @title theta_alpha_functions
+//' @description Determines how quickly theta decreases as domainitems increase
+//' @param theta_alpha Scales the strength of the theta dirichlet prior
+//' @param ndomainitems How many items are in this domain
+//' @aliases theta_alpha_constant theta_alpha_linear theta_alpha_log
+//' @keywords internal
+
+
+//' @name theta_alpha_constant
+//' @rdname theta_alpha_functions
+//' @keywords internal
+float theta_alpha_constant(float theta_alpha, int ndomainitems) {
+  TROUBLE_START(("theta_alpha_constant"));
+  TROUBLE_END; return theta_alpha;
+}
+
+//' @name theta_alpha_linear
+//' @rdname theta_alpha_functions
+//' @keywords internal
+float theta_alpha_linear(float theta_alpha, int ndomainitems) {
+  TROUBLE_START(("theta_alpha_linear"));
+  TROUBLE_END; return 2 * theta_alpha / float(ndomainitems);
+}
+
+//' @name theta_alpha_log
+//' @rdname theta_alpha_functions
+//' @keywords internal
+float theta_alpha_log(float theta_alpha, int ndomainitems) {
+  TROUBLE_START(("theta_alpha_log"));
+  TROUBLE_END; return std::log(2) * theta_alpha / std::log(float(ndomainitems));
+}
+
+std::map<std::string, std::function<float(float, int)>> THETA_ALPHA_FUNS = {
+  {"constant", &theta_alpha_constant}
+  , {"linear", &theta_alpha_linear}
+  , {"log", &theta_alpha_log}
+};
+
+
 /*****************************************************
  ****** Hyperparameters
  *****************************************************/
@@ -448,6 +493,7 @@ public:
   int domain_maxitems;
   float theta_alpha;
   Rcpp::LogicalVector steps_active;
+  std::string theta_alpha_funname;
   // Data Info
   Rcpp::IntegerVector item_nlevels;
   int nobs;
@@ -455,11 +501,12 @@ public:
   int nitem;
   int nclass2domain;
   float domain_alpha_one;
+  std::function<float(float, int)> theta_alpha_fun;
   
 public:
   int nclass2domain_calc() {return count_unique(class2domain);};
   int nitem_calc() {return item_nlevels.size();};
-  void set_hparams(int ndomains_in, int nclass_in, const Rcpp::IntegerVector& class2domain_in, const Rcpp::NumericVector& classPi_alpha_in, float domain_alpha_in, int domain_maxitems_in, float theta_alpha_in, float domain_proposal_empty_in, float domain_proposal_swap_in, int domain_nproposals_in, Rcpp::LogicalVector steps_active_in);
+  void set_hparams(int ndomains_in, int nclass_in, const Rcpp::IntegerVector& class2domain_in, const Rcpp::NumericVector& classPi_alpha_in, float domain_alpha_in, int domain_maxitems_in, float theta_alpha_in, float domain_proposal_empty_in, float domain_proposal_swap_in, int domain_nproposals_in, Rcpp::LogicalVector steps_active_in, std::string theta_alpha_funname_in);
   void set_hparams(Rcpp::List hparams_in);
   void set_dataInfo(const Rcpp::IntegerMatrix& x);
   void print();
@@ -481,7 +528,8 @@ void Hyperparameter::set_hparams(
   , float domain_proposal_empty_in
   , float domain_proposal_swap_in
   , int domain_nproposals_in
-  , Rcpp::LogicalVector steps_active_in) {
+  , Rcpp::LogicalVector steps_active_in
+  , std::string theta_alpha_funname_in) {
   TROUBLE_START(("Hyperparameter::set_hparams #V1"));
   ndomains = ndomains_in;
   nclass = nclass_in;
@@ -494,9 +542,11 @@ void Hyperparameter::set_hparams(
   domain_proposal_swap = domain_proposal_swap_in;
   domain_nproposals = domain_nproposals_in;
   steps_active =  steps_active_in;
+  theta_alpha_funname = theta_alpha_funname_in;
   
   // Inferred
   nclass2domain = nclass2domain_calc();
+  theta_alpha_fun = THETA_ALPHA_FUNS[theta_alpha_funname];
   TROUBLE_END;
 }
 
@@ -519,8 +569,9 @@ void Hyperparameter::set_hparams(Rcpp::List hparams_in) {
   float domain_proposal_swap = hparams_in("domain_proposal_swap");
   float domain_nproposals = hparams_in("domain_nproposals");
   Rcpp::LogicalVector steps_active = hparams_in("steps_active");
+  std::string theta_alpha_funname = hparams_in("theta_alpha_funname");
   
-  set_hparams(ndomains, nclass, class2domain, classPi_alpha, domain_alpha, domain_maxitems, theta_alpha, domain_proposal_empty, domain_proposal_swap, domain_nproposals, steps_active);
+  set_hparams(ndomains, nclass, class2domain, classPi_alpha, domain_alpha, domain_maxitems, theta_alpha, domain_proposal_empty, domain_proposal_swap, domain_nproposals, steps_active, theta_alpha_funname);
   TROUBLE_END;
 }
 
@@ -812,7 +863,7 @@ DomainCount BLANK_DOMAIN;
 
 
 /*****************************************************
- ****** Bayes Parameters
+ ****** Helpers for Bayes Parameters
  *****************************************************/
 
 // Output for BayesParameter::domainProposal(.)
@@ -846,6 +897,12 @@ struct domainPropProbOut {
   Rcpp::NumericVector domain_probs;
   std::map<int,  int> domainitem_counts;
 }; // List and tuples not working here so using struct
+
+
+/*****************************************************
+ ****** Bayes Parameters
+ *****************************************************/
+
 
 // Bayes parameters  (random variables)
 class BayesParameter {

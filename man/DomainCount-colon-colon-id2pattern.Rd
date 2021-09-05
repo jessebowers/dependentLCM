@@ -7,5 +7,6 @@
 Convert pattern ID to original response pattern
 See utilities ::id2pattern(.) for more details
 Differs from ::id2pattern(.) in that pattern2id_map is a cumulative compared to mapvec
+Assumes items are in same order as pattern2id_map;
 }
 \keyword{internal}

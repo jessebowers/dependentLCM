@@ -24,7 +24,7 @@ getStart_bayes_params(
 
 \item{domains}{list. Initial values for domains/probabilites.}
 
-\item{class_init_method}{string. Decides how 'classes' is defaulted if NULL. One of "kmodes" or "random"}
+\item{class_init_method}{string. Decides how 'classes' is defaulted if NULL. One of "kmodes" or "random" or "random_centers"}
 }
 \description{
 Generates initial values for bayes parameters
