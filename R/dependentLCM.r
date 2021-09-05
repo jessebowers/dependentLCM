@@ -18,7 +18,7 @@ THETA_ALPHA = 2
 DOMAIN_PROPOSAL_EMPTY = 0.3
 DOMAIN_PROPOSAL_SWAP = 0.3
 STEPS_ACTIVE = c("thetas"=TRUE, "domains"=TRUE, "class_pi"=TRUE, "classes"=TRUE, "identifiable"=TRUE)
-THETA_ALPHA_FUNNAME = "log"
+THETA_ALPHA_FUNNAME = "average"
 
 #' Fits a bayesian dependent LCM model
 #' @param nitr integer. Number of iterations to run the bayes MCMC
@@ -161,10 +161,10 @@ dependentLCM_fit <- function(
 #' @param domain_nproposals Sets how many times the domain metropolis propsal function is called each iteration
 #' @param steps_active Named boolean vector of what actions to take during mcmc. If mcmc is skipped then initial values are kept as fixed.
 #' thetas=TRUE to do gibbs on response probabilities, domains=TRUE to do metropolis on domains, class_pi=TRUE to do gibbs on class prior, classes=TRUE to do gibbs on class membership, identifiable=TRUE to check generic identifiability conditions of domains
-#' @param theta_alpha_funname Decides the prior for theta as domains get merged. 
-#' "constant" for theta~Dirichlet(rep(theta_alpha, size))
-#' "linear" for theta~Dirichlet(rep(2*theta_alpha/size, size))
-#' "log" for theta~Dirichlet(rep(log(2)*theta_alpha/log(size), size))
+#' @param theta_alpha_funname string [depreciated] Decides the prior for theta as domains get merged. 
+#' "constant" for theta~Dirichlet(theta_alpha * rep(1, npatterns))
+#' "average" for theta~Dirichlet(theta_alpha * * sum(npattens_i)/npatterns rep(1, npatterns))
+#' Setting is not recommended as it tends to 
 #' @keywords internal
 getStart_hparams <- function(
   df=NULL, nitems=NULL
@@ -348,7 +348,8 @@ getStart_domains <- function(mat, classes, hparams) {
     domains_list[[iclass+1]] <- lapply(
       1:hparams$nitems
       , function(icol) {
-        ix = mat[classes==iclass, icol]
+        ix = c(mat[classes==iclass, icol]
+               , seq_len(hparams$item_nlevels[icol])-1)
         idomains = as.vector((table(ix) + hparams$domain_alpha))
         idomains <- idomains/sum(idomains)
         iout = list(
