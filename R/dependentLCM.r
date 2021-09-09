@@ -18,7 +18,9 @@ THETA_ALPHA = 2
 DOMAIN_PROPOSAL_EMPTY = 0.3
 DOMAIN_PROPOSAL_SWAP = 0.3
 STEPS_ACTIVE = c("thetas"=TRUE, "domains"=TRUE, "class_pi"=TRUE, "classes"=TRUE, "identifiable"=TRUE)
-THETA_ALPHA_FUNNAME = "average"
+THETA_ALPHA_FUNNAMES = c("constant", "log", "average")
+THETA_ALPHA_FUNNAME = THETA_ALPHA_FUNNAMES[1]
+DOMAIN_MAXITEMS = 10
 
 #' Fits a bayesian dependent LCM model
 #' @param nitr integer. Number of iterations to run the bayes MCMC
@@ -129,7 +131,7 @@ dependentLCM_fit <- function(
     %>% filter(class == min(class))
     %>% dplyr::arrange(-nitems, items)
     %>% dplyr::summarize(domains_merged=paste(items, collapse="|"), .groups="keep")
-  ) # tk handle %>% correctly since it is from dplyr
+  )
   
   # Delete redundant info
   dlcm$domains_id <- NULL
@@ -154,17 +156,17 @@ dependentLCM_fit <- function(
 #' @param class2domain integer vector of length nclass. Classes with same value have same domains.
 #' @param classPi_alpha numeric vector. Bayes hyperparameter giving prior for Pi.
 #' @param domain_alpha numeric. Bayes hyperparameter giving prior for domains.
-#' @param domain_maxitems iinteger. Maximum number of items which can be in a doamin.
+#' @param domain_maxitems iinteger. Maximum number of items which can be in a domain. Default is 10 (beyond 10 runs slowly).
 #' @param theta_alpha numeric. Bayes hyperparemter giving the prior for theta/probabilties.
 #' @param domain_proposal_empty numeric. Sets how often the domain metropolis proposal function pairs a nonempty domain with an empty domain.
 #' @param domain_proposal_swap numeric. Sets how often the domain metropolis proposal function swaps items between domains.
 #' @param domain_nproposals Sets how many times the domain metropolis propsal function is called each iteration
 #' @param steps_active Named boolean vector of what actions to take during mcmc. If mcmc is skipped then initial values are kept as fixed.
 #' thetas=TRUE to do gibbs on response probabilities, domains=TRUE to do metropolis on domains, class_pi=TRUE to do gibbs on class prior, classes=TRUE to do gibbs on class membership, identifiable=TRUE to check generic identifiability conditions of domains
-#' @param theta_alpha_funname string [depreciated] Decides the prior for theta as domains get merged. 
-#' "constant" for theta~Dirichlet(theta_alpha * rep(1, npatterns))
-#' "average" for theta~Dirichlet(theta_alpha * * sum(npattens_i)/npatterns rep(1, npatterns))
-#' Setting is not recommended as it tends to 
+#' @param theta_alpha_funname string Decides the prior for theta as domains get merged. 
+#' "constant" for theta~Dirichlet(theta_alpha * rep(1, npatterns)). Produces domains of 1-4 items but typically not larger.
+#' "log" for theta~Dirichlet(theta_alpha * ln(sum(npattens_i))/ln(npatterns) rep(1, npatterns))
+#' "average" [depreciated] for theta~Dirichlet(theta_alpha * sum(npattens_i)/npatterns rep(1, npatterns)). Unstable for large domains
 #' @keywords internal
 getStart_hparams <- function(
   df=NULL, nitems=NULL
@@ -202,7 +204,7 @@ getStart_hparams <- function(
   
   # domain_maxitems
   if (is.null(domain_maxitems)) {
-    domain_maxitems <- nitems # No restrictions
+    domain_maxitems <- min(nitems, DOMAIN_MAXITEMS)
   }
   
   # domain_nproposals
@@ -488,7 +490,11 @@ set_dimnames <- function(xarray, axis_names) {
 #' domain_nitems = How often the domains are of size k.
 #' domain_accept = How often our metropolis step accepts its proposal
 #' @export
-dlcm.summary <- function(dlcm, nwarmup=1000, alpha=0) {
+dlcm.summary <- function(dlcm, nwarmup=NULL) {
+  
+  if (is.null(nwarmup)) {
+    nwarmup = min(1000, floor(dlcm$mcmc$maxitr/2))
+  }
   
   dlcm$mcmc$domains$item_value <- apply(
     dlcm$mcmc$domains[, dlcm$hparams$domain_item_cols]
@@ -503,19 +509,22 @@ dlcm.summary <- function(dlcm, nwarmup=1000, alpha=0) {
   
   domain_accept <- table(dlcm$mcmc$domains_accept[, , -(1:nwarmup)])
   
-  waic <- dlcm.get_waic(dlcm, itrs=nwarmup:dlcm$mcmc$maxitr, alpha=alpha)
+  waic <- dlcm.get_waic(dlcm, itrs=nwarmup:dlcm$mcmc$maxitr)
+  names(waic) <- paste0("waic_", names(waic))
   
-  return(list(
-    "thetas_avg"=thetas_avg, "domain_items"=domain_items, "domain_items_all"=domain_items_all, "domain_accept"=domain_accept, "waic"=waic
-  ))
+  return(c(
+    list("thetas_avg"=thetas_avg, "domain_items"=domain_items, "domain_items_all"=domain_items_all, "domain_accept"=domain_accept)
+    , waic
+    ))
 }
 
 #' Calculate likelihood and WAIC
 #' @param this_sim. Dependent Latent class model
 #' @param itrs integer vector. Which iterations should be include in calculation?
-#' @param alpha percentage. Used for robust calculation of varaince in WAIC. Ignore the alpha most extreme iterations.
 #' @export
-dlcm.get_waic <- function(this_sim, itrs=NULL, alpha=0) {
+dlcm.get_waic <- function(this_sim, itrs=NULL) {
+  
+  alpha <- 0 # No robust MCD variance estimate in WAIC
   
   if (is.null(itrs)) {
     # default in all iterations
