@@ -303,33 +303,52 @@ getStart_class_random <- function(mat, hparams) {
 #' @param mat matrix. Raw data.
 #' @param hparams list. List of hyperparameters
 #' @keywords internal
-getStart_class_kmodes <- function(mat, hparams, iter.max=2, ...) {
-  return(klaR::kmodes(mat, hparams$nclass, iter.max=iter.max, ...)$cluster-1)
+getStart_class_kmodes <- function(mat, hparams, ...) {
+  for (i in seq_len(3)) { 
+    # Repeated attempts because klaR sometimes errors randomly
+    tryCatch({
+      clusters <- klaR::kmodes(mat, hparams$nclass, ...)$cluster-1
+      break
+    }
+    , error=function(cond) {
+      message("Warning: Issue with class_init_method = 'kmodes'. Retrying. If issue persists try class_init_method = 'random_centers'.\n Reference getStart_class_kmodes:  ", cond)
+    }
+    )
+  }
+  return(clusters)
 }
 
 #' Choose nclass random centers and put observations in their nearest center
+#' Designed so that the chosen centers are as far from each other as possible
 #' @param mat matrix. Raw data.
 #' @param hparams list. List of hyperparameters
+#' @param weight_prob bool. True if more common patterns should be more likely to be chosen as centers. False if all patterns should be equally likely.
 #' @keywords internal
-getStart_class_random_centers <- function(mat, hparams) {
+getStart_class_random_centers <- function(mat, hparams, weight_prob=TRUE) {
   nobs <- dim(mat)[1]
   nclass <- hparams$nclass
   attempts <- 3
   
-  possible_centers <- mat # lazy copy (fast)
+  if (weight_prob==TRUE) {
+    # More common patterns more likely to be chosen
+    possible_centers <- mat # lazy copy (fast)
+  } else {
+    # All patterns equally likely to be chosen
+    possible_centers <- unique(mat)
+  }
   centers <- matrix(data=NA, nrow=nclass, ncol(mat))
   distance <- matrix(data=NA, nrow=nobs, ncol=nclass)
   
   # Get centers
   centers[1,] <-possible_centers[sample.int(n=nrow(possible_centers)
                                             , size=1),]
-  distance[,1] = rowSums(sweep(mat, 1, centers[1,], FUN="=="))
+  distance[,1] = rowSums(sweep(mat, 2, centers[1,], FUN="=="))
   for (i in seq_len(nclass-1)+1) {
     # choose the center farthest from the current centers
     min_dist <- apply(distance, 1, min, na.rm=TRUE)
     center_inds <- which(min_dist==min(min_dist))
     centers[i,] <- possible_centers[sample(center_inds, size=1),]
-    distance[,i] = rowSums(sweep(mat, 1, centers[i,], FUN="=="))
+    distance[,i] = rowSums(sweep(mat, 2, centers[i,], FUN="=="))
   }
   
   # Associate observation to nearest class
