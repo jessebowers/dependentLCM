@@ -611,12 +611,13 @@ dlcm.get_waic <- function(this_sim, itrs=NULL) {
 #' @param items integer vector. Which items should we include? (indexed starting at 1)
 #' @param this_sim a mcmc simulation. Output from dependentLCM_fit()
 #' @param itrs integer vector. Which iterations from this_sim should we include?
+#' @param merge_itrs TRUE if you want average probabilities across simulations. FALSE if you want to examine each iteration individually
 #' @description Useful when getting probilities which cross domains.
 #' @returns Probabilities for each pattern of items
 #' @export
-theta_item_probs <- function(items, this_sim, itrs) {
+theta_item_probs <- function(items, this_sim, itrs, merge_itrs=TRUE) {
   
-  itr_filter <- this_sim$mcmc$domains$itr %in% itrs
+  itr_filter <- which(this_sim$mcmc$domains$itr %in% itrs)
   nitr <- length(itrs)
   nitems <- length(items)
   items_colnames <- colnames(this_sim$mcmc$domains)[this_sim$hparams$domain_item_cols[items]]
@@ -644,13 +645,47 @@ theta_item_probs <- function(items, this_sim, itrs) {
     ) == nitems
     iprobs <- thetas_agg %>% filter(imatch_pattern) %>% group_by(itr, class) %>% summarize(prob=exp(sum(prob_log)), .groups="keep")
     iprobs$pi <- this_sim$mcm$class_pi[cbind(iprobs$class+1, iprobs$itr)]
-    out <- sum(iprobs$prob * iprobs$pi) / nitr
-    return(out)
+    iprobs$prob_pi <- iprobs$prob * iprobs$pi
+    return(iprobs)
   }
   
-  all_patterns$prob <- apply(all_patterns, 1, prob_helper)
+  if (merge_itrs==TRUE) {
+    # Get average across iterations
+    all_patterns$prob <- apply(all_patterns, 1
+                               , FUN = function(ipattern) {
+                                 iprobs <- prob_helper(ipattern)
+                                 return(sum(iprobs$prob * iprobs$pi) / nitr)
+                               })
+    out <- all_patterns
+  } else {
+    # Return probabilities for each individual iteration
+    out <- list(
+      all_patterns=all_patterns
+      , probs = t(apply(all_patterns, 1, FUN = function(ipattern) {
+        iprobs <- prob_helper(ipattern)
+        out <- (iprobs %>% dplyr::group_by(itr) %>% dplyr::summarize(probs=sum(prob_pi), .groups="keep")) %>% .$probs
+        return(out)
+      }))
+    )
+  }
   
-  return(all_patterns)
+  return(out)
+}
+
+#' For each iteration calculate the probability that a given observation is in each class.
+#' @param dlcm Dependent latent class model outptut from dependentLCM_fit
+#' @export
+get_class_probs <- function(dlcm) {
+  obsLogLiks <- sweep(dlcm$mcmc$class_loglik[,,, drop=FALSE]
+                      , c(1,3) # Include pi. Repeat for each observation (2)
+                      , log(dlcm$mcmc$class_pi[,, drop=FALSE]), "+")
+  obsLogLiks_sum <- apply(obsLogLiks, c(2,3), expSumLog)
+  obsLogLiks <- sweep(obsLogLiks
+                      , c(2,3)
+                      , obsLogLiks_sum
+                      , "-"
+  )
+  return(exp(obsLogLiks))
 }
 
 ##############
