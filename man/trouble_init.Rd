@@ -6,3 +6,4 @@
 \description{
 When troubleshooting, initializes globals
 }
+\keyword{internal}

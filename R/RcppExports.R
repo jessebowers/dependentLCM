@@ -6,6 +6,7 @@
 #' @description When troubleshooting, run this at start of all functions. Tracks progress.
 #' @param function_name name of the function in question
 #' @returns An ID identifying this specific execution of this specific function
+#' @keywords internal
 NULL
 
 #' @name trouble_end
@@ -13,16 +14,28 @@ NULL
 #' @description When troubleshooting, run this at end of all functions. Concludes tracking of progress
 #' @param trouble_id ID identifying the executing of the current function taken from trouble_start
 #' @param function_name name of the current function
+#' @keywords internal
 NULL
 
 #' @name trouble_init
 #' @title trouble_init
 #' @description When troubleshooting, initializes globals
+#' @keywords internal
+NULL
+
+#' see trouble_start above
+NULL
+
+#' see trouble_end above
+NULL
+
+#' see trouble_init above
 NULL
 
 #' @name trouble_list
 #' @title trouble_list
 #' @description Used to output troubleshooting information
+#' @keywords internal
 NULL
 
 #' @name colMax
@@ -145,30 +158,6 @@ NULL
 #' @keywords internal
 NULL
 
-#' @name theta_alpha_functions
-#' @title theta_alpha_functions
-#' @description Determines how quickly theta decreases as domainitems increase
-#' @param theta_alpha Scales the strength of the theta dirichlet prior
-#' @param ndomainitems How many items are in this domain
-#' @aliases theta_alpha_constant theta_alpha_linear theta_alpha_log
-#' @keywords internal
-NULL
-
-#' @name theta_alpha_constant
-#' @rdname theta_alpha_functions
-#' @keywords internal
-NULL
-
-#' @name theta_alpha_linear
-#' @rdname theta_alpha_functions
-#' @keywords internal
-NULL
-
-#' @name theta_alpha_log
-#' @rdname theta_alpha_functions
-#' @keywords internal
-NULL
-
 #' @name Hyperparameter::set_hparams
 #' @title Hyperparameter::set_hparams
 #' @description Set hyperparameter values
@@ -284,6 +273,14 @@ NULL
 #' @keywords internal
 NULL
 
+#' @name DomainCount::getloglik_x
+#' @title DomainCount::getloglik_x
+#' @description For a given domain, we want to know the probability of observing a series of responses.
+#' We calculate this probability conditioning on parameters, but marginalizing over theta (and convert to log scale)
+#' @param hparams hyperparameters
+#' @keywords internal
+NULL
+
 #' @name DomainCount::print
 #' @title DomainCount::print
 #' @description Prints this domain (used mainly for troubleshooting purposes)
@@ -384,15 +381,6 @@ NULL
 #' @keywords internal
 NULL
 
-#' @name BayesParameter::domain_getloglik_x
-#' @title BayesParameter::domain_getloglik_x
-#' @description For a given domain, we want to know the probability of observing a series of responses.
-#' We calculate this probability conditioning on parameters, but marginalizing over theta (and convert to log scale)
-#' @param pattern_counts The counts for each pattern in this domain (vector).
-#' @param theta_alpha Hyperparameter describing the Dirichlet concentration parameters for the theta prior.
-#' @keywords internal
-NULL
-
 #' @name BayesParameter::domain_getlik_domain
 #' @title BayesParameter::domain_getlik_domain
 #' @description Before observing data/other-parameters, how likely are we to put items into these particular domains?
@@ -403,6 +391,8 @@ NULL
 #' @name BayesParameter::get_superdomains
 #' @title BayesParameter::get_superdomains
 #' @description Merge overlapping domains from different class2domainid
+#' @param item2domainid Each colum describes what items must be grouped together for this item2domainid
+#' @param hparams hyperparameters
 #' @keywords internal
 NULL
 
@@ -411,6 +401,16 @@ NULL
 #' @description Check if choice of domains is generically identifiable
 #' Uses greedy algorithm. May fail in some cases, but is deterministic (if bad then consistently conservative for that choice of domains)
 #' See Allman paper (DOI:10.1214/09-AOS689 Theorem 4.) for criteria used: min(patterns1,nclass)+min(patterns2,nclass)+min(patterns3,nclass) > 2*nclass+2
+#' @param item2superdomainid Vector describing which items must be grouped together
+#' @param hparams hyperparameters
+#' @keywords internal
+NULL
+
+#' @name BayesParameter::is_identifiable
+#' @title BayesParameter::is_identifiable
+#' @description Check if choice of domains is generically identifiable under proposal
+#' @param proposal The candidate changes to domains we are evaluating
+#' @param hparams hyperparameters
 #' @keywords internal
 NULL
 

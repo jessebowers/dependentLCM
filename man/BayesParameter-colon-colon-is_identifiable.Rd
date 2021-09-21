@@ -3,9 +3,18 @@
 \name{BayesParameter::is_identifiable}
 \alias{BayesParameter::is_identifiable}
 \title{BayesParameter::is_identifiable}
+\arguments{
+\item{item2superdomainid}{Vector describing which items must be grouped together}
+
+\item{proposal}{The candidate changes to domains we are evaluating}
+
+\item{hparams}{hyperparameters}
+}
 \description{
 Check if choice of domains is generically identifiable
 Uses greedy algorithm. May fail in some cases, but is deterministic (if bad then consistently conservative for that choice of domains)
 See Allman paper (DOI:10.1214/09-AOS689 Theorem 4.) for criteria used: min(patterns1,nclass)+min(patterns2,nclass)+min(patterns3,nclass) > 2*nclass+2
+
+Check if choice of domains is generically identifiable under proposal
 }
 \keyword{internal}

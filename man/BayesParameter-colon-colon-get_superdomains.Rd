@@ -3,6 +3,11 @@
 \name{BayesParameter::get_superdomains}
 \alias{BayesParameter::get_superdomains}
 \title{BayesParameter::get_superdomains}
+\arguments{
+\item{item2domainid}{Each colum describes what items must be grouped together for this item2domainid}
+
+\item{hparams}{hyperparameters}
+}
 \description{
 Merge overlapping domains from different class2domainid
 }

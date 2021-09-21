@@ -4,12 +4,10 @@
 \alias{dlcm.get_waic}
 \title{Calculate likelihood and WAIC}
 \usage{
-dlcm.get_waic(this_sim, itrs = NULL, alpha = 0)
+dlcm.get_waic(this_sim, itrs = NULL)
 }
 \arguments{
 \item{itrs}{integer vector. Which iterations should be include in calculation?}
-
-\item{alpha}{percentage. Used for robust calculation of varaince in WAIC. Ignore the alpha most extreme iterations.}
 
 \item{this_sim.}{Dependent Latent class model}
 }

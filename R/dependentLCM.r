@@ -1,8 +1,3 @@
-# library(klaR) # for kmodes
-# library(Rcpp)
-# library(abind)
-# library(dplyr)
-
 #' dependentLCM: Dependent Latent Class Model
 #'
 #' @docType package
@@ -442,12 +437,6 @@ sink.reset <- function(){
   }
 }
 
-# #' Wrapper for dplyr::`%>%` 
-# #' @keywords internal
-# `%>%` <- function(...) {
-#   magrittr::`%>%`(...)
-# }
-
 #' Robust estimate for variance. Inspired by MCD but fast approximation instead
 #' @param x numeric vector. Data we wish to calculate variance of
 #' @param alpha percentage. Remove the alpha most extreme points before calculating variance.
@@ -474,6 +463,8 @@ expSumLog <- function(x) {
   return(xmax + log(sum(exp(x-xmax))))
 }
 
+#' @name set_dimnames
+#' @title set_dimnames
 #' @description Names each axis of your array by naming each row/column axisName#
 #' @param xarray The array you wish to name the axis of
 #' @param axis_names The name of each axis of this array
@@ -591,7 +582,7 @@ dlcm.get_waic <- function(this_sim, itrs=NULL) {
   
   likelihoods$logLik <- colSums(obsLogLiks, 1) # sum across observations
   
-  # QA against: LaplacesDemon::WAIC
+  # Same as: LaplacesDemon::WAIC
   summary["logLik_avg"] <- mean(likelihoods$logLik)
   summary["lppd"] <- sum(apply(obsLogLiks, 1, expSumLog) - log(dim(obsLogLiks)[2])) 
   summary["waic_nparams1"] <- 2 * sum(apply(obsLogLiks, 1, expSumLog) - log(dim(obsLogLiks)[2])

@@ -3,6 +3,7 @@
 export(dependentLCM_fit)
 export(dlcm.get_waic)
 export(dlcm.summary)
+export(get_class_probs)
 export(sim_logprobs)
 export(simulate_lcm)
 export(theta_item_probs)

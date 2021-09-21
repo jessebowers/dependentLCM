@@ -2,16 +2,20 @@
 % Please edit documentation in R/dependentLCM.r
 \name{getStart_class_random_centers}
 \alias{getStart_class_random_centers}
-\title{Choose nclass random centers and put observations in their nearest center}
+\title{Choose nclass random centers and put observations in their nearest center
+Designed so that the chosen centers are as far from each other as possible}
 \usage{
-getStart_class_random_centers(mat, hparams)
+getStart_class_random_centers(mat, hparams, weight_prob = TRUE)
 }
 \arguments{
 \item{mat}{matrix. Raw data.}
 
 \item{hparams}{list. List of hyperparameters}
+
+\item{weight_prob}{bool. True if more common patterns should be more likely to be chosen as centers. False if all patterns should be equally likely.}
 }
 \description{
 Choose nclass random centers and put observations in their nearest center
+Designed so that the chosen centers are as far from each other as possible
 }
 \keyword{internal}

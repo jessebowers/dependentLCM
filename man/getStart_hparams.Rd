@@ -37,7 +37,7 @@ getStart_hparams(
 
 \item{domain_alpha}{numeric. Bayes hyperparameter giving prior for domains.}
 
-\item{domain_maxitems}{iinteger. Maximum number of items which can be in a doamin.}
+\item{domain_maxitems}{iinteger. Maximum number of items which can be in a domain. Default is 10 (beyond 10 runs slowly).}
 
 \item{theta_alpha}{numeric. Bayes hyperparemter giving the prior for theta/probabilties.}
 
@@ -50,10 +50,10 @@ getStart_hparams(
 \item{steps_active}{Named boolean vector of what actions to take during mcmc. If mcmc is skipped then initial values are kept as fixed.
 thetas=TRUE to do gibbs on response probabilities, domains=TRUE to do metropolis on domains, class_pi=TRUE to do gibbs on class prior, classes=TRUE to do gibbs on class membership, identifiable=TRUE to check generic identifiability conditions of domains}
 
-\item{theta_alpha_funname}{Decides the prior for theta as domains get merged. 
-"constant" for theta~Dirichlet(rep(theta_alpha, size))
-"linear" for theta~Dirichlet(rep(2*theta_alpha/size, size))
-"log" for theta~Dirichlet(rep(log(2)*theta_alpha/log(size), size))}
+\item{theta_alpha_funname}{string Decides the prior for theta as domains get merged. 
+"constant" for theta~Dirichlet(theta_alpha * rep(1, npatterns)). Produces domains of 1-4 items but typically not larger.
+"log" for theta~Dirichlet(theta_alpha * ln(sum(npattens_i))/ln(npatterns) rep(1, npatterns))
+"average" [depreciated] for theta~Dirichlet(theta_alpha * sum(npattens_i)/npatterns rep(1, npatterns)). Unstable for large domains}
 }
 \description{
 Generate hyperparameters

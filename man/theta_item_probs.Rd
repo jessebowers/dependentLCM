@@ -4,7 +4,7 @@
 \alias{theta_item_probs}
 \title{Calculate the probabilities of different patterns}
 \usage{
-theta_item_probs(items, this_sim, itrs)
+theta_item_probs(items, this_sim, itrs, merge_itrs = TRUE)
 }
 \arguments{
 \item{items}{integer vector. Which items should we include? (indexed starting at 1)}
@@ -12,6 +12,8 @@ theta_item_probs(items, this_sim, itrs)
 \item{this_sim}{a mcmc simulation. Output from dependentLCM_fit()}
 
 \item{itrs}{integer vector. Which iterations from this_sim should we include?}
+
+\item{merge_itrs}{TRUE if you want average probabilities across simulations. FALSE if you want to examine each iteration individually}
 }
 \value{
 Probabilities for each pattern of items

@@ -1,17 +1,3 @@
-# To compile:
-library(devtools)
-Sys.setenv("PKG_CXXFLAGS"="-std=c++11") # Sys.setenv("PKG_CXXFLAGS"="-std=gnu++11")
-devtools::load_all(path="~/dependentLCM", recompile = TRUE, export_all=FALSE)
-# To generate documentation (also compiles):
-library(roxygen2)
-Sys.setenv("PKG_CXXFLAGS"="-std=c++11")
-roxygen2::roxygenize("~/dependentLCM", clean=TRUE)
-# To load into library 1) compile, 2) convert to zip, 3) remove.packages() 4) install.packages(*, repos = NULL, type = "win.binary")
-# ISSUE: the above two methods compile 10X SLOWER than:
-sourceCpp("~/dependentLCM/src/dependentLCM.cpp")
-# Need to change compiler/compile options so that the package runs just as fast...
-
-
 /*
  * OPEN ITEMS:
  * Compilation issues: Figure out why compiling as a package is (MUCH) slower than Rcpp in runtime
@@ -23,3 +9,36 @@ sourceCpp("~/dependentLCM/src/dependentLCM.cpp")
  * Incorporate optional checks/consistency checks eg domain size, nclasses, etc
  * post-hoc handle label switching
  */
+
+# To compile:
+library(devtools)
+Sys.setenv("PKG_CXXFLAGS"="-std=c++11") # CXX_STD = CXX11
+devtools::load_all(path="~/dependentLCM", recompile = TRUE, export_all=FALSE)
+
+# To generate documentation (also compiles):
+library(roxygen2)
+Sys.setenv("PKG_CXXFLAGS"="-std=c++11") # CXX_STD = CXX11
+roxygen2::roxygenize("~/dependentLCM", clean=TRUE)
+
+# To load into library 
+# 1) compile
+# 2) Remove *.o files as they cause problems
+# 3) convert to zip
+# 4) Run the following 
+invisible(lapply(paste0('package:', names(sessionInfo()$otherPkgs)), detach, character.only=TRUE, unload=TRUE)) # detach packages to initialize (or restart R)
+remove.packages("dependentLCM") # Remove existing package to initialize
+install.packages("~/dependentLCM.zip", repos = NULL, type = "win.binary")
+library(dependentLCM)
+
+# troubleshooting
+# Remember to remove *.o files as described above
+# From Terminal in Rstudio try
+# 1) Open Terminal in Rstudio
+# 2) cd ... to Navigate to the parent directory of your (unzipped) package
+# 3) R CMD build dependentLCM
+# 4) R CMD INSTALL dependentLCM
+# This provides additional details on why a package failed
+
+
+# Useful reference
+https://cran.rstudio.com/doc/manuals/r-release/R-exts.html#Using-C_002b_002b11-code

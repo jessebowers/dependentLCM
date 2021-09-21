@@ -5,6 +5,11 @@
 
 using namespace Rcpp;
 
+#ifdef RCPP_USE_GLOBAL_ROSTREAM
+Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
+Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
+#endif
+
 // dependentLCM_fit_cpp
 Rcpp::List dependentLCM_fit_cpp(Rcpp::IntegerMatrix& x_in, Rcpp::List hparams_list, Rcpp::List params_list, int nitr);
 RcppExport SEXP _dependentLCM_dependentLCM_fit_cpp(SEXP x_inSEXP, SEXP hparams_listSEXP, SEXP params_listSEXP, SEXP nitrSEXP) {

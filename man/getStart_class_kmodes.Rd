@@ -4,7 +4,7 @@
 \alias{getStart_class_kmodes}
 \title{Choose class of each observation using kmodes}
 \usage{
-getStart_class_kmodes(mat, hparams, iter.max = 2, ...)
+getStart_class_kmodes(mat, hparams, ...)
 }
 \arguments{
 \item{mat}{matrix. Raw data.}
