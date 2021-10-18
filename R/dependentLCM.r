@@ -177,7 +177,7 @@ getStart_hparams <- function(
   
   # ndomains
   if (is.null(ndomains)){
-    ndomains <- 100*nitems # Many more domains than items
+    ndomains <- ndomains_singleton_mode(nitems, prop=2) # All singletons X2 more likely than next most likely choice of domains
   }
   
   # class2domain
@@ -409,6 +409,47 @@ check_params <- function(all_params) {
   return(is_problem)
 }
 
+#' What is the prior probability of this choice of domains?
+#' Ignores the specific domain labelings
+#' @param x IntegerVector. The number of items in each domain. Ok to omit 0's
+#' @param D Integer. The total number of domains (including empty domains)
+#' @param specific_items Boolean. 
+#' If FALSE, we look for any domain which produces domains of this size regardless of what specific items they contain.
+#' IF TRUE, we fix which items are in which domain, and calculate the probability of grouping these specific items together.
+#' @param log Boolean. If TRUE give probability in log scale.
+#' Assumes x are logged values. Calculates sum(e^x) and then converts back to log scale
+#' @param x numeric vector in log scale
+#' @export
+ldomain_prior <- function(x, ndomains, specific_items=FALSE, log=TRUE) {
+  
+  if (specific_items==FALSE) {
+    lprob <- (
+      lfactorial(sum(x)) - sum(sapply(x, lfactorial)) # unique groups
+      - sum(sapply(table(x[x>0]), lfactorial)) # non-unique groups
+      + lfactorial(ndomains) - lfactorial(ndomains-sum(x > 0)) # permuting groups
+      - sum(x) * log(ndomains) # denominator
+    )
+  } else { # specific_items==TRUE
+    lprob <- (
+      lfactorial(ndomains) - lfactorial(ndomains-sum(x > 0)) # permuting groups
+      - sum(x) * log(ndomains) # denominator
+    )
+  }
+  if (log==FALSE) {
+    return(exp(lprob))
+  }
+  return(lprob)
+}
+
+
+#' How many domains (ndomains) we we need before 'all singleton domains' are prop-times more likely than 'one 2-item domain with rest singletons'? Using the prior only.
+#' Solves: ldomain_prior(rep(1, nitems), ndomains, specific_items=FALSE, log=TRUE) - ldomain_prior(c(2,rep(1, nitems-2)), ndomains, specific_items=FALSE, log=TRUE) = log(prop)
+#' @param nitems integer. Number of items in the data.
+#' @param prop float. prop=1 forces singleton domains to be mode. prop>1 makes singleton domains increasingly frequent.
+#' @export
+ndomains_singleton_mode <- function(nitems, prop=1) {
+  ceiling(nitems+prop*nitems*(nitems-1)/2-1)
+}
 
 ##############
 ############## UTILITIES
@@ -485,6 +526,8 @@ set_dimnames <- function(xarray, axis_names) {
   )
   return(xarray)
 }
+
+`%>%` <- magrittr::`%>%`
 
 ##############
 ############## SUMMARY
