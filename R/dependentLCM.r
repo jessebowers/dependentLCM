@@ -391,7 +391,7 @@ check_params <- function(all_params) {
     is_problem = TRUE
   }
   
-  if (all_params$hparams$ndomains <= all_params$hparams$nitems) {
+  if (all_params$hparams$ndomains < all_params$hparams$nitems) {
     warning("Must have more domains than items") # Fewer domains theoretically ok, but not implemented in code
     is_problem = TRUE
   }
@@ -410,7 +410,7 @@ check_params <- function(all_params) {
 }
 
 #' What is the prior probability of this choice of domains?
-#' Ignores the specific domain labelings
+#' Ignores identifiability restrictions
 #' @param x IntegerVector. The number of items in each domain. Ok to omit 0's
 #' @param D Integer. The total number of domains (including empty domains)
 #' @param specific_items Boolean. 

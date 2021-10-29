@@ -1590,7 +1590,7 @@ domainProposalOut BayesParameter::domain_proposal(int class2domain_id, Hyperpara
       proposal.backwardProb = (
         1 / float(domains_nonempty.size()-1) // Choosing domain2 for #1
       * hparams.domain_proposal_empty // Choose to split
-      * 1 // Do not care about what specific empty domain we split into
+      * 1 / float(hparams.ndomains - domains_nonempty.size()) // Choosing domain2 Omitted because we negelct labelings here
       * 1 / float(proposal.domain_new2.ndomainitems_calc()) // Choose this item to split off
       );
     }
@@ -1600,7 +1600,7 @@ domainProposalOut BayesParameter::domain_proposal(int class2domain_id, Hyperpara
     proposal.forwardProb = (
       1 / float(domains_nonempty.size()) // Choosing domain1
     * hparams.domain_proposal_empty // Choose to split (always 2+ items)
-    * 1 // Do not care about what specific empty domain we split into
+    * 1 / float(hparams.ndomains - domains_nonempty.size()) // Choosing domain2 Omitted because we negelct labelings here
     * 1 / float(proposal.domain_old1->ndomainitems_calc()) // Choose this item to split off
     );
     
@@ -1661,7 +1661,7 @@ domainAcceptOut BayesParameter::domain_accept(const Rcpp::IntegerMatrix& x, doma
   }
   
   out.unif = R::runif(0, 1);
-  out.log_cutoff = out.loglik_new - out.loglik_old + std::log(proposal.forwardProb) - std::log(proposal.backwardProb);
+  out.log_cutoff = out.loglik_new - out.loglik_old + std::log(proposal.backwardProb) - std::log(proposal.forwardProb);
   out.accept = int( out.log_cutoff > std::log(out.unif) );
   
   TROUBLE_END; return out;
