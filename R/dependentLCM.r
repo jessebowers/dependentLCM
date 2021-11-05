@@ -7,9 +7,8 @@
 NULL
 
 NCLASS = 2
-CLASSPI_ALPHA = 2
-DOMAIN_ALPHA_RATIO = 2
-THETA_ALPHA = 2
+CLASSPI_ALPHA = 1
+THETA_ALPHA = 1
 DOMAIN_PROPOSAL_EMPTY = 0.3
 DOMAIN_PROPOSAL_SWAP = 0.3
 STEPS_ACTIVE = c("thetas"=TRUE, "domains"=TRUE, "class_pi"=TRUE, "classes"=TRUE, "identifiable"=TRUE)
@@ -28,7 +27,7 @@ dependentLCM_fit <- function(
   # Data
   , df=NULL, mat=NULL
   # Hyperparameters
-  ,nclass=NCLASS, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA, domain_alpha=NULL, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_proposal_swap=DOMAIN_PROPOSAL_SWAP, domain_nproposals=NULL, steps_active = STEPS_ACTIVE, theta_alpha_funname = THETA_ALPHA_FUNNAME
+  ,nclass=NCLASS, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_proposal_swap=DOMAIN_PROPOSAL_SWAP, domain_nproposals=NULL, steps_active = STEPS_ACTIVE, theta_alpha_funname = THETA_ALPHA_FUNNAME
   # Bayes parameters
   , class_pi = NULL, classes = NULL, domains = NULL
   # Misc
@@ -47,7 +46,7 @@ dependentLCM_fit <- function(
   hparams <- getStart_hparams(
     df=mat
     # Hyperparameters
-    ,nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_alpha=domain_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, domain_proposal_empty=domain_proposal_empty, domain_proposal_swap=domain_proposal_swap, domain_nproposals=domain_nproposals, steps_active=steps_active, theta_alpha_funname=theta_alpha_funname
+    ,nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, domain_proposal_empty=domain_proposal_empty, domain_proposal_swap=domain_proposal_swap, domain_nproposals=domain_nproposals, steps_active=steps_active, theta_alpha_funname=theta_alpha_funname
   )
   
   bayesparams <- getStart_bayes_params(
@@ -150,7 +149,6 @@ dependentLCM_fit <- function(
 #' @param ndomains integer. Number of item domains
 #' @param class2domain integer vector of length nclass. Classes with same value have same domains.
 #' @param classPi_alpha numeric vector. Bayes hyperparameter giving prior for Pi.
-#' @param domain_alpha numeric. Bayes hyperparameter giving prior for domains.
 #' @param domain_maxitems iinteger. Maximum number of items which can be in a domain. Default is 10 (beyond 10 runs slowly).
 #' @param theta_alpha numeric. Bayes hyperparemter giving the prior for theta/probabilties.
 #' @param domain_proposal_empty numeric. Sets how often the domain metropolis proposal function pairs a nonempty domain with an empty domain.
@@ -166,7 +164,7 @@ dependentLCM_fit <- function(
 getStart_hparams <- function(
   df=NULL, nitems=NULL
   # Hyperparameters
-  ,nclass=NCLASS, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA, domain_alpha=NULL, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_proposal_swap=DOMAIN_PROPOSAL_SWAP, domain_nproposals=NULL, steps_active=STEPS_ACTIVE, theta_alpha_funname = THETA_ALPHA_FUNNAME
+  ,nclass=NCLASS, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_proposal_swap=DOMAIN_PROPOSAL_SWAP, domain_nproposals=NULL, steps_active=STEPS_ACTIVE, theta_alpha_funname = THETA_ALPHA_FUNNAME
 ) {
   # Purpose: Add default hyperparameters
   
@@ -192,11 +190,6 @@ getStart_hparams <- function(
     classPi_alpha <- rep(classPi_alpha, nclass)
   }
   
-  # domain_alpha
-  if (is.null(domain_alpha)) {
-    domain_alpha <- nitems * DOMAIN_ALPHA_RATIO
-  }
-  
   # domain_maxitems
   if (is.null(domain_maxitems)) {
     domain_maxitems <- min(nitems, DOMAIN_MAXITEMS)
@@ -213,7 +206,7 @@ getStart_hparams <- function(
   steps_active_fn[names(steps_active)] = steps_active
   
   return(list(
-    nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_alpha=domain_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, nitems = nitems, item_nlevels = item_nlevels, nclass2domain = nclass2domain, domain_proposal_empty=domain_proposal_empty, domain_proposal_swap=domain_proposal_swap, domain_nproposals=domain_nproposals, steps_active = steps_active_fn, theta_alpha_funname = theta_alpha_funname
+    nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, nitems = nitems, item_nlevels = item_nlevels, nclass2domain = nclass2domain, domain_proposal_empty=domain_proposal_empty, domain_proposal_swap=domain_proposal_swap, domain_nproposals=domain_nproposals, steps_active = steps_active_fn, theta_alpha_funname = theta_alpha_funname
   ))
 }
 
