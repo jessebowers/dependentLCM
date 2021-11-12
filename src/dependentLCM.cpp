@@ -861,7 +861,7 @@ float DomainCount::getloglik_x(Hyperparameter& hparams) {
     TROUBLE_END; return 0; // log(1)
   }
   Rcpp::NumericVector theta_alpha = theta_alpha_fun(hparams) + Rcpp::NumericVector(counts.size());
-  float loglik = ( //tk
+  float loglik = (
     lbeta(Rcpp::as<Rcpp::NumericVector> (counts) + theta_alpha)
     - lbeta(theta_alpha)
   );
@@ -1601,7 +1601,7 @@ domainProposalOut BayesParameter::domain_proposal(int class2domain_id, Hyperpara
       proposal.backwardProb = (
         1 / float(domains_nonempty.size()-1) // Choosing domain2 for #1
       * hparams.domain_proposal_empty // Choose to split
-      //* 1 / float(hparams.ndomains - domains_nonempty.size()) // Choosing domain2 Omitted because we negelct labelings here tk
+      * 1 / float(hparams.ndomains - domains_nonempty.size()) // Choosing domain2 Omitted because we negelct labelings here tk
       * 1 / float(proposal.domain_new2.ndomainitems_calc()) // Choose this item to split off
       );
     }
@@ -1611,7 +1611,7 @@ domainProposalOut BayesParameter::domain_proposal(int class2domain_id, Hyperpara
     proposal.forwardProb = (
       1 / float(domains_nonempty.size()) // Choosing domain1
     * hparams.domain_proposal_empty // Choose to split (always 2+ items)
-    //* 1 / float(hparams.ndomains - domains_nonempty.size()) // Choosing domain2 Omitted because we negelct labelings here tk
+    * 1 / float(hparams.ndomains - domains_nonempty.size()) // Choosing domain2 Omitted because we negelct labelings here tk
     * 1 / float(proposal.domain_old1->ndomainitems_calc()) // Choose this item to split off
     );
     
