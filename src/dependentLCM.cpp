@@ -601,7 +601,7 @@ public:
   double get_ltheta(Rcpp::IntegerMatrix::ConstRow xobs); // maybe switch to template
   float theta_alpha_fun(Hyperparameter& hparams);
   float getloglik_marginal(Hyperparameter& hparams);
-  void drop_item(int item, Hyperparameter& hparams);
+  void reduce_items(Rcpp::IntegerVector items_new, Hyperparameter& hparams);
   
 public:
   void countReset();
@@ -682,16 +682,15 @@ void DomainCount::set_initial(Rcpp::List list_domain, Hyperparameter& hparams) {
   TROUBLE_END;
 }
 
-//' @name DomainCount::drop_item
-//' @title DomainCount::drop_item
-//' @description Efficiently remove item from domain (without needing to re-calculate counts)
-//' @param item Item you want to remove.
+//' @name DomainCount::reduce_items
+//' @title DomainCount::reduce_items
+//' @description Efficiently remove items from domain (without needing to re-calculate counts)
+//' @param items_new Resulting items in your domain. Assumed(!!) to be subset of current items.
 //' @keywords internal
-void DomainCount::drop_item(int item, Hyperparameter& hparams) {
-  TROUBLE_START(("DomainCount::drop_item"));
+void DomainCount::reduce_items(Rcpp::IntegerVector items_new, Hyperparameter& hparams) {
+  TROUBLE_START(("DomainCount::reduce_items"));
   
   DomainCount domain_orig = copy();
-  Rcpp::IntegerVector items_new = items[items!=item];
   set_initial(items, hparams);
   for (int i=0; i < npatterns; i++) {
     counts[pattern2id(domain_orig.id2pattern(i))] += domain_orig.counts[i];
