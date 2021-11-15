@@ -548,7 +548,8 @@ dlcm.summary <- function(dlcm, nwarmup=NULL) {
   )
   thetas_avg <- dlcm$mcmc$domains %>% dplyr::filter(itr > nwarmup) %>% dplyr::group_by(class, items, item_value) %>% dplyr::summarize(n=dplyr::n(), prob=mean(prob), .groups="keep")
   
-  domain_items_all <- dlcm$mcmc$domains_merged %>% dplyr::filter(itr > nwarmup) %>% dplyr::group_by(class2domain, items=domains_merged) %>% dplyr::summarize(n=dplyr::n(), .groups="keep") %>% dplyr::arrange(-n)
+  domain_items_all <- dlcm$mcmc$domains_merged %>% dplyr::filter(itr > nwarmup) %>% dplyr::group_by(class2domain, items=domains_merged) %>% dplyr::summarize(n=dplyr::n(), .groups="keep")
+  domain_items_all <- domain_items_all %>% group_by(class2domain) %>% mutate(perc = n / sum(n)) %>% dplyr::arrange(-perc)
   domain_items <- dlcm$mcmc$domains %>% dplyr::filter(pattern_id==0, itr > nwarmup) %>% dplyr::group_by(class2domain, items) %>% filter(class == min(class)) %>% dplyr::summarize(nitems=max(nitems), n=dplyr::n(), .groups="keep") %>% dplyr::arrange(-n)
   
   # domain_nitems <- table((dlcm$mcmc$domains %>% dplyr::filter(pattern_id==0, itr > nwarmup))$nitems)
