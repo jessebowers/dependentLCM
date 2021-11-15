@@ -9,8 +9,6 @@ NULL
 NCLASS = 2
 CLASSPI_ALPHA = 1
 THETA_ALPHA = 1
-DOMAIN_PROPOSAL_EMPTY = 0.3
-DOMAIN_PROPOSAL_SWAP = 0.3
 STEPS_ACTIVE = c("thetas"=TRUE, "domains"=TRUE, "class_pi"=TRUE, "classes"=TRUE, "identifiable"=TRUE)
 THETA_ALPHA_FUNNAMES = c("constant", "log", "average")
 THETA_ALPHA_FUNNAME = THETA_ALPHA_FUNNAMES[1]
@@ -27,7 +25,7 @@ dependentLCM_fit <- function(
   # Data
   , df=NULL, mat=NULL
   # Hyperparameters
-  ,nclass=NCLASS, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_proposal_swap=DOMAIN_PROPOSAL_SWAP, domain_nproposals=NULL, steps_active = STEPS_ACTIVE, theta_alpha_funname = THETA_ALPHA_FUNNAME
+  ,nclass=NCLASS, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_nproposals=NULL, steps_active = STEPS_ACTIVE, theta_alpha_funname = THETA_ALPHA_FUNNAME
   # Bayes parameters
   , class_pi = NULL, classes = NULL, domains = NULL
   # Misc
@@ -46,7 +44,7 @@ dependentLCM_fit <- function(
   hparams <- getStart_hparams(
     df=mat
     # Hyperparameters
-    ,nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, domain_proposal_empty=domain_proposal_empty, domain_proposal_swap=domain_proposal_swap, domain_nproposals=domain_nproposals, steps_active=steps_active, theta_alpha_funname=theta_alpha_funname
+    ,nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, domain_nproposals=domain_nproposals, steps_active=steps_active, theta_alpha_funname=theta_alpha_funname
   )
   
   bayesparams <- getStart_bayes_params(
@@ -86,13 +84,11 @@ dependentLCM_fit <- function(
   rownames(dlcm$domains_patterns) <- paste0("item_", 1:(nrow(dlcm$domains_patterns)))
   mode(dlcm$domains_patterns) <- "integer"
   dlcm$domains_lprobs <- unlist(dlcm$domains_lprobs)
-  dlcm$domains_accept <- do.call(function(...) abind::abind(..., along=3), dlcm$domains_accept)
   dlcm$class_loglik <- do.call(function(...) abind::abind(..., along=3), dlcm$class_loglik)
   
   # name
   dlcm$class_pi <- set_dimnames(dlcm$class_pi, c("class", "itr"))
   dlcm$classes <- set_dimnames(dlcm$classes, c("obs", "itr"))
-  dlcm$domains_accept <- set_dimnames(dlcm$domains_accept, c(NULL, NULL, "itr"))
   dlcm$class_loglik <- set_dimnames(dlcm$class_loglik, c("class", "obs", "itr"))
   
   # Supplemental
@@ -151,8 +147,6 @@ dependentLCM_fit <- function(
 #' @param classPi_alpha numeric vector. Bayes hyperparameter giving prior for Pi.
 #' @param domain_maxitems iinteger. Maximum number of items which can be in a domain. Default is 10 (beyond 10 runs slowly).
 #' @param theta_alpha numeric. Bayes hyperparemter giving the prior for theta/probabilties.
-#' @param domain_proposal_empty numeric. Sets how often the domain metropolis proposal function pairs a nonempty domain with an empty domain.
-#' @param domain_proposal_swap numeric. Sets how often the domain metropolis proposal function swaps items between domains.
 #' @param domain_nproposals Sets how many times the domain metropolis propsal function is called each iteration
 #' @param steps_active Named boolean vector of what actions to take during mcmc. If mcmc is skipped then initial values are kept as fixed.
 #' thetas=TRUE to do gibbs on response probabilities, domains=TRUE to do metropolis on domains, class_pi=TRUE to do gibbs on class prior, classes=TRUE to do gibbs on class membership, identifiable=TRUE to check generic identifiability conditions of domains
@@ -164,7 +158,7 @@ dependentLCM_fit <- function(
 getStart_hparams <- function(
   df=NULL, nitems=NULL
   # Hyperparameters
-  ,nclass=NCLASS, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_proposal_swap=DOMAIN_PROPOSAL_SWAP, domain_nproposals=NULL, steps_active=STEPS_ACTIVE, theta_alpha_funname = THETA_ALPHA_FUNNAME
+  ,nclass=NCLASS, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_nproposals=NULL, steps_active=STEPS_ACTIVE, theta_alpha_funname = THETA_ALPHA_FUNNAME
 ) {
   # Purpose: Add default hyperparameters
   
@@ -197,7 +191,7 @@ getStart_hparams <- function(
   
   # domain_nproposals
   if (is.null(domain_nproposals)) {
-    domain_nproposals <- nitems
+    domain_nproposals <- ceiling(sqrt(nitems))
   }
   
   
@@ -206,7 +200,7 @@ getStart_hparams <- function(
   steps_active_fn[names(steps_active)] = steps_active
   
   return(list(
-    nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, nitems = nitems, item_nlevels = item_nlevels, nclass2domain = nclass2domain, domain_proposal_empty=domain_proposal_empty, domain_proposal_swap=domain_proposal_swap, domain_nproposals=domain_nproposals, steps_active = steps_active_fn, theta_alpha_funname = theta_alpha_funname
+    nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, nitems = nitems, item_nlevels = item_nlevels, nclass2domain = nclass2domain, domain_nproposals=domain_nproposals, steps_active = steps_active_fn, theta_alpha_funname = theta_alpha_funname
   ))
 }
 
@@ -534,7 +528,6 @@ set_dimnames <- function(xarray, axis_names) {
 #' thetas_avg = average response probabilities for different patterns
 #' domain_items = Which items are commonly grouped together in the same domain
 #' domain_nitems = How often the domains are of size k.
-#' domain_accept = How often our metropolis step accepts its proposal
 #' @export
 dlcm.summary <- function(dlcm, nwarmup=NULL) {
   
@@ -553,13 +546,11 @@ dlcm.summary <- function(dlcm, nwarmup=NULL) {
   
   # domain_nitems <- table((dlcm$mcmc$domains %>% dplyr::filter(pattern_id==0, itr > nwarmup))$nitems)
   
-  domain_accept <- table(dlcm$mcmc$domains_accept[, , -(1:nwarmup)])
-  
   waic <- dlcm.get_waic(dlcm, itrs=nwarmup:dlcm$mcmc$maxitr)
   names(waic) <- paste0("waic_", names(waic))
   
   return(c(
-    list("thetas_avg"=thetas_avg, "domain_items"=domain_items, "domain_items_all"=domain_items_all, "domain_accept"=domain_accept)
+    list("thetas_avg"=thetas_avg, "domain_items"=domain_items, "domain_items_all"=domain_items_all)
     , waic
     ))
 }
