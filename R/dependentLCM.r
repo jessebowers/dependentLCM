@@ -197,7 +197,7 @@ getStart_hparams <- function(
   
   # domain_nproposals
   if (is.null(domain_nproposals)) {
-    domain_nproposals <- nitems
+    domain_nproposals <- ceiling(sqrt(nitems))
   }
   
   

@@ -1,6 +1,7 @@
 /*
  * OPEN ITEMS:
  * Compilation issues: Figure out why compiling as a package is (MUCH) slower than Rcpp in runtime
+ * need to re-introduce swaps
  */
 
 /*
@@ -10,6 +11,8 @@
  * post-hoc handle label switching
  * Aggregate X so that we can get counts of duplicates all at once rather than one-at-a-time
  * Maybe remove lchoose from cpp. Not currently in use
+ * right now we redo counts every time we redo domains. Might be better to save the probability for proposal purposes. Due to class changes this might not represent the likelihood but might be close enough for practical purposes. And might just count for the specific proposal
+ * right now when doing domains we do identifiability for every prospective domain. might be better to just do candidate domain
  */
 
 # To compile:
