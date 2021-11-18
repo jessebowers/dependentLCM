@@ -52,7 +52,7 @@ void trouble_init() {
 // define globals
 unsigned long long int _trouble_id = 0;
 std::map<unsigned long long int, ttime> _trouble_start_times;
-std::vector<std::string> TROUBLE_FUNCTION_NAMES = {"colMax", "rDirichlet", "rCategorical", "count_unique", "lbeta", "which", "count_integers", "map_get", "minimum", "id2pattern", "insertSorted", "mmult", "equal_to_adjmat", "helper_compare_adjmat", "adjmat_to_equal", "product", "powl", "Hyperparameter::set_hparams #V1", "Hyperparameter::set_hparams #V2", "Hyperparameter::set_dataInfo", "Hyperparameter::print", "DomainCount::set_initial #V1", "DomainCount::set_pattern2id_map", "DomainCount::set_initial #V2", "DomainCount::pattern2id", "DomainCount::get_ltheta", "DomainCount::id2pattern #V1", "DomainCount::id2pattern #V2", "DomainCount::countAdd", "DomainCount::list2domains", "DomainCount::copy", "DomainCount::itemsid_calc", "DomainCount::theta_alpha", "DomainCount::getloglik_marginal", "DomainCount::print", "BayesParameter::set_initial #V1", "BayesParameter::set_initial #V2", "BayesParameter::class_lprob #V1", "BayesParameter::class_lprob #V2", "BayesParameter::set_class_loglik", "BayesParameter::domain_resetCounts #V1", "BayesParameter::domain_resetCounts #V2", "BayesParameter::domain_addCount #V1", "BayesParameter::domain_addCount #V2", "BayesParameter::domain_addCounts #V1", "BayesParameter::domain_addCounts #V2", "BayesParameter::item2domainid_calc", "BayesParameter::domain_prior", "get_superdomains", "is_identifiable #V2", "is_identifiable #V2", "BayesParameter::domain_id_new", "BayesParameter::class_pi_args", "BayesParameter::class_pi_next", "BayesParameter::classes_next", "BayesParameter::thetas_next", "BayesParameter::domain_proposal", "BayesParameter::domain_accept", "BayesParameter::domain_next", "BayesParameter::domains_next", "Archive::set_initial", "Archive::domains2mat", "Archive::add", "BayesContainer::set_initial", "BayesContainer::run", "BayesContainer::run_init", "dependentLCM_fit_cpp", "lchoose"};
+std::vector<std::string> TROUBLE_FUNCTION_NAMES = {"colMax", "rDirichlet", "rCategorical", "count_unique", "lbeta", "which", "count_integers", "map_get", "minimum", "id2pattern", "insertSorted", "mmult", "equal_to_adjmat", "helper_compare_adjmat", "adjmat_to_equal", "product", "powl", "Hyperparameter::set_hparams #V1", "Hyperparameter::set_hparams #V2", "Hyperparameter::set_dataInfo", "Hyperparameter::print", "DomainCount::set_initial #V1", "DomainCount::set_pattern2id_map", "DomainCount::set_initial #V2", "DomainCount::reduce_items", "DomainCount::drop_item", "DomainCount::pattern2id", "DomainCount::get_ltheta", "DomainCount::id2pattern #V1", "DomainCount::id2pattern #V2", "DomainCount::countAdd", "DomainCount::list2domains", "DomainCount::copy", "DomainCount::itemsid_calc", "DomainCount::theta_alpha", "DomainCount::getloglik_marginal", "DomainCount::print", "BayesParameter::set_initial #V1", "BayesParameter::set_initial #V2", "BayesParameter::class_lprob #V1", "BayesParameter::class_lprob #V2", "BayesParameter::set_class_loglik", "BayesParameter::domain_resetCounts #V1", "BayesParameter::domain_resetCounts #V2", "BayesParameter::domain_addCount #V1", "BayesParameter::domain_addCount #V2", "BayesParameter::domain_addCounts #V1", "BayesParameter::domain_addCounts #V2", "BayesParameter::item2domainid_calc", "BayesParameter::domain_prior", "BayesParameter::get_superdomains", "BayesParameter::is_identifiable #V1", "BayesParameter::is_identifiable #V2", "BayesParameter::domain_id_new", "BayesParameter::class_pi_args", "BayesParameter::class_pi_next", "BayesParameter::classes_next", "BayesParameter::thetas_next", "BayesParameter::domain_proposal", "BayesParameter::domain_accept", "BayesParameter::domain_next", "BayesParameter::domains_next", "Archive::set_initial", "Archive::domains2mat", "Archive::add", "BayesContainer::set_initial", "BayesContainer::run", "BayesContainer::run_init", "dependentLCM_fit_cpp"};
 Rcpp::NumericVector _trouble_runtimes = Rcpp::NumericVector::create();
 Rcpp::IntegerVector _trouble_runcounts = Rcpp::IntegerVector::create();
 
@@ -601,6 +601,7 @@ public:
   double get_ltheta(Rcpp::IntegerMatrix::ConstRow xobs); // maybe switch to template
   float theta_alpha_fun(Hyperparameter& hparams);
   float getloglik_marginal(Hyperparameter& hparams);
+  void reduce_items(Rcpp::IntegerVector items_new, Hyperparameter& hparams);
   void drop_item(int item, Hyperparameter& hparams);
   
 public:
@@ -682,20 +683,33 @@ void DomainCount::set_initial(Rcpp::List list_domain, Hyperparameter& hparams) {
   TROUBLE_END;
 }
 
+//' @name DomainCount::reduce_items
+//' @title DomainCount::reduce_items
+//' @description Efficiently remove items from domain (without needing to re-calculate counts)
+//' @param items_new Resulting items in your domain. Assumed(!!) to be subset of current items.
+//' @keywords internal
+void DomainCount::reduce_items(Rcpp::IntegerVector items_new, Hyperparameter& hparams) {
+  TROUBLE_START(("DomainCount::reduce_items"));
+  
+  DomainCount domain_orig = copy();
+  set_initial(items_new, hparams);
+  for (int i=0; i < domain_orig.npatterns; i++) { // implicit, ignores ndomains ndomainitems_calc()==0
+    counts[pattern2id(domain_orig.id2pattern(i))] += domain_orig.counts[i];
+  }
+  TROUBLE_END;
+}
+
 //' @name DomainCount::drop_item
 //' @title DomainCount::drop_item
 //' @description Efficiently remove item from domain (without needing to re-calculate counts)
-//' @param item Item you want to remove.
+//' @param item item you wish to remove
 //' @keywords internal
 void DomainCount::drop_item(int item, Hyperparameter& hparams) {
   TROUBLE_START(("DomainCount::drop_item"));
   
-  DomainCount domain_orig = copy();
   Rcpp::IntegerVector items_new = items[items!=item];
-  set_initial(items, hparams);
-  for (int i=0; i < npatterns; i++) {
-    counts[pattern2id(domain_orig.id2pattern(i))] += domain_orig.counts[i];
-  }
+  reduce_items(items_new, hparams);
+  
   TROUBLE_END;
 }
 
@@ -895,8 +909,10 @@ void DomainCount::print() {
   TROUBLE_END;
 }
 
-// Example blank domain. GLOBAL CONSTANT - DO NOT MODIFY!
-DomainCount BLANK_DOMAIN;
+// GLOBAL CONSTANTS - DO NOT MODIFY!
+DomainCount BLANK_DOMAIN; // Example blank domain
+float fINF = std::numeric_limits<float>::infinity();
+double dINF = std::numeric_limits<double>::infinity();
 
 
 /*****************************************************
@@ -1228,7 +1244,7 @@ float BayesParameter::domain_prior(Rcpp::IntegerVector& item2domainid_vec, Hyper
 //' @param hparams hyperparameters
 //' @keywords internal
 Rcpp::IntegerVector BayesParameter::get_superdomains(Rcpp::IntegerMatrix& item2domainid, Hyperparameter& hparams) {
-  TROUBLE_START(("get_superdomains"));
+  TROUBLE_START(("BayesParameter::get_superdomains"));
   int nitems = item2domainid.nrow();
   int nclass2domain = item2domainid.ncol();
   int i;
@@ -1260,7 +1276,7 @@ Rcpp::IntegerVector BayesParameter::get_superdomains(Rcpp::IntegerMatrix& item2d
 //' @param hparams hyperparameters
 //' @keywords internal
 bool BayesParameter::is_identifiable(Rcpp::IntegerVector& item2superdomainid, Hyperparameter& hparams) {
-  TROUBLE_START(("is_identifiable #V1"));
+  TROUBLE_START(("BayesParameter::is_identifiable #V1"));
   
   if ((hparams.steps_active["identifiable"]==false) // identifiability turned off
         | (hparams.nclass == 1) // 1 class always identifiable (under weak conditions)
@@ -1347,7 +1363,7 @@ bool BayesParameter::is_identifiable(Rcpp::IntegerVector& item2superdomainid, Hy
 //' @param hparams hyperparameters
 //' @keywords internal
 bool BayesParameter::is_identifiable(domainProposalOut& proposal, Hyperparameter& hparams) {
-  TROUBLE_START(("is_identifiable #V2"));
+  TROUBLE_START(("BayesParameter::is_identifiable #V2"));
   
   // maybe do early checks here to quit early (e.g. identifiability off, single class)
   
