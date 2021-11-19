@@ -12,9 +12,14 @@ THETA_ALPHA = 1
 DOMAIN_PROPOSAL_EMPTY = 0.3
 DOMAIN_PROPOSAL_SWAP = 0.3
 STEPS_ACTIVE = c("thetas"=TRUE, "domains"=TRUE, "class_pi"=TRUE, "classes"=TRUE, "identifiable"=TRUE)
-THETA_ALPHA_FUNNAMES = c("constant", "log", "average")
+THETA_ALPHA_FUNNAMES = c("constant") # c("log", "average")
 THETA_ALPHA_FUNNAME = THETA_ALPHA_FUNNAMES[1]
 DOMAIN_MAXITEMS = 10
+CLASS2DOMAIN_FUNS = list(
+  "HOMO" = function(nclass) rep(0, nclass)
+  , "HET" = function(nclass) seq(0, nclass-1)
+)
+CLASS2DOMAIN = "HOMO"
 
 #' Fits a bayesian dependent LCM model
 #' @param nitr integer. Number of iterations to run the bayes MCMC
@@ -27,7 +32,7 @@ dependentLCM_fit <- function(
   # Data
   , df=NULL, mat=NULL
   # Hyperparameters
-  ,nclass=NCLASS, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_proposal_swap=DOMAIN_PROPOSAL_SWAP, domain_nproposals=NULL, steps_active = STEPS_ACTIVE, theta_alpha_funname = THETA_ALPHA_FUNNAME
+  ,nclass=NCLASS, ndomains=NULL, class2domain=CLASS2DOMAIN, classPi_alpha=CLASSPI_ALPHA, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_proposal_swap=DOMAIN_PROPOSAL_SWAP, domain_nproposals=NULL, steps_active = STEPS_ACTIVE, theta_alpha_funname = THETA_ALPHA_FUNNAME
   # Bayes parameters
   , class_pi = NULL, classes = NULL, domains = NULL
   # Misc
@@ -148,6 +153,7 @@ dependentLCM_fit <- function(
 #' @param nclass integer. Number of subject latent classes
 #' @param ndomains integer. Number of item domains
 #' @param class2domain integer vector of length nclass. Classes with same value have same domains.
+#' If "HOMO" then defaults to c(0,0,...). If "HET" then defaults to c(0, 1, 2, ...)
 #' @param classPi_alpha numeric vector. Bayes hyperparameter giving prior for Pi.
 #' @param domain_maxitems iinteger. Maximum number of items which can be in a domain. Default is 10 (beyond 10 runs slowly).
 #' @param theta_alpha numeric. Bayes hyperparemter giving the prior for theta/probabilties.
@@ -179,12 +185,13 @@ getStart_hparams <- function(
   }
   
   # class2domain
-  if (is.null(class2domain)) {
-    class2domain <- rep(0, nclass) # all classes use same domains
+  if ((typeof(class2domain) == "character") & length(class2domain)==1) {
+    # convert string description into raw numbers we need
+    class2domain = CLASS2DOMAIN_FUNS[[toupper(class2domain)]](nclass)
   }
   class2domain <- as.integer(factor(class2domain))-1 # Make sequential starting at 0
   nclass2domain <- length(unique(class2domain))
-  
+
   # classPi_alpha
   if (length(classPi_alpha)==1) {
     classPi_alpha <- rep(classPi_alpha, nclass)

@@ -849,24 +849,31 @@ int DomainCount::itemsid_calc() {
   TROUBLE_END; return sum;
 }
 
+//' @name DomainCount::theta_alpha_fun
+//' @title DomainCount::theta_alpha_fun
+//' @description Allows for theta prior to change as domains get merged
+//' @param hparams hyperparameters
+//' @keywords internal
 float DomainCount::theta_alpha_fun(Hyperparameter& hparams) {
   TROUBLE_START(("DomainCount::theta_alpha"));
   float out;
   if (hparams.theta_alpha_funname == "constant") {
     out = 1;
-  } else if (hparams.theta_alpha_funname == "average") {
-    Rcpp::IntegerVector item_nlevels = hparams.item_nlevels[items];
-    out = (
-      float(Rcpp::sum(item_nlevels))
-      / float(npatterns)
-    );
-  } else if (hparams.theta_alpha_funname == "log") {
-    Rcpp::IntegerVector item_nlevels = hparams.item_nlevels[items];
-    out = (
-      std::log(float(Rcpp::sum(item_nlevels)))
-      / std::log(float(npatterns))
-    );
-  } else {
+  }
+  // else if (hparams.theta_alpha_funname == "average") { // depreciated
+  //   Rcpp::IntegerVector item_nlevels = hparams.item_nlevels[items];
+  //   out = (
+  //     float(Rcpp::sum(item_nlevels))
+  //     / float(npatterns)
+  //   );
+  // } else if (hparams.theta_alpha_funname == "log") { // depreciated
+  //   Rcpp::IntegerVector item_nlevels = hparams.item_nlevels[items];
+  //   out = (
+  //     std::log(float(Rcpp::sum(item_nlevels)))
+  //     / std::log(float(npatterns))
+  //   );
+  // } 
+  else {
     Rcpp::warning("DomainCount::theta_alpha: Invalid hparams.theta_alpha_funname");
     out = 1;
   }
@@ -1699,8 +1706,7 @@ domainAcceptOut BayesParameter::domain_accept(const Rcpp::IntegerMatrix& x, doma
     out.loglik_old = 0;
     out.loglik_new = 0;
   }
-  //tkjmb
-  
+
   int iclass;
   for (int i = 0; i < proposal.domain_classes.size(); i++) {
     
