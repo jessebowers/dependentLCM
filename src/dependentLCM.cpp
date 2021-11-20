@@ -941,7 +941,8 @@ struct domainProposalOut {
   DomainCount domain_new1;
   DomainCount domain_new2;
   Rcpp::IntegerVector domain_classes;
-  std::vector<std::map<int,  DomainCount> > domains_new;
+  std::vector<std::map<int,  DomainCount> > domains_new_counted;
+  std::vector<std::map<int,  DomainCount> > domains_new_uncounted;
 };
 
 // Output for BayesParameter::domain_accept(.)
@@ -1668,15 +1669,25 @@ domainProposalOut BayesParameter::domain_proposal(int class2domain_id, Hyperpara
   }
   
   // Save new domains as map
-  proposal.domains_new.resize(hparams.nclass);
+  proposal.domains_new_counted.resize(hparams.nclass);
+  proposal.domains_new_uncounted.resize(hparams.nclass);
   int i;
   int iclass;
+  DomainCount adomain;
   for (i = 0; i < proposal.domain_classes.size(); i++) {
     iclass = proposal.domain_classes[i];
     if (proposal.domain_new1.ndomainitems_calc() > 0) {
-      proposal.domains_new[iclass][proposal.domain_id1] = proposal.domain_new1.copy();
+      if (proposal.swap_type==0) {
+        // swap, need to count
+        proposal.domains_new_uncounted[iclass][proposal.domain_id1] = proposal.domain_new1.copy();
+      } else {
+        // transfer/split. Infer count
+        adomain = domains[iclass][proposal.domain_id1].copy();
+        adomain.drop_item(proposal.item1_old, hparams);
+        proposal.domains_new_counted[iclass][proposal.domain_id1] = adomain;
+      }
     }
-    proposal.domains_new[iclass][proposal.domain_id2] = proposal.domain_new2.copy();
+    proposal.domains_new_uncounted[iclass][proposal.domain_id2] = proposal.domain_new2.copy();
   }
   
   TROUBLE_END; return proposal;
@@ -1706,7 +1717,7 @@ domainAcceptOut BayesParameter::domain_accept(const Rcpp::IntegerMatrix& x, doma
     out.loglik_old = 0;
     out.loglik_new = 0;
   }
-
+  
   int iclass;
   for (int i = 0; i < proposal.domain_classes.size(); i++) {
     
@@ -1718,11 +1729,11 @@ domainAcceptOut BayesParameter::domain_accept(const Rcpp::IntegerMatrix& x, doma
     if (domains[iclass].count(proposal.domain_id2) > 0) {
       out.loglik_old += domains[iclass][proposal.domain_id2].getloglik_marginal(hparams);
     }
-    if (proposal.domains_new[iclass].count(proposal.domain_id1) > 0) {
-      out.loglik_new += proposal.domains_new[iclass][proposal.domain_id1].getloglik_marginal(hparams);
+    if (proposal.domains_new_counted[iclass].count(proposal.domain_id1) > 0) {
+      out.loglik_new += proposal.domains_new_counted[iclass][proposal.domain_id1].getloglik_marginal(hparams);
     }
-    if (proposal.domains_new[iclass].count(proposal.domain_id2) > 0) { // should always be true
-      out.loglik_new += proposal.domains_new[iclass][proposal.domain_id2].getloglik_marginal(hparams);
+    if (proposal.domains_new_counted[iclass].count(proposal.domain_id2) > 0) { // should always be true
+      out.loglik_new += proposal.domains_new_counted[iclass][proposal.domain_id2].getloglik_marginal(hparams);
     }
   }
   
@@ -1777,7 +1788,12 @@ int BayesParameter::domain_next(int class2domain_id, const Rcpp::IntegerMatrix& 
    *** Get Likelihood
    ***/
   
-  domain_addCounts(x, classes, true, proposal.domains_new); // true not strictly necessary
+  // count 
+  domain_addCounts(x, classes, true, proposal.domains_new_uncounted); // true not strictly necessary
+  for (int i=0; i < hparams.nclass; i++) {
+    proposal.domains_new_counted[i].insert(proposal.domains_new_uncounted[i].begin(), proposal.domains_new_uncounted[i].end());
+    proposal.domains_new_uncounted[i].clear();
+  }
   domainAcceptOut accept_info = domain_accept(x,proposal, hparams);
   accept = accept_info.accept;
   
@@ -1800,8 +1816,8 @@ int BayesParameter::domain_next(int class2domain_id, const Rcpp::IntegerMatrix& 
   std::map<int,  DomainCount>::const_iterator domain_end;
   for (int i = 0; i < proposal.domain_classes.size(); i++) {
     iclass = proposal.domain_classes[i];
-    domain_end = proposal.domains_new[iclass].end();
-    for (domain_iter = proposal.domains_new[iclass].begin(); domain_iter!=domain_end; ++domain_iter) {
+    domain_end = proposal.domains_new_counted[iclass].end();
+    for (domain_iter = proposal.domains_new_counted[iclass].begin(); domain_iter!=domain_end; ++domain_iter) {
       domains[iclass][domain_iter->first] = domain_iter->second;
     }
     if (proposal.domain_new1.ndomainitems_calc() == 0) {
