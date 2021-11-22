@@ -677,7 +677,7 @@ void DomainCount::set_pattern2id_map(Hyperparameter& hparams) {
 //' @keywords internal
 void DomainCount::set_initial(Rcpp::List list_domain, Hyperparameter& hparams) {
   TROUBLE_START(("DomainCount::set_initial #V2"));
-  Rcpp::NumericVector lthetas_in =  Rcpp::log(list_domain["domains"]);
+  Rcpp::NumericVector lthetas_in =  Rcpp::log(list_domain["thetas"]);
   Rcpp::IntegerVector items_in = list_domain["items"];
   set_initial(items_in, hparams, lthetas_in);
   TROUBLE_END;

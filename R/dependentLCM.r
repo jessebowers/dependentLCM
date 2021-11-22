@@ -9,8 +9,9 @@ NULL
 NCLASS = 2
 CLASSPI_ALPHA = 1
 THETA_ALPHA = 1
+CLASS_INIT_METHOD = "kmodes"
 DOMAIN_PROPOSAL_EMPTY = 0.3
-DOMAIN_PROPOSAL_SWAP = 0.3
+DOMAIN_PROPOSAL_SWAP = 0.2
 STEPS_ACTIVE = c("thetas"=TRUE, "domains"=TRUE, "class_pi"=TRUE, "classes"=TRUE, "identifiable"=TRUE)
 THETA_ALPHA_FUNNAMES = c("constant") # c("log", "average")
 THETA_ALPHA_FUNNAME = THETA_ALPHA_FUNNAMES[1]
@@ -36,13 +37,28 @@ dependentLCM_fit <- function(
   # Bayes parameters
   , class_pi = NULL, classes = NULL, domains = NULL
   # Misc
-  , class_init_method = "kmodes") {
+  , class_init_method = CLASS_INIT_METHOD
+  , warmup_settings = "default"
+  ) {
   
+  args <- as.list(environment()) # c(as.list(environment()), list(...))
   datetimes <- c("fun_start"=Sys.time())
   
   #
   # Set starting values
   #
+  
+  if (identical(warmup_settings, "default")) {
+    if (identical(class2domain, "HET") | identical(class2domain, "het")) {
+      # Default warmup for HET
+      warmup_settings <- list()
+      warmup_settings$nitr <- round(median(c(100, 1000, nitr/20)))
+      warmup_settings$class2domain <- "HOMO"
+    } else {
+      # Otherwise default is no warmup
+      warmup_settings = NULL
+    }
+  }
   
   if (is.null(mat)) {
     mat <- getStart_matrix(df)
@@ -54,12 +70,23 @@ dependentLCM_fit <- function(
     ,nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, domain_proposal_empty=domain_proposal_empty, domain_proposal_swap=domain_proposal_swap, domain_nproposals=domain_nproposals, steps_active=steps_active, theta_alpha_funname=theta_alpha_funname
   )
   
-  bayesparams <- getStart_bayes_params(
-    mat=mat, hparams=hparams
-    , class_pi = class_pi, classes = classes, domains = domains
-    # Misc
-    , class_init_method = class_init_method
-  )
+  if (is.null(warmup_settings)) {
+    # no warmup
+    bayesparams <- getStart_bayes_params(
+      mat=mat, hparams=hparams
+      , class_pi = class_pi, classes = classes, domains = domains
+      # Misc
+      , class_init_method = class_init_method
+    )
+    warmup_sims <- NULL
+  } else {
+    # warmup
+    warmup_args <- args # as.list(match.call())[-1]
+    warmup_args[names(warmup_settings)] <- warmup_settings
+    warmup_args$warmup_settings <- NULL
+    warmup_sims <- do.call(dependentLCM_fit, warmup_args)
+    bayesparams <- dlcm2paramargs(warmup_sims)$bayesparams
+  }
   
   all_params <- list(
     mat = mat
@@ -142,7 +169,7 @@ dependentLCM_fit <- function(
   dlcm$runtimes <- as.numeric(c(diff(datetimes), total=tail(datetimes,1)-datetimes[1]))
   names(dlcm$runtimes) <- c("pre", "mcmc", "post", "total")
   
-  return(list(hparams=all_params$hparams, mcmc=dlcm))
+  return(list(hparams=all_params$hparams, mcmc=dlcm, warmup=warmup_sims))
 }
 
 
@@ -245,7 +272,7 @@ getStart_bayes_params <- function(
   mat, hparams
   , class_pi = NULL, classes = NULL, domains = NULL
   # Misc
-  , class_init_method = "kmodes"
+  , class_init_method = CLASS_INIT_METHOD
 ) {
   
   # classes
@@ -259,6 +286,8 @@ getStart_bayes_params <- function(
     if (class_init_method=="random_centers") {
       classes <- getStart_class_random_centers(mat, hparams)
     }
+  } else {
+    classes = as.integer(factor(classes))-1
   }
   
   # class_pi
@@ -353,6 +382,7 @@ getStart_class_random_centers <- function(mat, hparams, weight_prob=TRUE) {
 }
 
 #' Choose starting domain values.
+#' Note that the initial choice of theta (although set) is unimportant since we recalculate theta before applying it in MCMC/CPP.
 #' @param mat matrix. Raw data.
 #' @param classes integer vector. The class of each observation.
 #' @param hparams list. List of hyperparameters
@@ -364,14 +394,13 @@ getStart_domains <- function(mat, classes, hparams) {
     domains_list[[iclass+1]] <- lapply(
       1:hparams$nitems
       , function(icol) {
-        ix = c(mat[classes==iclass, icol]
-               , seq_len(hparams$item_nlevels[icol])-1)
-        idomains = as.vector((table(ix) + hparams$domain_alpha))
-        idomains <- idomains/sum(idomains)
+        ix = c(mat[classes==iclass, icol] # actual data
+               , seq_len(hparams$item_nlevels[icol])-1 # +1 of each category (avoid zeros)
+               )
+        ithetas = as.vector(table(ix)) / length(ix)
         iout = list(
           items=c(icol-1)
-          # , item_nlevels = hparams$item_nlevels[icol] # now inferred
-          , domains = idomains
+          , thetas = ithetas
         )
         return(iout)
       }
@@ -407,6 +436,51 @@ check_params <- function(all_params) {
   }
   
   return(is_problem)
+}
+
+#' Take dependent latent class model (dlcm) output (i.e. from dependentLCM_fit)
+#' and convert it into Hyper/Bayes parameter arguments to put into dependentLCM_fit.
+#' Used namely for nesting dependentLCM_fit.
+#' @param dlcm Dependent latent class model from dependentLCM_fit()
+#' @param iter which iteration to pull values from (by default last itration)
+#' @keywords internal
+dlcm2paramargs <- function(dlcm, iter=NULL) {
+  iter <- dlcm$mcmc$maxitr
+  nitems <- dlcm$hparams$nitems
+  
+  domains_mat <- dlcm$mcmc$domains %>% filter(itr == iter)
+  domains_mat$items <- (
+    # apply(id2pattern(domains_mat$items_id, rep(2, nitems))==1, 2, which)
+    unlist(apply(domains_mat[,dlcm$hparams$domain_item_cols] >= 0, 1, function(x) list(which(x)-1)), recursive = FALSE)
+  )
+  
+  domains_list <- (domains_mat 
+                   %>% group_by(class, domain)
+                   %>% arrange(pattern_id) 
+                   %>% dplyr::group_map(function(.x, .y) list(
+                     items = unname(unlist(.x[1,"items"]))
+                     , thetas=.x$prob
+                     , name=.y # for filering in next step
+                   )))
+  domains_list <- lapply(
+    seq_len(dlcm$hparams$nclass)-1
+    , function(iclass) {
+      domains_list[sapply(domains_list, function(x) x$name$class==iclass)]
+    }
+  )
+  
+  bayesparams <- list(
+    class_pi = unname(dlcm$mcmc$class_pi[,iter])
+    , classes = unname(dlcm$mcmc$classes[,iter])
+    , domains =  domains_list
+  )
+  
+  all_params <- list(
+    hparams = dlcm$hparams
+    , bayesparams = bayesparams
+  )
+  
+  return(all_params)
 }
 
 #' What is the prior probability of this choice of domains?
@@ -454,6 +528,18 @@ ndomains_singleton_mode <- function(nitems, prop=1) {
 ##############
 ############## UTILITIES
 ##############
+
+CAST_FUN <- list("integer"=as.integer, "double"=as.numeric)
+
+#' Calculate mode (most common value)
+#' @keywords internal
+getMode <- function(x) {
+  xtype <- typeof(x)
+  xcounts <- table(x)
+  xmode <- names(xcounts)[which.max(xcounts)]
+  xmode <- CAST_FUN[[xtype]](xmode) 
+  return(xmode)
+}
 
 
 #' Convert numeric vector x to percentages.
@@ -566,8 +652,11 @@ dlcm.summary <- function(dlcm, nwarmup=NULL) {
   waic <- dlcm.get_waic(dlcm, itrs=nwarmup:dlcm$mcmc$maxitr)
   names(waic) <- paste0("waic_", names(waic))
   
+  classes <- unname(apply(dlcm$mcmc$classes[,-(1:nwarmup)], 1, getMode))
+  class_pi = rowMeans(dlcm$mcmc$class_pi[,-(1:nwarmup), drop=FALSE])
+  
   return(c(
-    list("thetas_avg"=thetas_avg, "domain_items"=domain_items, "domain_items_all"=domain_items_all, "domain_accept"=domain_accept)
+    list("thetas_avg"=thetas_avg, "domain_items"=domain_items, "domain_items_all"=domain_items_all, "domain_accept"=domain_accept, "classes"=classes, "class_pi"=class_pi)
     , waic
     ))
 }
