@@ -154,7 +154,7 @@ dependentLCM_fit <- function(
     dlcm$domains 
     %>% dplyr::filter(pattern_id==0) 
     %>% dplyr::group_by(itr, class2domain)
-    %>% filter(class == min(class))
+    %>% dplyr::filter(class == min(class))
     %>% dplyr::arrange(-nitems, items)
     %>% dplyr::summarize(domains_merged=paste(items, collapse="|"), .groups="keep")
   )
@@ -277,13 +277,13 @@ getStart_bayes_params <- function(
   
   # classes
   if (is.null(classes)) {
-    if (class_init_method=="kmodes") {
+    if (hparams$nclass == 1) {
+      classes <- rep(0, dim(mat)[1])
+    } else if (class_init_method=="kmodes") {
       classes <- getStart_class_kmodes(mat, hparams)
-    }
-    if (class_init_method=="random") {
+    } else if (class_init_method=="random") {
       classes <- getStart_class_random(mat, hparams)
-    }
-    if (class_init_method=="random_centers") {
+    } else if (class_init_method=="random_centers") {
       classes <- getStart_class_random_centers(mat, hparams)
     }
   } else {
@@ -448,15 +448,15 @@ dlcm2paramargs <- function(dlcm, iter=NULL) {
   iter <- dlcm$mcmc$maxitr
   nitems <- dlcm$hparams$nitems
   
-  domains_mat <- dlcm$mcmc$domains %>% filter(itr == iter)
+  domains_mat <- dlcm$mcmc$domains %>% dplyr::filter(itr == iter)
   domains_mat$items <- (
     # apply(id2pattern(domains_mat$items_id, rep(2, nitems))==1, 2, which)
     unlist(apply(domains_mat[,dlcm$hparams$domain_item_cols] >= 0, 1, function(x) list(which(x)-1)), recursive = FALSE)
   )
   
   domains_list <- (domains_mat 
-                   %>% group_by(class, domain)
-                   %>% arrange(pattern_id) 
+                   %>% dplyr::group_by(class, domain)
+                   %>% dplyr::arrange(pattern_id) 
                    %>% dplyr::group_map(function(.x, .y) list(
                      items = unname(unlist(.x[1,"items"]))
                      , thetas=.x$prob
@@ -548,14 +548,6 @@ get_perc <- function(x) {
   x / sum(x)
 }
 
-#' Calculate mode of x
-#' @keywords internal
-getmode <- function(x) {
-  xcounts <- table(x)
-  mode_name <- names(xcounts)[which.max(xcounts)]
-  return(mode_name)
-}
-
 #' Reset all sinks. Sink is used to to write to file.
 #' @keywords internal
 sink.reset <- function(){
@@ -642,8 +634,8 @@ dlcm.summary <- function(dlcm, nwarmup=NULL) {
   thetas_avg <- dlcm$mcmc$domains %>% dplyr::filter(itr > nwarmup) %>% dplyr::group_by(class, items, item_value) %>% dplyr::summarize(n=dplyr::n(), prob=mean(prob), .groups="keep")
   
   domain_items_all <- dlcm$mcmc$domains_merged %>% dplyr::filter(itr > nwarmup) %>% dplyr::group_by(class2domain, items=domains_merged) %>% dplyr::summarize(n=dplyr::n(), .groups="keep")
-  domain_items_all <- domain_items_all %>% group_by(class2domain) %>% mutate(perc = n / sum(n)) %>% dplyr::arrange(-perc)
-  domain_items <- dlcm$mcmc$domains %>% dplyr::filter(pattern_id==0, itr > nwarmup) %>% dplyr::group_by(class2domain, items) %>% filter(class == min(class)) %>% dplyr::summarize(nitems=max(nitems), n=dplyr::n(), .groups="keep") %>% dplyr::arrange(-n)
+  domain_items_all <- domain_items_all %>% dplyr::group_by(class2domain) %>% dplyr::mutate(perc = n / sum(n)) %>% dplyr::arrange(-perc)
+  domain_items <- dlcm$mcmc$domains %>% dplyr::filter(pattern_id==0, itr > nwarmup) %>% dplyr::group_by(class2domain, items) %>% dplyr::filter(class == min(class)) %>% dplyr::summarize(nitems=max(nitems), n=dplyr::n(), .groups="keep") %>% dplyr::arrange(-n)
   
   # domain_nitems <- table((dlcm$mcmc$domains %>% dplyr::filter(pattern_id==0, itr > nwarmup))$nitems)
   
@@ -693,9 +685,9 @@ dlcm.get_waic <- function(this_sim, itrs=NULL) {
   
   theta_parameters <- (
     this_sim$mcmc$domains 
-    %>% filter(itr %in% itrs) 
-    %>% group_by(itr) 
-    %>% summarize(nparams = n() - length(unique(domain)), .groups="keep"))
+    %>% dplyr::filter(itr %in% itrs) 
+    %>% dplyr::group_by(itr) 
+    %>% dplyr::summarize(nparams = dplyr::n() - length(unique(domain)), .groups="keep"))
   likelihoods$nparameters <- (
     unlist(theta_parameters[match(likelihoods$itr, theta_parameters$itr), "nparams"])
     + this_sim$hparams$nclass-1 # class pis
@@ -767,7 +759,7 @@ theta_item_probs <- function(items, this_sim, itrs, merge_itrs=TRUE) {
       sweep(thetas_agg[,1:nitems, drop=FALSE], 2, ipattern, "==") # Matches pattern
       | thetas_agg[,1:nitems, drop=FALSE] < 0 # Or is undefined
     ) == nitems
-    iprobs <- thetas_agg %>% filter(imatch_pattern) %>% group_by(itr, class) %>% summarize(prob=exp(sum(prob_log)), .groups="keep")
+    iprobs <- thetas_agg %>% dplyr::filter(imatch_pattern) %>% dplyr::group_by(itr, class) %>% dplyr::summarize(prob=exp(sum(prob_log)), .groups="keep")
     iprobs$pi <- this_sim$mcm$class_pi[cbind(iprobs$class+1, iprobs$itr)]
     iprobs$prob_pi <- iprobs$prob * iprobs$pi
     return(iprobs)
