@@ -731,7 +731,11 @@ dlcm.get_waic <- function(this_sim, itrs=NULL) {
 #' @description Useful when getting probilities which cross domains.
 #' @returns Probabilities for each pattern of items
 #' @export
-theta_item_probs <- function(items, this_sim, itrs, merge_itrs=TRUE) {
+theta_item_probs <- function(items, this_sim, itrs=NULL, merge_itrs=TRUE) {
+  
+  if (is.null(itrs)) {
+    itrs <- 1:this_sim$mcmc$maxitr
+  }
   
   itr_filter <- which(this_sim$mcmc$domains$itr %in% itrs)
   nitr <- length(itrs)
@@ -760,7 +764,7 @@ theta_item_probs <- function(items, this_sim, itrs, merge_itrs=TRUE) {
       | thetas_agg[,1:nitems, drop=FALSE] < 0 # Or is undefined
     ) == nitems
     iprobs <- thetas_agg %>% dplyr::filter(imatch_pattern) %>% dplyr::group_by(itr, class) %>% dplyr::summarize(prob=exp(sum(prob_log)), .groups="keep")
-    iprobs$pi <- this_sim$mcm$class_pi[cbind(iprobs$class+1, iprobs$itr)]
+    iprobs$pi <- this_sim$mcmc$class_pi[cbind(iprobs$class+1, iprobs$itr)]
     iprobs$prob_pi <- iprobs$prob * iprobs$pi
     return(iprobs)
   }
