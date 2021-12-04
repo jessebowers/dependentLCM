@@ -581,8 +581,6 @@ public:
   Rcpp::NumericVector lthetas; // probabilities of corresponding pattern on log scale
   Rcpp::IntegerVector items; // items in this domain
   Rcpp::IntegerVector pattern2id_map;
-  
-public:
   int npatterns = 0;
   Rcpp::IntegerVector counts; // number of times each pattern appears in the data
   
@@ -591,22 +589,27 @@ public:
   void set_initial(Rcpp::List list_domain, Hyperparameter& hparams);
   static std::vector<std::map<int,  DomainCount> > list2domains(Rcpp::List list_list_domains, Hyperparameter& hparams);
   void set_pattern2id_map(Hyperparameter& hparams);
+  
+public:
   template <typename vectype> int pattern2id(vectype xobs);
   Rcpp::IntegerVector id2pattern(int id);
+  int id2altid(int id, Hyperparameter& hparams);
+  int itemsid_calc();
+  int ndomainitems_calc() {return items.size();}; // number of items in this domain
+  int nitems_calc() {return pattern2id_map.size();}; // number of items in the data
+  
+public:
   double get_ltheta(Rcpp::IntegerMatrix::ConstRow xobs); // maybe switch to template
   float theta_alpha_fun(Hyperparameter& hparams);
   float getloglik_marginal(Hyperparameter& hparams);
-  void reduce_items(Rcpp::IntegerVector items_new, Hyperparameter& hparams);
-  void drop_item(int item, Hyperparameter& hparams);
   
 public:
   void countReset();
   void countAdd(Rcpp::IntegerMatrix::ConstRow xobs);
+  void reduce_items(Rcpp::IntegerVector items_new, Hyperparameter& hparams);
+  void drop_item(int item, Hyperparameter& hparams);
   
 public:
-  int ndomainitems_calc() {return items.size();}; // number of items in this domain
-  int nitems_calc() {return pattern2id_map.size();}; // number of items in the data
-  int itemsid_calc();
   DomainCount copy();
   void print();
 };
@@ -1793,8 +1796,8 @@ int BayesParameter::domain_next(int class2domain_id, const Rcpp::IntegerMatrix& 
   }
   if (proposal.is_ok == -1) {
     // No change up to reordering of domains. Do not bother changing
-    // (also checks too many items in a given domain, partially)
-    accept = 3;
+    // (also checks too many items in a given domain, partially. future might give these separate ids)
+    accept = -1;
   }
   if ((proposal.items1_new.size() > hparams.domain_maxitems)
         | (proposal.items1_new.size() > hparams.domain_maxitems)) {
@@ -1872,7 +1875,6 @@ public:
   Rcpp::NumericMatrix class_pi;
   Rcpp::IntegerMatrix classes;
   std::vector<Rcpp::IntegerMatrix> domains_id; // Row for iter, classid,  domain_id, pattern_id, items_id
-  std::vector<Rcpp::IntegerMatrix> domains_patterns; // Row per item
   std::vector<Rcpp::NumericVector> domains_lprobs;
   std::vector<Rcpp::IntegerMatrix> domains_accept;
   std::vector<Rcpp::NumericMatrix> class_loglik;
@@ -1882,7 +1884,7 @@ public:
 public:
   void set_initial(int nclass, int nobs, int nitems, int maxiter_in, int domain_nproposals, int nclass2domain);
   void add(BayesParameter& aparams);
-  void domains2mat(BayesParameter& params, int itr, Rcpp::IntegerMatrix& out_domains_id, Rcpp::IntegerMatrix& out_domains_patterns, Rcpp::NumericVector& out_domains_lprobs);
+  void domains2mat(BayesParameter& params, int itr, Rcpp::IntegerMatrix& out_domains_id, Rcpp::NumericVector& out_domains_lprobs);
 };
 
 //' @name Archive::set_initial
@@ -1898,7 +1900,6 @@ void Archive::set_initial(int nclass, int nobs, int nitems, int maxiter_in, int 
   classes = Rcpp::IntegerMatrix(nobs, maxiter_in);
   
   domains_id.resize(maxiter_in);
-  domains_patterns.resize(maxiter_in);
   domains_lprobs.resize(maxiter_in);
   
   domains_accept.resize(maxiter_in);
@@ -1919,7 +1920,7 @@ void Archive::set_initial(int nclass, int nobs, int nitems, int maxiter_in, int 
 //' Used to convert the domains from map form to matrix form for storage
 //' Although we could make a deep copy of the domain map each time, this would be unproductive because we need it in matrix form later for R. Therfore we convert to matrix.
 //' @keywords internal
-void Archive::domains2mat(BayesParameter& params, int itr, Rcpp::IntegerMatrix& out_domains_id, Rcpp::IntegerMatrix& out_domains_patterns, Rcpp::NumericVector& out_domains_lprobs) {
+void Archive::domains2mat(BayesParameter& params, int itr, Rcpp::IntegerMatrix& out_domains_id, Rcpp::NumericVector& out_domains_lprobs) {
   TROUBLE_START(("Archive::domains2mat"));
   
   std::map<int,  DomainCount>::iterator domain_iter;
@@ -1934,7 +1935,7 @@ void Archive::domains2mat(BayesParameter& params, int itr, Rcpp::IntegerMatrix& 
   // misc
   int npatterns;
   int nclass = params.nclass_calc();
-  int nitems = params.nitems_calc();
+  // int nitems = params.nitems_calc();
   
   
   // Set Size
@@ -1947,7 +1948,6 @@ void Archive::domains2mat(BayesParameter& params, int itr, Rcpp::IntegerMatrix& 
     }
   }
   out_domains_id = Rcpp::IntegerMatrix(5, npatterns); // Row for iter, classid,  domain_id, pattern_id, items_id
-  out_domains_patterns = Rcpp::IntegerMatrix(nitems, npatterns);
   out_domains_lprobs = Rcpp::NumericVector(npatterns);
   
   
@@ -1966,7 +1966,6 @@ void Archive::domains2mat(BayesParameter& params, int itr, Rcpp::IntegerMatrix& 
         out_domains_id(2, ithis_pattern_id) = idomain_id;
         out_domains_id(3, ithis_pattern_id) = i;
         out_domains_id(4, ithis_pattern_id) = iitems_id;
-        out_domains_patterns.column(ithis_pattern_id) = idomain->id2pattern(i);
         out_domains_lprobs(ithis_pattern_id) = idomain->lthetas(i);
         
         ithis_pattern_id += 1;  //Increment
@@ -1995,7 +1994,7 @@ void Archive::add(BayesParameter& aparams) {
   class_pi.column(next_itr) = aparams.class_pi;
   classes.column(next_itr) = aparams.classes;
   Archive::domains2mat(aparams, next_itr
-                         , domains_id[next_itr], domains_patterns[next_itr], domains_lprobs[next_itr]);
+                         , domains_id[next_itr], domains_lprobs[next_itr]);
   domains_accept[next_itr] = Rcpp::clone(aparams.domains_accept);
   class_loglik[next_itr] = Rcpp::clone(aparams.class_loglik);
   next_itr += 1;
@@ -2098,7 +2097,6 @@ Rcpp::List dependentLCM_fit_cpp(Rcpp::IntegerMatrix& x_in, Rcpp::List hparams_li
       Rcpp::Named("class_pi") = bcontainer.archive.class_pi
     , Rcpp::Named("classes") = bcontainer.archive.classes
     , Rcpp::Named("domains_id") = wrap(bcontainer.archive.domains_id)
-    , Rcpp::Named("domains_patterns") = wrap(bcontainer.archive.domains_patterns)
     , Rcpp::Named("domains_lprobs") = wrap(bcontainer.archive.domains_lprobs)
     , Rcpp::Named("next_itr") = bcontainer.archive.next_itr
     , Rcpp::Named("maxitr") = bcontainer.archive.maxitr
@@ -2132,4 +2130,37 @@ Rcpp::IntegerMatrix id2pattern(const Rcpp::IntegerVector& xpattern, const Rcpp::
   }
   
   return unmapped_mat; 
+}
+
+//' @name itemid2patterns
+//' @title itemid2patterns
+//' @description Take pattern_id/item_id combinations and form pattern.
+//' @param pattern_ids ID reprsenting the value of 'filled in' items. (unfilled items get -1)
+//' @param items_ids ID reprsenting which items (positions) should be 'filled'. 
+//' @param item_nlevels How many possible values each item can take
+// [[Rcpp::export]]
+Rcpp::IntegerVector itemid2patterns(const Rcpp::IntegerVector& pattern_ids, const Rcpp::IntegerVector& items_ids, const Rcpp::IntegerVector& item_nlevels) {
+  int n = pattern_ids.size();
+  int nitems = item_nlevels.size();
+  Rcpp::IntegerVector items_2s (nitems, 2);
+  Rcpp::IntegerMatrix patterns (nitems, n);
+  std::map<std::tuple<int,int>, Rcpp::IntegerVector> lookups;
+  
+  std::tuple<int,int> key;
+  Rcpp::LogicalVector items;
+  Rcpp::IntegerVector pattern (nitems);
+  for (int i=0; i<n; i++) {
+    key = std::make_pair(items_ids[i], pattern_ids[i]);
+    if (lookups.count(key) > 0) {
+      pattern = lookups[key];
+    } else {
+      items = id2pattern(std::get<0>(key), items_2s)==1;
+      pattern.fill(-1);
+      pattern[items] = id2pattern(std::get<1>(key), item_nlevels[items]);
+      lookups[key] = pattern;
+    }
+    patterns.column(i) = pattern;
+  }
+  
+  return patterns;
 }

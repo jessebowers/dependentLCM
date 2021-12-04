@@ -114,9 +114,6 @@ dependentLCM_fit <- function(
   dlcm$domains_id <- do.call(cbind, dlcm$domains_id)
   rownames(dlcm$domains_id) <- c("itr", "class", "domain", "pattern_id", "items_id")
   mode(dlcm$domains_id) <- "integer"
-  dlcm$domains_patterns <- do.call(cbind, dlcm$domains_patterns)
-  rownames(dlcm$domains_patterns) <- paste0("item_", 1:(nrow(dlcm$domains_patterns)))
-  mode(dlcm$domains_patterns) <- "integer"
   dlcm$domains_lprobs <- unlist(dlcm$domains_lprobs)
   dlcm$domains_accept <- do.call(function(...) abind::abind(..., along=3), dlcm$domains_accept)
   dlcm$class_loglik <- do.call(function(...) abind::abind(..., along=3), dlcm$class_loglik)
@@ -126,6 +123,11 @@ dependentLCM_fit <- function(
   dlcm$classes <- set_dimnames(dlcm$classes, c("obs", "itr"))
   dlcm$domains_accept <- set_dimnames(dlcm$domains_accept, c(NULL, NULL, "itr"))
   dlcm$class_loglik <- set_dimnames(dlcm$class_loglik, c("class", "obs", "itr"))
+  
+  # domains_patterns 
+  dlcm$domains_patterns <- itemid2patterns(dlcm$domains_id["pattern_id",], dlcm$domains_id["items_id",], hparams[["item_nlevels"]])
+  rownames(dlcm$domains_patterns) <- paste0("item_", 1:(nrow(dlcm$domains_patterns)))
+  mode(dlcm$domains_patterns) <- "integer"
   
   # Supplemental
   domains_items <- apply(
