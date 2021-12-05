@@ -632,7 +632,12 @@ dlcm.summary <- function(dlcm, nwarmup=NULL) {
     dlcm$mcmc$domains[, dlcm$hparams$domain_item_cols]
     , 1, function(x) paste0(x[x>-1], collapse=", ")
   )
-  thetas_avg <- dlcm$mcmc$domains %>% dplyr::filter(itr > nwarmup) %>% dplyr::group_by(class, items, item_value) %>% dplyr::summarize(n=dplyr::n(), prob=mean(prob), .groups="keep")
+  thetas_avg <- dlcm$mcmc$domains %>% dplyr::filter(itr > nwarmup) %>% dplyr::group_by(class, items_id, pattern_id) %>% dplyr::summarize(
+    items = first(items)
+    , item_value = first(item_value)
+    , n=dplyr::n()
+    , prob=mean(prob)
+    , .groups="keep")
   
   domain_items_all <- dlcm$mcmc$domains_merged %>% dplyr::filter(itr > nwarmup) %>% dplyr::group_by(class2domain, items=domains_merged) %>% dplyr::summarize(n=dplyr::n(), .groups="keep")
   domain_items_all <- domain_items_all %>% dplyr::group_by(class2domain) %>% dplyr::mutate(perc = n / sum(n)) %>% dplyr::arrange(-perc)

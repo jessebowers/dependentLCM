@@ -2152,12 +2152,12 @@ Rcpp::IntegerVector itemid2patterns(const Rcpp::IntegerVector& pattern_ids, cons
   for (int i=0; i<n; i++) {
     key = std::make_pair(items_ids[i], pattern_ids[i]);
     if (lookups.count(key) > 0) {
-      pattern = lookups[key];
+      pattern = Rcpp::clone(lookups[key]);
     } else {
       items = id2pattern(std::get<0>(key), items_2s)==1;
       pattern.fill(-1);
       pattern[items] = id2pattern(std::get<1>(key), item_nlevels[items]);
-      lookups[key] = pattern;
+      lookups[key] = Rcpp::clone(pattern);
     }
     patterns.column(i) = pattern;
   }
