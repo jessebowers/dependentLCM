@@ -734,16 +734,32 @@ dlcm.get_waic <- function(this_sim, itrs=NULL) {
 #' @param this_sim a mcmc simulation. Output from dependentLCM_fit()
 #' @param itrs integer vector. Which iterations from this_sim should we include?
 #' @param merge_itrs TRUE if you want average probabilities across simulations. FALSE if you want to examine each iteration individually
+#' @param classes Which classes are we evaluating? By default all classes
 #' @description Useful when getting probilities which cross domains.
 #' @returns Probabilities for each pattern of items
 #' @export
-theta_item_probs <- function(items, this_sim, itrs=NULL, merge_itrs=TRUE) {
+theta_item_probs <- function(items, this_sim, itrs=NULL, merge_itrs=TRUE, classes=NULL) {
   
   if (is.null(itrs)) {
     itrs <- 1:this_sim$mcmc$maxitr
   }
+  if (!is.null(classes)
+      & !identical(classes, seq_len(this_sim$hparams$nclass)-1)
+      ) {
+    this_sim$mcmc$class_pi[-(classes+1),] <- 0
+    this_sim$mcmc$class_pi <- sweep(
+      this_sim$mcmc$class_pi
+      , 2
+      , colSums(this_sim$mcmc$class_pi)
+      , '/'
+    )
+  }
   
-  itr_filter <- which(this_sim$mcmc$domains$itr %in% itrs)
+  
+  itr_filter <- which(
+    (this_sim$mcmc$domains$itr %in% itrs)
+    & (this_sim$mcmc$domains$class %in% classes)
+    )
   nitr <- length(itrs)
   nitems <- length(items)
   items_colnames <- colnames(this_sim$mcmc$domains)[this_sim$hparams$domain_item_cols[items]]
@@ -756,6 +772,7 @@ theta_item_probs <- function(items, this_sim, itrs=NULL, merge_itrs=TRUE) {
   )
   thetas_agg <- thetas_agg[!(rowSums(thetas_agg[, 1:nitems, drop=FALSE]) == -nitems), ] # Remove unrelated rows
   thetas_agg$prob_log <- log(thetas_agg$prob)
+  thetas_agg$class_pi <- this_sim$mcmc$class_pi[cbind(thetas_agg$class+1, thetas_agg$itr)]
   
   all_patterns <- expand.grid(
     lapply(this_sim$hparams$item_nlevels[items], function(n) 0:(n-1))
@@ -769,20 +786,23 @@ theta_item_probs <- function(items, this_sim, itrs=NULL, merge_itrs=TRUE) {
       sweep(thetas_agg[,1:nitems, drop=FALSE], 2, ipattern, "==") # Matches pattern
       | thetas_agg[,1:nitems, drop=FALSE] < 0 # Or is undefined
     ) == nitems
-    iprobs <- thetas_agg %>% dplyr::filter(imatch_pattern) %>% dplyr::group_by(itr, class) %>% dplyr::summarize(prob=exp(sum(prob_log)), .groups="keep")
-    iprobs$pi <- this_sim$mcmc$class_pi[cbind(iprobs$class+1, iprobs$itr)]
-    iprobs$prob_pi <- iprobs$prob * iprobs$pi
+    iprobs <- (
+      thetas_agg 
+      %>% dplyr::filter(imatch_pattern) 
+      %>% dplyr::group_by(itr, class) 
+      %>% dplyr::summarize(prob=exp(sum(prob_log)), class_pi=first(class_pi), .groups="keep"))
+    iprobs$prob_pi <- iprobs$prob * iprobs$class_pi
     return(iprobs)
   }
   
   if (merge_itrs==TRUE) {
     # Get average across iterations
-    all_patterns$prob <- apply(all_patterns, 1
+    out <- all_patterns
+    out$prob <- apply(all_patterns, 1
                                , FUN = function(ipattern) {
                                  iprobs <- prob_helper(ipattern)
-                                 return(sum(iprobs$prob * iprobs$pi) / nitr)
+                                 return(sum(iprobs$prob_pi) / nitr)
                                })
-    out <- all_patterns
   } else {
     # Return probabilities for each individual iteration
     out <- list(
@@ -813,6 +833,7 @@ get_class_probs <- function(dlcm) {
   )
   return(exp(obsLogLiks))
 }
+
 
 ##############
 ############## SIMULATION
