@@ -743,9 +743,11 @@ theta_item_probs <- function(items, this_sim, itrs=NULL, merge_itrs=TRUE, classe
   if (is.null(itrs)) {
     itrs <- 1:this_sim$mcmc$maxitr
   }
+  
+  class_filter <- TRUE
   if (!is.null(classes)
       & !identical(classes, seq_len(this_sim$hparams$nclass)-1)
-      ) {
+  ) {
     this_sim$mcmc$class_pi[-(classes+1),] <- 0
     this_sim$mcmc$class_pi <- sweep(
       this_sim$mcmc$class_pi
@@ -753,13 +755,14 @@ theta_item_probs <- function(items, this_sim, itrs=NULL, merge_itrs=TRUE, classe
       , colSums(this_sim$mcmc$class_pi)
       , '/'
     )
+    class_filter = (this_sim$mcmc$domains$class %in% classes)
   }
   
   
-  itr_filter <- which(
+  afilter <- which(
     (this_sim$mcmc$domains$itr %in% itrs)
-    & (this_sim$mcmc$domains$class %in% classes)
-    )
+    & class_filter
+  )
   nitr <- length(itrs)
   nitems <- length(items)
   items_colnames <- colnames(this_sim$mcmc$domains)[this_sim$hparams$domain_item_cols[items]]
@@ -767,7 +770,7 @@ theta_item_probs <- function(items, this_sim, itrs=NULL, merge_itrs=TRUE, classe
   # Reduce thetas down to relevant patterns only (merging redundant patterns as necessary)
   thetas_agg <- aggregate(
     formula(paste0("prob ~ ", paste(c(items_colnames, "class", "itr"), collapse=" + ")))
-    , this_sim$mcmc$domains[itr_filter, ]
+    , this_sim$mcmc$domains[afilter, ]
     , sum
   )
   thetas_agg <- thetas_agg[!(rowSums(thetas_agg[, 1:nitems, drop=FALSE]) == -nitems), ] # Remove unrelated rows
@@ -799,10 +802,10 @@ theta_item_probs <- function(items, this_sim, itrs=NULL, merge_itrs=TRUE, classe
     # Get average across iterations
     out <- all_patterns
     out$prob <- apply(all_patterns, 1
-                               , FUN = function(ipattern) {
-                                 iprobs <- prob_helper(ipattern)
-                                 return(sum(iprobs$prob_pi) / nitr)
-                               })
+                      , FUN = function(ipattern) {
+                        iprobs <- prob_helper(ipattern)
+                        return(sum(iprobs$prob_pi) / nitr)
+                      })
   } else {
     # Return probabilities for each individual iteration
     out <- list(
