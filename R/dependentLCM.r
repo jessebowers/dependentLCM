@@ -10,17 +10,15 @@ NULL
 NCLASS = 2
 CLASSPI_ALPHA = 1
 THETA_ALPHA = 1
-CLASS_INIT_METHOD = "kmodes"
+CLASS_INIT_METHODS = c("kmodes", "random", "random_centers", "random_centers_polar")
 DOMAIN_PROPOSAL_EMPTY = 0.3
 STEPS_ACTIVE = c("thetas"=TRUE, "domains"=TRUE, "class_pi"=TRUE, "classes"=TRUE, "identifiable"=TRUE)
-THETA_ALPHA_FUNNAMES = c("constant") # c("log", "average")
-THETA_ALPHA_FUNNAME = THETA_ALPHA_FUNNAMES[1]
 DOMAIN_MAXITEMS = 10
 CLASS2DOMAIN_FUNS = list(
   "HOMO" = function(nclass) rep(0, nclass)
   , "HET" = function(nclass) seq(0, nclass-1)
 )
-CLASS2DOMAIN = "HOMO"
+CLASS2DOMAINS = names(CLASS2DOMAIN_FUNS)
 
 #' Fits a bayesian dependent LCM model
 #' @param nitr integer. Number of iterations to run the bayes MCMC
@@ -33,11 +31,11 @@ dependentLCM_fit <- function(
   # Data
   , df=NULL, mat=NULL
   # Hyperparameters
-  ,nclass=NCLASS, ndomains=NULL, class2domain=CLASS2DOMAIN, classPi_alpha=CLASSPI_ALPHA, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_nproposals=NULL, steps_active = STEPS_ACTIVE, theta_alpha_funname = THETA_ALPHA_FUNNAME
+  ,nclass=NCLASS, ndomains=NULL, class2domain=CLASS2DOMAINS[1], classPi_alpha=CLASSPI_ALPHA, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_nproposals=NULL, steps_active = STEPS_ACTIVE
   # Bayes parameters
   , class_pi = NULL, classes = NULL, domains = NULL
   # Misc
-  , class_init_method = CLASS_INIT_METHOD
+  , class_init_method = CLASS_INIT_METHODS[1]
   , warmup_settings = "default"
   ) {
   
@@ -67,7 +65,7 @@ dependentLCM_fit <- function(
   hparams <- getStart_hparams(
     df=mat
     # Hyperparameters
-    ,nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, domain_proposal_empty=domain_proposal_empty, domain_nproposals=domain_nproposals, steps_active=steps_active, theta_alpha_funname=theta_alpha_funname
+    ,nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, domain_proposal_empty=domain_proposal_empty, domain_nproposals=domain_nproposals, steps_active=steps_active
   )
   
   if (is.null(warmup_settings)) {
@@ -177,7 +175,7 @@ dependentLCM_fit <- function(
 
 #' Generate hyperparameters
 #' Generate a list of hyperparameters, adding default values when necessary
-#' @param df dataframe. Raw data you are fitting with all assumed to be factors
+#' @param df dataframe. Raw data you are fitting with all assumed to be factors. Assumes no missing data (no NAs).
 #' @param nitems integer. Number of columns of df.
 #' @param nclass integer. Number of subject latent classes
 #' @param ndomains integer. Number of item domains
@@ -190,7 +188,6 @@ dependentLCM_fit <- function(
 #' @param domain_nproposals Sets how many times the domain metropolis propsal function is called each iteration
 #' @param steps_active Named boolean vector of what actions to take during mcmc. If mcmc is skipped then initial values are kept as fixed.
 #' thetas=TRUE to do gibbs on response probabilities, domains=TRUE to do metropolis on domains, class_pi=TRUE to do gibbs on class prior, classes=TRUE to do gibbs on class membership, identifiable=TRUE to check generic identifiability conditions of domains
-#' @param theta_alpha_funname string Decides the prior for theta as domains get merged. 
 #' "constant" for theta~Dirichlet(theta_alpha * rep(1, npatterns)). Produces domains of 1-4 items but typically not larger.
 #' "log" for theta~Dirichlet(theta_alpha * ln(sum(npattens_i))/ln(npatterns) rep(1, npatterns))
 #' "average" [depreciated] for theta~Dirichlet(theta_alpha * sum(npattens_i)/npatterns rep(1, npatterns)). Unstable for large domains
@@ -198,7 +195,7 @@ dependentLCM_fit <- function(
 getStart_hparams <- function(
   df=NULL, nitems=NULL
   # Hyperparameters
-  ,nclass=NCLASS, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_nproposals=NULL, steps_active=STEPS_ACTIVE, theta_alpha_funname = THETA_ALPHA_FUNNAME
+  ,nclass=NCLASS, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_nproposals=NULL, steps_active=STEPS_ACTIVE
 ) {
   # Purpose: Add default hyperparameters
   
@@ -241,7 +238,8 @@ getStart_hparams <- function(
   steps_active_fn[names(steps_active)] = steps_active
   
   return(list(
-    nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, nitems = nitems, item_nlevels = item_nlevels, nclass2domain = nclass2domain, domain_proposal_empty=domain_proposal_empty, domain_nproposals=domain_nproposals, steps_active = steps_active_fn, theta_alpha_funname = theta_alpha_funname
+    nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, nitems = nitems, item_nlevels = item_nlevels, nclass2domain = nclass2domain, domain_proposal_empty=domain_proposal_empty, domain_nproposals=domain_nproposals, steps_active = steps_active_fn
+    , theta_alpha_funname = "constant"
   ))
 }
 
@@ -273,19 +271,21 @@ getStart_bayes_params <- function(
   mat, hparams
   , class_pi = NULL, classes = NULL, domains = NULL
   # Misc
-  , class_init_method = CLASS_INIT_METHOD
+  , class_init_method = CLASS_INIT_METHODS[1]
 ) {
   
   # classes
   if (is.null(classes)) {
     if (hparams$nclass == 1) {
       classes <- rep(0, dim(mat)[1])
-    } else if (class_init_method=="kmodes") {
+    } else if (identical(class_init_method,"kmodes")) {
       classes <- getStart_class_kmodes(mat, hparams)
-    } else if (class_init_method=="random") {
+    } else if (identical(class_init_method,"random")) {
       classes <- getStart_class_random(mat, hparams)
-    } else if (class_init_method=="random_centers") {
-      classes <- getStart_class_random_centers(mat, hparams)
+    } else if (identical(class_init_method,"random_centers")) {
+      classes <- getStart_class_random_centers(mat, hparams, isWeighted=FALSE, isPolar=FALSE)$classes
+    }  else if (identical(class_init_method,"random_centers_polar")) {
+      classes <- getStart_class_random_centers(mat, hparams, isWeighted=TRUE, isPolar=TRUE)$classes
     }
   } else {
     classes = as.integer(factor(classes))-1
@@ -347,39 +347,65 @@ getStart_class_kmodes <- function(mat, hparams, ...) {
 #' Designed so that the chosen centers are as far from each other as possible
 #' @param mat matrix. Raw data.
 #' @param hparams list. List of hyperparameters
-#' @param weight_prob bool. True if more common patterns should be more likely to be chosen as centers. False if all patterns should be equally likely.
+#' @param isWeighted bool. True if more common patterns should be more likely to be chosen as centers. False if all patterns should be equally likely.
+#' @param isPolar bool. True to force centers to be as far from each other as possible
+#' @param attempts int. Number of tries to get unique centers
 #' @keywords internal
-getStart_class_random_centers <- function(mat, hparams, weight_prob=TRUE) {
+getStart_class_random_centers <- function(mat, hparams, isWeighted, isPolar) {
   nobs <- dim(mat)[1]
   nclass <- hparams$nclass
-  attempts <- 3
   
-  if (weight_prob==TRUE) {
+  if (isWeighted==TRUE) {
     # More common patterns more likely to be chosen
     possible_centers <- mat # lazy copy (fast)
   } else {
     # All patterns equally likely to be chosen
     possible_centers <- unique(mat)
   }
-  centers <- matrix(data=NA, nrow=nclass, ncol(mat))
-  distance <- matrix(data=NA, nrow=nobs, ncol=nclass)
   
-  # Get centers
-  centers[1,] <-possible_centers[sample.int(n=nrow(possible_centers)
-                                            , size=1),]
-  distance[,1] = rowSums(sweep(mat, 2, centers[1,], FUN="=="))
-  for (i in seq_len(nclass-1)+1) {
-    # choose the center farthest from the current centers
-    min_dist <- apply(distance, 1, min, na.rm=TRUE)
-    center_inds <- which(min_dist==min(min_dist))
-    centers[i,] <- possible_centers[sample(center_inds, size=1),]
-    distance[,i] = rowSums(sweep(mat, 2, centers[i,], FUN="=="))
+  distance <- matrix(data=NA, nrow=nobs, ncol=nclass)
+  if (isPolar==TRUE) {
+    # Have centers be as far as possible from each other
+    
+    # Get centers
+    centers <- matrix(data=NA, nrow=nclass, ncol(mat))
+    centers[1,] <-sample.df(possible_centers, size=1)
+    distance[,1] <- rowSums(sweep(mat, 2, centers[1,], FUN="=="))
+    for (i in seq_len(nclass-1)+1) {
+  	  # choose the center farthest from the current centers
+  	  min_dist <- apply(distance, 1, min, na.rm=TRUE)
+  	  center_inds <- which(min_dist==min(min_dist))
+  	  centers[i,] <- possible_centers[sample(center_inds, size=1),]
+  	  distance[,i] = rowSums(sweep(mat, 2, centers[i,], FUN="=="))
+    }
+  } else {
+    # Centers entirely at random
+  	centers <-unique(sample.df(possible_centers, nclass))
+  	last_processed = 0
+    for (j in seq_len(nclass)) {
+      
+      for (i in last_processed+seq_len(nrow(centers)-last_processed)) {
+        distance[,i] = rowSums(sweep(mat, 2, centers[i,], FUN="=="))
+      }
+      
+  	  if (nrow(centers)==nclass) {
+  	    break # we have nclass unique centers
+  	  }
+      
+      possible_centers <- possible_centers[apply(possible_centers, 1, min, na.rm=TRUE) > 0, ]
+      
+  	  centers <- unique(rbind(
+  	    centers
+  		, sample.df(possible_centers, nclass-nrow(centers))
+  		))
+  	}
   }
   
   # Associate observation to nearest class
   classes <- apply(distance, 1, FUN=function(idist) sample(which(idist==min(idist)),1))
+  classes <- classes - 1 # start at 0
   
-  return(classes-1)
+  return(list(classes=classes, centers=centers))
 }
 
 #' Choose starting domain values.
@@ -604,6 +630,18 @@ set_dimnames <- function(xarray, axis_names) {
     }
   )
   return(xarray)
+}
+
+
+#' @name sample.df
+#' @title sample.df
+#' @description Samples rows from a dataframe or matrix
+#' @param x The dataframe or matrix we are sampling from
+#' @param size Number of rows to sample
+#' @param ... Other options per sample.int()
+#' @export
+sample.df <- function(x, size, ...) {
+  return(x[sample.int(n=nrow(x), size=size, ...),])
 }
 
 `%>%` <- magrittr::`%>%`
