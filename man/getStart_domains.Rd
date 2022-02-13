@@ -2,7 +2,8 @@
 % Please edit documentation in R/dependentLCM.r
 \name{getStart_domains}
 \alias{getStart_domains}
-\title{Choose starting domain values.}
+\title{Choose starting domain values.
+Note that the initial choice of theta (although set) is unimportant since we recalculate theta before applying it in MCMC/CPP.}
 \usage{
 getStart_domains(mat, classes, hparams)
 }
@@ -15,5 +16,6 @@ getStart_domains(mat, classes, hparams)
 }
 \description{
 Choose starting domain values.
+Note that the initial choice of theta (although set) is unimportant since we recalculate theta before applying it in MCMC/CPP.
 }
 \keyword{internal}

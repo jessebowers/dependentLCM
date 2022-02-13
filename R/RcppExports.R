@@ -211,6 +211,20 @@ NULL
 #' @keywords internal
 NULL
 
+#' @name DomainCount::reduce_items
+#' @title DomainCount::reduce_items
+#' @description Efficiently remove items from domain (without needing to re-calculate counts)
+#' @param items_new Resulting items in your domain. Assumed(!!) to be subset of current items.
+#' @keywords internal
+NULL
+
+#' @name DomainCount::drop_item
+#' @title DomainCount::drop_item
+#' @description Efficiently remove item from domain (without needing to re-calculate counts)
+#' @param item item you wish to remove
+#' @keywords internal
+NULL
+
 #' @name DomainCount::pattern2id
 #' @title DomainCount::pattern2id
 #' @description Convert (vector) response pattern to representative ID
@@ -273,8 +287,15 @@ NULL
 #' @keywords internal
 NULL
 
-#' @name DomainCount::getloglik_x
-#' @title DomainCount::getloglik_x
+#' @name DomainCount::theta_alpha_fun
+#' @title DomainCount::theta_alpha_fun
+#' @description Allows for theta prior to change as domains get merged
+#' @param hparams hyperparameters
+#' @keywords internal
+NULL
+
+#' @name DomainCount::getloglik_marginal
+#' @title DomainCount::getloglik_marginal
 #' @description For a given domain, we want to know the probability of observing a series of responses.
 #' We calculate this probability conditioning on parameters, but marginalizing over theta (and convert to log scale)
 #' @param hparams hyperparameters
@@ -381,8 +402,8 @@ NULL
 #' @keywords internal
 NULL
 
-#' @name BayesParameter::domain_getlik_domain
-#' @title BayesParameter::domain_getlik_domain
+#' @name BayesParameter::domain_prior
+#' @title BayesParameter::domain_prior
 #' @description Before observing data/other-parameters, how likely are we to put items into these particular domains?
 #' Some choices of domains may be more likely than other based on prior.
 #' @keywords internal
@@ -535,5 +556,24 @@ dependentLCM_fit_cpp <- function(x_in, hparams_list, params_list, nitr) {
 #' If we have a vector id of 12 we cand find a corresponding vector of [0,0,1,1].
 id2pattern <- function(xpattern, mapvec) {
     .Call(`_dependentLCM_id2pattern`, xpattern, mapvec)
+}
+
+#' @name itemid2patterns
+#' @title itemid2patterns
+#' @description Take pattern_id/item_id combinations and form pattern.
+#' @param pattern_ids ID reprsenting the value of 'filled in' items. (unfilled items get -1)
+#' @param items_ids ID reprsenting which items (positions) should be 'filled'. 
+#' @param item_nlevels How many possible values each item can take
+#' @examples
+#' \donotrun{
+#' # Find the pattern of each row in domains from IDs
+#' domain_patterns <- itemid2patterns(
+#'   pattern_ids = dlcm_out$mcmc$domains$pattern_id
+#'   , items_ids = dlcm_out$mcmc$domains$items_id
+#'   , item_nlevels = dlcm_out$hparams$item_nlevels
+#'   )
+#' }
+itemid2patterns <- function(pattern_ids, items_ids, item_nlevels) {
+    .Call(`_dependentLCM_itemid2patterns`, pattern_ids, items_ids, item_nlevels)
 }
 

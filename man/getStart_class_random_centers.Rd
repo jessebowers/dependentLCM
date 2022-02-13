@@ -5,14 +5,18 @@
 \title{Choose nclass random centers and put observations in their nearest center
 Designed so that the chosen centers are as far from each other as possible}
 \usage{
-getStart_class_random_centers(mat, hparams, weight_prob = TRUE)
+getStart_class_random_centers(mat, hparams, isWeighted, isPolar)
 }
 \arguments{
 \item{mat}{matrix. Raw data.}
 
 \item{hparams}{list. List of hyperparameters}
 
-\item{weight_prob}{bool. True if more common patterns should be more likely to be chosen as centers. False if all patterns should be equally likely.}
+\item{isWeighted}{bool. True if more common patterns should be more likely to be chosen as centers. False if all patterns should be equally likely.}
+
+\item{isPolar}{bool. True to force centers to be as far from each other as possible}
+
+\item{attempts}{int. Number of tries to get unique centers}
 }
 \description{
 Choose nclass random centers and put observations in their nearest center

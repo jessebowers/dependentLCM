@@ -12,18 +12,15 @@ getStart_hparams(
   ndomains = NULL,
   class2domain = NULL,
   classPi_alpha = CLASSPI_ALPHA,
-  domain_alpha = NULL,
   domain_maxitems = NULL,
   theta_alpha = THETA_ALPHA,
   domain_proposal_empty = DOMAIN_PROPOSAL_EMPTY,
-  domain_proposal_swap = DOMAIN_PROPOSAL_SWAP,
   domain_nproposals = NULL,
-  steps_active = STEPS_ACTIVE,
-  theta_alpha_funname = THETA_ALPHA_FUNNAME
+  steps_active = STEPS_ACTIVE
 )
 }
 \arguments{
-\item{df}{dataframe. Raw data you are fitting with all assumed to be factors}
+\item{df}{dataframe. Raw data you are fitting with all assumed to be factors. Assumes no missing data (no NAs).}
 
 \item{nitems}{integer. Number of columns of df.}
 
@@ -31,11 +28,10 @@ getStart_hparams(
 
 \item{ndomains}{integer. Number of item domains}
 
-\item{class2domain}{integer vector of length nclass. Classes with same value have same domains.}
+\item{class2domain}{integer vector of length nclass. Classes with same value have same domains.
+If "HOMO" then defaults to c(0,0,...). If "HET" then defaults to c(0, 1, 2, ...)}
 
 \item{classPi_alpha}{numeric vector. Bayes hyperparameter giving prior for Pi.}
-
-\item{domain_alpha}{numeric. Bayes hyperparameter giving prior for domains.}
 
 \item{domain_maxitems}{iinteger. Maximum number of items which can be in a domain. Default is 10 (beyond 10 runs slowly).}
 
@@ -43,14 +39,10 @@ getStart_hparams(
 
 \item{domain_proposal_empty}{numeric. Sets how often the domain metropolis proposal function pairs a nonempty domain with an empty domain.}
 
-\item{domain_proposal_swap}{numeric. Sets how often the domain metropolis proposal function swaps items between domains.}
-
 \item{domain_nproposals}{Sets how many times the domain metropolis propsal function is called each iteration}
 
 \item{steps_active}{Named boolean vector of what actions to take during mcmc. If mcmc is skipped then initial values are kept as fixed.
-thetas=TRUE to do gibbs on response probabilities, domains=TRUE to do metropolis on domains, class_pi=TRUE to do gibbs on class prior, classes=TRUE to do gibbs on class membership, identifiable=TRUE to check generic identifiability conditions of domains}
-
-\item{theta_alpha_funname}{string Decides the prior for theta as domains get merged. 
+thetas=TRUE to do gibbs on response probabilities, domains=TRUE to do metropolis on domains, class_pi=TRUE to do gibbs on class prior, classes=TRUE to do gibbs on class membership, identifiable=TRUE to check generic identifiability conditions of domains
 "constant" for theta~Dirichlet(theta_alpha * rep(1, npatterns)). Produces domains of 1-4 items but typically not larger.
 "log" for theta~Dirichlet(theta_alpha * ln(sum(npattens_i))/ln(npatterns) rep(1, npatterns))
 "average" [depreciated] for theta~Dirichlet(theta_alpha * sum(npattens_i)/npatterns rep(1, npatterns)). Unstable for large domains}

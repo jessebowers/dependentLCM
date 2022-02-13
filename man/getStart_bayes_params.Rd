@@ -10,7 +10,7 @@ getStart_bayes_params(
   class_pi = NULL,
   classes = NULL,
   domains = NULL,
-  class_init_method = "kmodes"
+  class_init_method = CLASS_INIT_METHODS[1]
 )
 }
 \arguments{
