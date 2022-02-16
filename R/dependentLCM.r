@@ -682,8 +682,8 @@ dlcm.summary <- function(dlcm, nwarmup=NULL) {
     , 1, function(x) paste0(x[x>-1], collapse=", ")
   )
   thetas_avg <- dlcm$mcmc$domains %>% dplyr::filter(itr > nwarmup) %>% dplyr::group_by(class, items_id, pattern_id) %>% dplyr::summarize(
-    items = first(items)
-    , item_value = first(item_value)
+    items = dplyr::first(items)
+    , item_value = dplyr::first(item_value)
     , n=dplyr::n()
     , prob=mean(prob)
     , .groups="keep")
@@ -842,7 +842,7 @@ theta_item_probs <- function(items, this_sim, itrs=NULL, merge_itrs=TRUE, classe
       thetas_agg 
       %>% dplyr::filter(imatch_pattern) 
       %>% dplyr::group_by(itr, class) 
-      %>% dplyr::summarize(prob=exp(sum(prob_log)), class_pi=first(class_pi), .groups="keep"))
+      %>% dplyr::summarize(prob=exp(sum(prob_log)), class_pi=dplyr::first(class_pi), .groups="keep"))
     iprobs$prob_pi <- iprobs$prob * iprobs$class_pi
     return(iprobs)
   }
