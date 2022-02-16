@@ -39,8 +39,18 @@ dependentLCM_fit <- function(
   , warmup_settings = "default"
   ) {
   
+  #
+  # Save starting info
+  #
+  
   args <- as.list(environment()) # c(as.list(environment()), list(...))
   datetimes <- c("fun_start"=Sys.time())
+  
+  # Save seed for reproducibility
+  if (!exists(".Random.seed")) {
+    set.seed(NULL)
+  }
+  .Random.seed_start <- .Random.seed
   
   #
   # Set starting values
@@ -137,6 +147,7 @@ dependentLCM_fit <- function(
   domains_domain_id <- as.data.frame(t(rbind(dlcm$domains_id, domains_class2domain)))
   domains_domain_id <- do.call(paste, domains_domain_id) # paste rows together, faster than apply
   dlcm$domains_id["itr",] <- dlcm$domains_id["itr",] + 1L # start at 1
+  dlcm$.Random.seed <- .Random.seed_start
   
   # Merge domains attributes
   dlcm$domains <- data.frame(
