@@ -11,6 +11,7 @@
  * Aggregate X so that we can get counts of duplicates all at once rather than one-at-a-time
  * Maybe remove lchoose from cpp. Not currently in use
  * Use dropItem for faster counting. Tried this in dropItemSpeedup branch but was not faster in practice. There should be an implementation which is faster. One idea is to change domains from a map of domains to a map of pointers to domains. Then in Bayes.domainCounts have an option just to count the empty domains. You would need to create a new map of just the empty domains then proceed as usual (where updating the new map updates the old).
+ * Change how warmup is done. Allow us to input an old DLCM into this DLCM (also allow to just work as is)
  */
 
 # To compile:
@@ -22,6 +23,7 @@ devtools::load_all(path="~/dependentLCM", recompile = TRUE, export_all=FALSE)
 library(roxygen2)
 Sys.setenv("PKG_CXXFLAGS"="-std=c++11") # CXX_STD = CXX11
 roxygen2::roxygenize("~/dependentLCM", clean=TRUE)
+devtools::build_manual("~/dependentLCM") # pdf
 
 # To load into library 
 # 1) compile

@@ -7,9 +7,9 @@
 dlcm.get_waic(this_sim, itrs = NULL)
 }
 \arguments{
-\item{itrs}{integer vector. Which iterations should be include in calculation?}
+\item{this_sim}{Dependent Latent class model}
 
-\item{this_sim.}{Dependent Latent class model}
+\item{itrs}{integer vector. Which iterations should be include in calculation?}
 }
 \description{
 Calculate likelihood and WAIC

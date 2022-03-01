@@ -62,7 +62,7 @@ thetas=TRUE to do gibbs on response probabilities, domains=TRUE to do metropolis
 
 \item{class_init_method}{string. Decides how 'classes' is defaulted if NULL. One of "kmodes" or "random" or "random_centers"}
 
-\item{cleanup}{boolean. TRUE to delete some redundant data from output}
+\item{warmup_settings}{list. Optionally allows for an extra warmup cycle using different parameters vs the arguments given for the main process. Any parameters in the given list will overwrite the arguments of the same name in the wamrup cycle.}
 }
 \description{
 Fits a bayesian dependent LCM model

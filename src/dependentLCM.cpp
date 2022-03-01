@@ -56,7 +56,7 @@ std::vector<std::string> TROUBLE_FUNCTION_NAMES = {"colMax", "rDirichlet", "rCat
 Rcpp::NumericVector _trouble_runtimes = Rcpp::NumericVector::create();
 Rcpp::IntegerVector _trouble_runcounts = Rcpp::IntegerVector::create();
 
-//' see trouble_start above
+// see trouble_start above
 unsigned long long int trouble_start(std::string function_name) {
   // Track runtime
   _trouble_runcounts(function_name) = _trouble_runcounts(function_name) + 1;
@@ -65,7 +65,7 @@ unsigned long long int trouble_start(std::string function_name) {
   return _trouble_id;
 }
 
-//' see trouble_end above
+// see trouble_end above
 void trouble_end(unsigned long long int trouble_id, std::string function_name) {
   // Track runtime
   ttime end_time = std::chrono::high_resolution_clock::now();
@@ -74,7 +74,7 @@ void trouble_end(unsigned long long int trouble_id, std::string function_name) {
   _trouble_start_times.erase(trouble_id);
 }
 
-//' see trouble_init above
+// see trouble_init above
 void trouble_init() {
   _trouble_id = 0;
   
@@ -2084,8 +2084,13 @@ void BayesContainer::run_init(const Rcpp::IntegerMatrix& x_in, Rcpp::List hparam
 
 //' @name dependentLCM_fit_cpp
 //' @title dependentLCM_fit_cpp
-//' @description Does MCMC simulations for dependent LCM model
-//' For more details see dependentLCM_fit in dependentLCM.r
+//' @description Does MCMC simulations for dependent LCM model.
+//' This is a C++ script. Run dependentLCM_fit in dependentLCM.r to execute.
+//' @param x_in Matrix of responses we are analyzing
+//' @param hparams_list List of hyperparameter info. See getStart_hparams() in R.
+//' @param params_list List of parameter info. See getStart_bayes_params() in R.
+//' @param nitr How many MCMC iterations we will run.
+//' @keywords internal
 // [[Rcpp::export]]
 Rcpp::List dependentLCM_fit_cpp(Rcpp::IntegerMatrix& x_in, Rcpp::List hparams_list, Rcpp::List params_list
                                   , int nitr) {

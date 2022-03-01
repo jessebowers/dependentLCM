@@ -6,7 +6,16 @@
 \usage{
 dependentLCM_fit_cpp(x_in, hparams_list, params_list, nitr)
 }
+\arguments{
+\item{x_in}{Matrix of responses we are analyzing}
+
+\item{hparams_list}{List of hyperparameter info. See getStart_hparams() in R.}
+
+\item{params_list}{List of parameter info. See getStart_bayes_params() in R.}
+
+\item{nitr}{How many MCMC iterations we will run.}
+}
 \description{
-Does MCMC simulations for dependent LCM model
-For more details see dependentLCM_fit in dependentLCM.r
+Does MCMC simulations for dependent LCM model.
+This is a C++ script. Run dependentLCM_fit in dependentLCM.r to execute.
 }

@@ -22,9 +22,9 @@ CLASS2DOMAINS = names(CLASS2DOMAIN_FUNS)
 
 #' Fits a bayesian dependent LCM model
 #' @param nitr integer. Number of iterations to run the bayes MCMC
-#' @param cleanup boolean. TRUE to delete some redundant data from output
 #' @inheritParams getStart_hparams
 #' @inheritParams getStart_bayes_params
+#' @param warmup_settings list. Optionally allows for an extra warmup cycle using different parameters vs the arguments given for the main process. Any parameters in the given list will overwrite the arguments of the same name in the wamrup cycle.
 #' @export
 dependentLCM_fit <- function(
   nitr
@@ -524,7 +524,7 @@ dlcm2paramargs <- function(dlcm, iter=NULL) {
 #' What is the prior probability of this choice of domains?
 #' Ignores identifiability restrictions
 #' @param x IntegerVector. The number of items in each domain. Ok to omit 0's
-#' @param D Integer. The total number of domains (including empty domains)
+#' @param ndomains Integer. The total number of domains (including empty domains)
 #' @param specific_items Boolean. 
 #' If FALSE, we look for any domain which produces domains of this size regardless of what specific items they contain.
 #' IF TRUE, we fix which items are in which domain, and calculate the probability of grouping these specific items together.
@@ -709,7 +709,7 @@ dlcm.summary <- function(dlcm, nwarmup=NULL) {
 }
 
 #' Calculate likelihood and WAIC
-#' @param this_sim. Dependent Latent class model
+#' @param this_sim Dependent Latent class model
 #' @param itrs integer vector. Which iterations should be include in calculation?
 #' @export
 dlcm.get_waic <- function(this_sim, itrs=NULL) {

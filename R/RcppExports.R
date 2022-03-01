@@ -23,15 +23,6 @@ NULL
 #' @keywords internal
 NULL
 
-#' see trouble_start above
-NULL
-
-#' see trouble_end above
-NULL
-
-#' see trouble_init above
-NULL
-
 #' @name trouble_list
 #' @title trouble_list
 #' @description Used to output troubleshooting information
@@ -535,8 +526,12 @@ NULL
 
 #' @name dependentLCM_fit_cpp
 #' @title dependentLCM_fit_cpp
-#' @description Does MCMC simulations for dependent LCM model
-#' For more details see dependentLCM_fit in dependentLCM.r
+#' @description Does MCMC simulations for dependent LCM model.
+#' This is a C++ script. Run dependentLCM_fit in dependentLCM.r to execute.
+#' @param x_in Matrix of responses we are analyzing
+#' @param hparams_list List of hyperparameter info. See getStart_hparams() in R.
+#' @param params_list List of parameter info. See getStart_bayes_params() in R.
+#' @param nitr How many MCMC iterations we will run.
 dependentLCM_fit_cpp <- function(x_in, hparams_list, params_list, nitr) {
     .Call(`_dependentLCM_dependentLCM_fit_cpp`, x_in, hparams_list, params_list, nitr)
 }
