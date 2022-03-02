@@ -25,6 +25,18 @@ CLASS2DOMAINS = names(CLASS2DOMAIN_FUNS)
 #' @inheritParams getStart_hparams
 #' @inheritParams getStart_bayes_params
 #' @param warmup_settings list. Optionally allows for an extra warmup cycle using different parameters vs the arguments given for the main process. Any parameters in the given list will overwrite the arguments of the same name in the wamrup cycle.
+#' @examples
+#' \dontrun{
+#' library(pks)
+#' data(probability, package="pks")
+#' set.seed(4)
+#' dlcm <- dependentLCM_fit(
+#'   nitr = 6000
+#'   , df=probability
+#'   , nclass=2
+#' )
+#' dlcm$summary <- dlcm.summary(dlcm)
+#' }
 #' @export
 dependentLCM_fit <- function(
   nitr
@@ -897,7 +909,7 @@ get_class_probs <- function(dlcm) {
 #' @param pis numeric vector. How often an observation is in class k.
 #' @param thetas response probabilities. If a matrix of size Kxlength(pi) then the response probabilites of k bernouli items across length(pi) classes. Otherwise a list of length(pi) (per class) containing lists of length K (per item), containing vectors of response probabilities of each item.
 #' @examples
-#' \donotrun{
+#' \dontrun{
 #' set.seed(4)
 #' sim_list1 <- simulate_lcm(
 #'   n = 1000

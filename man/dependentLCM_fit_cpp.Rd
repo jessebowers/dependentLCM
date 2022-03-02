@@ -19,3 +19,4 @@ dependentLCM_fit_cpp(x_in, hparams_list, params_list, nitr)
 Does MCMC simulations for dependent LCM model.
 This is a C++ script. Run dependentLCM_fit in dependentLCM.r to execute.
 }
+\keyword{internal}

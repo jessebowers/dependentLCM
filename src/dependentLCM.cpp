@@ -2144,7 +2144,7 @@ Rcpp::IntegerMatrix id2pattern(const Rcpp::IntegerVector& xpattern, const Rcpp::
 //' @param items_ids ID reprsenting which items (positions) should be 'filled'. 
 //' @param item_nlevels How many possible values each item can take
 //' @examples
-//' \donotrun{
+//' \dontrun{
 //' # Find the pattern of each row in domains from IDs
 //' domain_patterns <- itemid2patterns(
 //'   pattern_ids = dlcm_out$mcmc$domains$pattern_id

@@ -532,6 +532,7 @@ NULL
 #' @param hparams_list List of hyperparameter info. See getStart_hparams() in R.
 #' @param params_list List of parameter info. See getStart_bayes_params() in R.
 #' @param nitr How many MCMC iterations we will run.
+#' @keywords internal
 dependentLCM_fit_cpp <- function(x_in, hparams_list, params_list, nitr) {
     .Call(`_dependentLCM_dependentLCM_fit_cpp`, x_in, hparams_list, params_list, nitr)
 }
@@ -560,7 +561,7 @@ id2pattern <- function(xpattern, mapvec) {
 #' @param items_ids ID reprsenting which items (positions) should be 'filled'. 
 #' @param item_nlevels How many possible values each item can take
 #' @examples
-#' \donotrun{
+#' \dontrun{
 #' # Find the pattern of each row in domains from IDs
 #' domain_patterns <- itemid2patterns(
 #'   pattern_ids = dlcm_out$mcmc$domains$pattern_id

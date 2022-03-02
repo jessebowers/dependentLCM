@@ -67,3 +67,16 @@ thetas=TRUE to do gibbs on response probabilities, domains=TRUE to do metropolis
 \description{
 Fits a bayesian dependent LCM model
 }
+\examples{
+\dontrun{
+library(pks)
+data(probability, package="pks")
+set.seed(4)
+dlcm <- dependentLCM_fit(
+  nitr = 6000
+  , df=probability
+  , nclass=2
+)
+dlcm$summary <- dlcm.summary(dlcm)
+}
+}

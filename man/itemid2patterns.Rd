@@ -17,7 +17,7 @@ itemid2patterns(pattern_ids, items_ids, item_nlevels)
 Take pattern_id/item_id combinations and form pattern.
 }
 \examples{
-\donotrun{
+\dontrun{
 # Find the pattern of each row in domains from IDs
 domain_patterns <- itemid2patterns(
   pattern_ids = dlcm_out$mcmc$domains$pattern_id
