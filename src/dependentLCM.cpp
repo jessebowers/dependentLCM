@@ -1418,7 +1418,7 @@ Rcpp::NumericVector BayesParameter::class_pi_args(Hyperparameter& hparams) {
   
   Rcpp::IntegerVector::iterator classes_itr;
   Rcpp::IntegerVector::const_iterator classes_end = classes.end();
-  for (Rcpp::IntegerVector::const_iterator classes_itr = classes.begin();
+  for (classes_itr = classes.begin();
        classes_itr != classes_end;
        ++classes_itr) {
     args(*classes_itr) += 1;
