@@ -100,6 +100,8 @@ devtools::build_manual("~/dependentLCM") # pdf
 
 devtools::check("~/dependentLCM") # Any package errors?
 
+invisible(lapply(paste0('package:', names(sessionInfo()$otherPkgs)), detach, character.only=TRUE, unload=TRUE)) # detach packages to initialize (or restart R)
+remove.packages("dependentLCM") # Remove existing package to initialize
 
 ###################
 ################### Gotchyas
