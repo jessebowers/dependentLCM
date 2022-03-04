@@ -71,11 +71,12 @@ Fits a bayesian dependent LCM model
 \dontrun{
 library(pks)
 data(probability, package="pks")
+xdf <- probability[,c("b101", "b102", "b103", "b104", "b105", "b106", "b107", "b108", "b109", "b110", "b111", "b112", "b201", "b202", "b203", "b204", "b205", "b206", "b207", "b208", "b209", "b210", "b211", "b212")]
 set.seed(4)
 dlcm <- dependentLCM_fit(
-  nitr = 6000
-  , df=probability
-  , nclass=2
+  nitr = 600
+  , df=xdf
+  , nclass=3
 )
 dlcm$summary <- dlcm.summary(dlcm)
 }
