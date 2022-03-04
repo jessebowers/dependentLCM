@@ -4,6 +4,7 @@
 #' @name dependentLCM
 #' @useDynLib dependentLCM, .registration = TRUE
 #' @importFrom dplyr "%>%"
+#' @importFrom Rcpp evalCpp
 NULL
 
 # Default values

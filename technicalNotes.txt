@@ -47,3 +47,5 @@ library(dependentLCM)
 
 # Useful reference
 https://cran.rstudio.com/doc/manuals/r-release/R-exts.html#Using-C_002b_002b11-code
+
+"c:\Program Files\R\R-4.1.2\bin\R" CMD check dependentLCM
