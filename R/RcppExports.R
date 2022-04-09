@@ -524,6 +524,19 @@ NULL
 #' @keywords internal
 NULL
 
+#' @name is_identifiable
+#' @title is_identifiable
+#' @description Check if choice of domains is generically identifiable
+#' Uses greedy algorithm. May give false negatives in some cases, but is quick and deterministic
+#' See Allman paper (DOI:10.1214/09-AOS689 Theorem 4.) for criteria used: min(patterns1,nclass)+min(patterns2,nclass)+min(patterns3,nclass) > 2*nclass+2
+#' @param item2superdomainid Vector describing which items must be grouped together
+#' @param nclass Number of classes
+#' @param item_nlevels Vector with levels of items
+#' @export
+is_identifiable <- function(item2superdomainid, nclass, item_nlevels) {
+    .Call(`_dependentLCM_is_identifiable`, item2superdomainid, nclass, item_nlevels)
+}
+
 #' @name dependentLCM_fit_cpp
 #' @title dependentLCM_fit_cpp
 #' @description Does MCMC simulations for dependent LCM model.

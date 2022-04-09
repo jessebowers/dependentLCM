@@ -10,6 +10,19 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// is_identifiable
+bool is_identifiable(Rcpp::IntegerVector& item2superdomainid, int nclass, Rcpp::IntegerVector& item_nlevels);
+RcppExport SEXP _dependentLCM_is_identifiable(SEXP item2superdomainidSEXP, SEXP nclassSEXP, SEXP item_nlevelsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector& >::type item2superdomainid(item2superdomainidSEXP);
+    Rcpp::traits::input_parameter< int >::type nclass(nclassSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector& >::type item_nlevels(item_nlevelsSEXP);
+    rcpp_result_gen = Rcpp::wrap(is_identifiable(item2superdomainid, nclass, item_nlevels));
+    return rcpp_result_gen;
+END_RCPP
+}
 // dependentLCM_fit_cpp
 Rcpp::List dependentLCM_fit_cpp(Rcpp::IntegerMatrix& x_in, Rcpp::List hparams_list, Rcpp::List params_list, int nitr);
 RcppExport SEXP _dependentLCM_dependentLCM_fit_cpp(SEXP x_inSEXP, SEXP hparams_listSEXP, SEXP params_listSEXP, SEXP nitrSEXP) {
@@ -51,6 +64,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_dependentLCM_is_identifiable", (DL_FUNC) &_dependentLCM_is_identifiable, 3},
     {"_dependentLCM_dependentLCM_fit_cpp", (DL_FUNC) &_dependentLCM_dependentLCM_fit_cpp, 4},
     {"_dependentLCM_id2pattern", (DL_FUNC) &_dependentLCM_id2pattern, 2},
     {"_dependentLCM_itemid2patterns", (DL_FUNC) &_dependentLCM_itemid2patterns, 3},

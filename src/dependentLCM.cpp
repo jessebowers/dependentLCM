@@ -52,7 +52,7 @@ void trouble_init() {
 // define globals
 unsigned long long int _trouble_id = 0;
 std::map<unsigned long long int, ttime> _trouble_start_times;
-std::vector<std::string> TROUBLE_FUNCTION_NAMES = {"colMax", "rDirichlet", "rCategorical", "count_unique", "lbeta", "which", "count_integers", "map_get", "minimum", "id2pattern", "insertSorted", "mmult", "equal_to_adjmat", "helper_compare_adjmat", "adjmat_to_equal", "product", "powl", "Hyperparameter::set_hparams #V1", "Hyperparameter::set_hparams #V2", "Hyperparameter::set_dataInfo", "Hyperparameter::print", "DomainCount::set_initial #V1", "DomainCount::set_pattern2id_map", "DomainCount::set_initial #V2", "DomainCount::reduce_items", "DomainCount::drop_item", "DomainCount::pattern2id", "DomainCount::get_ltheta", "DomainCount::id2pattern #V1", "DomainCount::id2pattern #V2", "DomainCount::countAdd", "DomainCount::list2domains", "DomainCount::copy", "DomainCount::itemsid_calc", "DomainCount::theta_alpha", "DomainCount::getloglik_marginal", "DomainCount::print", "BayesParameter::set_initial #V1", "BayesParameter::set_initial #V2", "BayesParameter::class_lprob #V1", "BayesParameter::class_lprob #V2", "BayesParameter::set_class_loglik", "BayesParameter::domain_resetCounts #V1", "BayesParameter::domain_resetCounts #V2", "BayesParameter::domain_addCount #V1", "BayesParameter::domain_addCount #V2", "BayesParameter::domain_addCounts #V1", "BayesParameter::domain_addCounts #V2", "BayesParameter::item2domainid_calc", "BayesParameter::domain_prior", "BayesParameter::get_superdomains", "BayesParameter::is_identifiable #V1", "BayesParameter::is_identifiable #V2", "BayesParameter::domain_id_new", "BayesParameter::class_pi_args", "BayesParameter::class_pi_next", "BayesParameter::classes_next", "BayesParameter::thetas_next", "BayesParameter::domain_proposal", "BayesParameter::domain_accept", "BayesParameter::domain_next", "BayesParameter::domains_next", "Archive::set_initial", "Archive::domains2mat", "Archive::add", "BayesContainer::set_initial", "BayesContainer::run", "BayesContainer::run_init", "dependentLCM_fit_cpp"};
+std::vector<std::string> TROUBLE_FUNCTION_NAMES = {"colMax", "rDirichlet", "rCategorical", "count_unique", "lbeta", "which", "count_integers", "map_get", "minimum", "id2pattern", "insertSorted", "mmult", "equal_to_adjmat", "helper_compare_adjmat", "adjmat_to_equal", "product", "powl", "Hyperparameter::set_hparams #V1", "Hyperparameter::set_hparams #V2", "Hyperparameter::set_dataInfo", "Hyperparameter::print", "DomainCount::set_initial #V1", "DomainCount::set_pattern2id_map", "DomainCount::set_initial #V2", "DomainCount::reduce_items", "DomainCount::drop_item", "DomainCount::pattern2id", "DomainCount::get_ltheta", "DomainCount::id2pattern #V1", "DomainCount::id2pattern #V2", "DomainCount::countAdd", "DomainCount::list2domains", "DomainCount::copy", "DomainCount::itemsid_calc", "DomainCount::theta_alpha", "DomainCount::getloglik_marginal", "DomainCount::print", "BayesParameter::set_initial #V1", "BayesParameter::set_initial #V2", "BayesParameter::class_lprob #V1", "BayesParameter::class_lprob #V2", "BayesParameter::set_class_loglik", "BayesParameter::domain_resetCounts #V1", "BayesParameter::domain_resetCounts #V2", "BayesParameter::domain_addCount #V1", "BayesParameter::domain_addCount #V2", "BayesParameter::domain_addCounts #V1", "BayesParameter::domain_addCounts #V2", "BayesParameter::item2domainid_calc", "BayesParameter::domain_prior", "BayesParameter::get_superdomains", "BayesParameter::is_identifiable #V1", "BayesParameter::is_identifiable #V2", "BayesParameter::domain_id_new", "BayesParameter::class_pi_args", "BayesParameter::class_pi_next", "BayesParameter::classes_next", "BayesParameter::thetas_next", "BayesParameter::domain_proposal", "BayesParameter::domain_accept", "BayesParameter::domain_next", "BayesParameter::domains_next", "Archive::set_initial", "Archive::domains2mat", "Archive::add", "BayesContainer::set_initial", "BayesContainer::run", "BayesContainer::run_init", "dependentLCM_fit_cpp", "is_identifiable"};
 Rcpp::NumericVector _trouble_runtimes = Rcpp::NumericVector::create();
 Rcpp::IntegerVector _trouble_runcounts = Rcpp::IntegerVector::create();
 
@@ -442,6 +442,91 @@ int product(Rcpp::IntegerVector x) {
 int powl(int x, int p) {
   TROUBLE_START(("powl"));
   TROUBLE_END; return int(std::pow(double(x), double(p))+0.5);
+}
+
+//' @name is_identifiable
+//' @title is_identifiable
+//' @description Check if choice of domains is generically identifiable
+//' Uses greedy algorithm. May give false negatives in some cases, but is quick and deterministic
+//' See Allman paper (DOI:10.1214/09-AOS689 Theorem 4.) for criteria used: min(patterns1,nclass)+min(patterns2,nclass)+min(patterns3,nclass) > 2*nclass+2
+//' @param item2superdomainid Vector describing which items must be grouped together
+//' @param nclass Number of classes
+//' @param item_nlevels Vector with levels of items
+//' @export
+// [[Rcpp::export]]
+bool is_identifiable(Rcpp::IntegerVector& item2superdomainid, int nclass, Rcpp::IntegerVector& item_nlevels) {
+  TROUBLE_START(("is_identifiable"));
+  
+  int i;
+  int domain_id;
+  int nitems = item2superdomainid.size();
+  int goal = 2*nclass + 2;
+  
+  // count patterns
+  std::map<int, int> pattern_counts_map;
+  for (i=0; i < nitems; i++) {
+    domain_id = item2superdomainid(i);
+    if (pattern_counts_map.count(domain_id)==0) {
+      pattern_counts_map[domain_id] = product(item_nlevels[item2superdomainid==domain_id]);
+      pattern_counts_map[domain_id] = minimum(pattern_counts_map[domain_id], nclass); // Beyond nclass not relevent. Don't necessarily need to do this
+    }
+  }
+  
+  // convert map to vector
+  int ndomains = pattern_counts_map.size();
+  Rcpp::IntegerVector pattern_counts = Rcpp::IntegerVector(ndomains);
+  std::map<int,int>::iterator map_itr;
+  std::map<int,int>::const_iterator map_end = pattern_counts_map.end();
+  i = 0;
+  for (map_itr = pattern_counts_map.begin(); map_itr != map_end; map_itr++) {
+    pattern_counts[i] = map_itr->second; // Add number of patterns
+    i += 1;
+  }
+  pattern_counts.sort(true); // descending
+  
+  // greedy search
+  Rcpp::IntegerVector tripart = Rcpp::IntegerVector(3, 0);
+  int best_index;
+  int best_value;
+  int best_diff;
+  int new_value;
+  int new_diff;
+  int tripart_sum = 0;
+  for (i=0; i<ndomains; i++) {
+    
+    // Find best group for i'th domain
+    best_index = 0;
+    best_value = 0;
+    best_diff = 0;
+    for (int j=0; j<3; j++) {
+      
+      if (tripart[j] > 0) {
+        new_value = tripart[j] *  pattern_counts[i];
+      } else {
+        new_value = 0 + pattern_counts[i];
+      }
+      new_value = minimum(new_value, nclass);
+      new_diff = new_value - tripart[j];
+      
+      if (new_diff > best_diff) {
+        best_index = j;
+        best_value = new_value;
+        best_diff = new_diff;
+      }
+      
+    }
+    
+    // Add to chosen group
+    tripart[best_index] = best_value;
+    tripart_sum += best_diff; // same as tripart.sum()
+    
+    if (tripart_sum >= goal) {
+      break; // no need to continue
+    }
+    
+  }
+  
+  TROUBLE_END; return (tripart_sum >= goal);
 }
 
 
@@ -1283,82 +1368,9 @@ Rcpp::IntegerVector BayesParameter::get_superdomains(Rcpp::IntegerMatrix& item2d
 bool BayesParameter::is_identifiable(Rcpp::IntegerVector& item2superdomainid, Hyperparameter& hparams) {
   TROUBLE_START(("BayesParameter::is_identifiable #V1"));
   
-  if ((hparams.steps_active["identifiable"]==false) // identifiability turned off
-        | (hparams.nclass == 1) // 1 class always identifiable (under weak conditions)
-  ) {
-    TROUBLE_END; return true;
-  }
-  
-  int i;
-  int domain_id;
-  int nitems = item2superdomainid.size();
-  int goal = 2*hparams.nclass + 2;
-  
-  // count patterns
-  std::map<int, int> pattern_counts_map;
-  for (i=0; i < nitems; i++) {
-    domain_id = item2superdomainid(i);
-    if (pattern_counts_map.count(domain_id)==0) {
-      pattern_counts_map[domain_id] = product(hparams.item_nlevels[item2superdomainid==domain_id]);
-      pattern_counts_map[domain_id] = minimum(pattern_counts_map[domain_id], hparams.nclass); // Beyond hparams.nclass not relevent. Don't necessarily need to do this
-    }
-  }
-  
-  // convert map to vector
-  int ndomains = pattern_counts_map.size();
-  Rcpp::IntegerVector pattern_counts = Rcpp::IntegerVector(ndomains);
-  std::map<int,int>::iterator map_itr;
-  std::map<int,int>::const_iterator map_end = pattern_counts_map.end();
-  i = 0;
-  for (map_itr = pattern_counts_map.begin(); map_itr != map_end; map_itr++) {
-    pattern_counts[i] = map_itr->second; // Add number of patterns
-    i += 1;
-  }
-  pattern_counts.sort(true); // descending
-  
-  // greedy search
-  Rcpp::IntegerVector tripart = Rcpp::IntegerVector(3, 0);
-  int best_index;
-  int best_value;
-  int best_diff;
-  int new_value;
-  int new_diff;
-  int tripart_sum = 0;
-  for (i=0; i<ndomains; i++) {
+  bool identifiable = ::is_identifiable(item2superdomainid, hparams.nclass, hparams.item_nlevels)
     
-    // Find best group for i'th domain
-    best_index = 0;
-    best_value = 0;
-    best_diff = 0;
-    for (int j=0; j<3; j++) {
-      
-      if (tripart[j] > 0) {
-        new_value = tripart[j] *  pattern_counts[i];
-      } else {
-        new_value = 0 + pattern_counts[i];
-      }
-      new_value = minimum(new_value, hparams.nclass);
-      new_diff = new_value - tripart[j];
-      
-      if (new_diff > best_diff) {
-        best_index = j;
-        best_value = new_value;
-        best_diff = new_diff;
-      }
-      
-    }
-    
-    // Add to chosen group
-    tripart[best_index] = best_value;
-    tripart_sum += best_diff; // same as tripart.sum()
-    
-    if (tripart_sum >= goal) {
-      break; // no need to continue
-    }
-    
-  }
-  
-  TROUBLE_END; return (tripart_sum >= goal);
+    TROUBLE_END; return identifiable;
 }
 
 //' @name BayesParameter::is_identifiable
