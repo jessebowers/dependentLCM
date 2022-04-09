@@ -21,6 +21,7 @@ FUTURE ENHANCEMENTS:
    > importFrom("utils", "tail")
    > Use .data$varname for dplyr
    > CPP: Fix is free text not code as expected at: @examples Suppose we
+ * Make is_identifiable a standalone exported function in CPP
 
 
 ###################

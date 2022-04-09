@@ -2124,6 +2124,7 @@ Rcpp::List dependentLCM_fit_cpp(Rcpp::IntegerMatrix& x_in, Rcpp::List hparams_li
 //' The appropriate mapvec in this situation would be [2,2,2,3] equal to the number of unique values in each position.
 //' If we have a vector of [1,0,1,2] the corresponding id is 1*(1) + 0*(2) + 1*(2*2) + 2*(2*2*2) = 21.
 //' If we have a vector id of 12 we cand find a corresponding vector of [0,0,1,1].
+//' @export
 // [[Rcpp::export]]
 Rcpp::IntegerMatrix id2pattern(const Rcpp::IntegerVector& xpattern, const Rcpp::IntegerVector& mapvec) {
   int npatterns = xpattern.size();
@@ -2152,6 +2153,7 @@ Rcpp::IntegerMatrix id2pattern(const Rcpp::IntegerVector& xpattern, const Rcpp::
 //'   , item_nlevels = dlcm_out$hparams$item_nlevels
 //'   )
 //' }
+//' @export
 // [[Rcpp::export]]
 Rcpp::IntegerVector itemid2patterns(const Rcpp::IntegerVector& pattern_ids, const Rcpp::IntegerVector& items_ids, const Rcpp::IntegerVector& item_nlevels) {
   int n = pattern_ids.size();

@@ -550,6 +550,7 @@ dependentLCM_fit_cpp <- function(x_in, hparams_list, params_list, nitr) {
 #' The appropriate mapvec in this situation would be [2,2,2,3] equal to the number of unique values in each position.
 #' If we have a vector of [1,0,1,2] the corresponding id is 1*(1) + 0*(2) + 1*(2*2) + 2*(2*2*2) = 21.
 #' If we have a vector id of 12 we cand find a corresponding vector of [0,0,1,1].
+#' @export
 id2pattern <- function(xpattern, mapvec) {
     .Call(`_dependentLCM_id2pattern`, xpattern, mapvec)
 }
@@ -569,6 +570,7 @@ id2pattern <- function(xpattern, mapvec) {
 #'   , item_nlevels = dlcm_out$hparams$item_nlevels
 #'   )
 #' }
+#' @export
 itemid2patterns <- function(pattern_ids, items_ids, item_nlevels) {
     .Call(`_dependentLCM_itemid2patterns`, pattern_ids, items_ids, item_nlevels)
 }
