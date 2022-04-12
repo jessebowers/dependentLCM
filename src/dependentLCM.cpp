@@ -1653,8 +1653,14 @@ domainProposalOut BayesParameter::domain_proposal(int class2domain_id, Hyperpara
     // mix
     if (empty_created == false) {
       // equally likely in either direction
-      forwardProb = 1;
-      backwardProb = 1;
+      forwardProb = (
+          ((items0_old.size() > 1) ? (1 - hparams.domain_proposal_empty) : 1)
+      + ((items1_old.size() > 1) ? (1 - hparams.domain_proposal_empty) : 1)
+      );
+      backwardProb = (
+          ((items0_new.size() > 1) ? (1 - hparams.domain_proposal_empty) : 1)
+      + ((items1_new.size() > 1) ? (1 - hparams.domain_proposal_empty) : 1)
+      );
     } else {
       forwardProb = (
         1 / float(domains_nonempty_size) // Choosing domain1
@@ -1682,8 +1688,8 @@ domainProposalOut BayesParameter::domain_proposal(int class2domain_id, Hyperpara
       1 / float(domains_nonempty_size+1) // Choosing domain1
       * 1 / float(domains_nonempty_size) // Choosing domain2
       * (
-          ((items0_old.size() > 1) ? (1 - hparams.domain_proposal_empty) : 1)
-      + ((items1_old.size() > 1) ? (1 - hparams.domain_proposal_empty) : 1)
+          ((items0_new.size() > 1) ? (1 - hparams.domain_proposal_empty) : 1)
+      + ((items1_new.size() > 1) ? (1 - hparams.domain_proposal_empty) : 1)
       ) // No split (need to consider both directions)
       * 1 // every mix equally likely up to proportionality
     );
