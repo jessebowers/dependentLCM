@@ -11,7 +11,7 @@ NULL
 NCLASS = 2
 CLASSPI_ALPHA = 1
 THETA_ALPHA = 1
-CLASS_INIT_METHODS = c("kmodes", "random", "random_centers", "random_centers_polar")
+CLASS_INIT_METHODS = c("random_centers", "random_centers_polar", "random", "kmodes")
 DOMAIN_PROPOSAL_EMPTY = 0.3
 STEPS_ACTIVE = c("thetas"=TRUE, "domains"=TRUE, "class_pi"=TRUE, "classes"=TRUE, "identifiable"=TRUE)
 DOMAIN_MAXITEMS = 10
@@ -310,7 +310,7 @@ getStart_bayes_params <- function(
     } else if (identical(class_init_method,"random_centers")) {
       classes <- getStart_class_random_centers(mat, hparams, isWeighted=FALSE, isPolar=FALSE)$classes
     }  else if (identical(class_init_method,"random_centers_polar")) {
-      classes <- getStart_class_random_centers(mat, hparams, isWeighted=TRUE, isPolar=TRUE)$classes
+      classes <- getStart_class_random_centers(mat, hparams, isWeighted=FALSE, isPolar=TRUE)$classes
     }
   } else {
     classes = as.integer(factor(classes))-1
@@ -372,10 +372,8 @@ getStart_class_kmodes <- function(mat, hparams, ...) {
     )
   }
   if (success == FALSE) {
-    warning_str <- "Warning: Issue with class_init_method = 'kmodes'. Using class_init_method = 'random_centers' instead."
-    message(warning_str)
+    message("Warning: Issue with class_init_method = 'kmodes'. Using class_init_method = 'random_centers' instead.")
     out <- getStart_class_random_centers(mat, hparams, isWeighted=FALSE, isPolar=FALSE)
-    out$warning <- warning_str
   }
   
   return(out)
