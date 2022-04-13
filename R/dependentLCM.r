@@ -340,10 +340,10 @@ getStart_bayes_params <- function(
 getStart_class_random <- function(mat, hparams) {
   class_pi <- hparams$classPi_alpha / sum(hparams$classPi_alpha)
   nobs <- dim(mat)[1]
-  classes <- sample(0:(hparams$nclass-1), size=nobs, replace=TRUE, prob=class_pi)
+  classes <- sample.int(hparams$nclass, size=nobs, replace=TRUE, prob=class_pi) - 1
   
   # Ensure every class shows up atleast once:
-  ids <- sample.int(nobs, hparams$nclass)
+  ids <- sample.int(n=nobs, size=hparams$nclass, replace=FALSE)
   classes[ids] <- 0:(hparams$nclass-1)
   
   return(list(classes=classes))
@@ -405,18 +405,18 @@ getStart_class_random_centers <- function(mat, hparams, isWeighted, isPolar) {
     
     # Get centers
     centers <- matrix(data=NA, nrow=nclass, ncol(mat))
-    centers[1,] <-mat[sample(centers_filter, size=1),]
+    centers[1,] <-mat[sample.integers(x=centers_filter, size=1),]
     distance[,1] <- rowSums(sweep(mat, 2, centers[1,], FUN="!="))
     for (i in seq_len(nclass-1)+1) {
   	  # choose the center farthest from the current centers
   	  min_dist <- apply(distance[centers_filter,], 1, min, na.rm=TRUE)
   	  center_inds <- centers_filter[which(min_dist==max(min_dist))]
-  	  centers[i,] <- mat[sample(center_inds, size=1),]
+  	  centers[i,] <- mat[sample.integers(x=center_inds, size=1),]
   	  distance[,i] = rowSums(sweep(mat, 2, centers[i,], FUN="!="))
     }
   } else {
     # Centers entirely at random
-  	centers <-unique(mat[sample(centers_filter, nclass),])
+  	centers <-unique(mat[sample.integers(x=centers_filter, size=nclass),])
   	last_processed = 0
     for (j in seq_len(nclass)) {
       
@@ -434,13 +434,13 @@ getStart_class_random_centers <- function(mat, hparams, isWeighted, isPolar) {
       
   	  centers <- unique(rbind(
   	    centers
-  		, mat[sample(center_inds, nclass-nrow(centers)),]
+  		, mat[sample.integers(x=center_inds, size=nclass-nrow(centers)),]
   		))
   	}
   }
   
   # Associate observation to nearest class
-  classes <- apply(distance, 1, FUN=function(idist) sample(which(idist==min(idist)),1))
+  classes <- apply(distance, 1, FUN=function(idist) sample.integers(x=which(idist==min(idist)), size=1))
   classes <- classes - 1 # start at 0
   
   return(list(classes=classes, centers=centers))
@@ -680,6 +680,18 @@ set_dimnames <- function(xarray, axis_names) {
 #' @export
 sample.df <- function(x, size, ...) {
   return(x[sample.int(n=nrow(x), size=size, ...),])
+}
+
+#' @name sample.integers
+#' @title sample.integers
+#' @description Samples values from an provided integer vector.
+#' Safer version of sample() which has bad behavior if length(x)==1.
+#' @param x integer vector we are sampling from
+#' @param size Number of rows to sample
+#' @param ... Other options per sample.int()
+#' @keywords internal
+sample.integers <- {
+  return(x[sample.int(n=length(x), size=size, ...)])
 }
 
 `%>%` <- magrittr::`%>%`
