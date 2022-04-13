@@ -11,7 +11,7 @@ NULL
 NCLASS = 2
 CLASSPI_ALPHA = 1
 THETA_ALPHA = 1
-CLASS_INIT_METHODS = c("random_centers", "random_centers_polar", "random", "kmodes")
+CLASS_INIT_METHODS = c("random_centers_polar", "random_centers", "random", "kmodes")
 DOMAIN_PROPOSAL_EMPTY = 0.3
 STEPS_ACTIVE = c("thetas"=TRUE, "domains"=TRUE, "class_pi"=TRUE, "classes"=TRUE, "identifiable"=TRUE)
 DOMAIN_MAXITEMS = 10
@@ -290,7 +290,7 @@ getStart_matrix <- function(df) {
 #' @param class_pi numeric vector size nclass. Initial condition for bayes parameter pi.
 #' @param classes integer vector size nrow(df). Initial condition for subject classes.
 #' @param domains list. Initial values for domains/probabilites.
-#' @param class_init_method string. Decides how 'classes' is defaulted if NULL. One of "kmodes" or "random" or "random_centers"
+#' @param class_init_method string. Decides how 'classes' is defaulted if NULL. One of "kmodes" or "random" or "random_centers", "random_centers_polar"
 #' @keywords internal
 getStart_bayes_params <- function(
   mat, hparams
@@ -391,12 +391,12 @@ getStart_class_random_centers <- function(mat, hparams, isWeighted, isPolar) {
   nobs <- dim(mat)[1]
   nclass <- hparams$nclass
   
-  if (isWeighted==TRUE) {
-    # More common patterns more likely to be chosen
-    possible_centers <- mat # lazy copy (fast)
+  if (isWeighted==FALSE) {
+    # All patterns equally likely to be chosen, each pattern appears once
+    centers_filter <- which(!duplicated(mat))
   } else {
-    # All patterns equally likely to be chosen
-    possible_centers <- unique(mat)
+    # More common patterns more likely to be chosen, patterns appear repeatedly
+    centers_filter <- seq_len(nrow(mat))
   }
   
   distance <- matrix(data=NA, nrow=nobs, ncol=nclass)
@@ -405,34 +405,36 @@ getStart_class_random_centers <- function(mat, hparams, isWeighted, isPolar) {
     
     # Get centers
     centers <- matrix(data=NA, nrow=nclass, ncol(mat))
-    centers[1,] <-sample.df(possible_centers, size=1)
-    distance[,1] <- rowSums(sweep(mat, 2, centers[1,], FUN="=="))
+    centers[1,] <-mat[sample(centers_filter, size=1),]
+    distance[,1] <- rowSums(sweep(mat, 2, centers[1,], FUN="!="))
     for (i in seq_len(nclass-1)+1) {
   	  # choose the center farthest from the current centers
-  	  min_dist <- apply(distance, 1, min, na.rm=TRUE)
-  	  center_inds <- which(min_dist==min(min_dist))
-  	  centers[i,] <- possible_centers[sample(center_inds, size=1),]
-  	  distance[,i] = rowSums(sweep(mat, 2, centers[i,], FUN="=="))
+  	  min_dist <- apply(distance[centers_filter,], 1, min, na.rm=TRUE)
+  	  center_inds <- centers_filter[which(min_dist==max(min_dist))]
+  	  centers[i,] <- mat[sample(center_inds, size=1),]
+  	  distance[,i] = rowSums(sweep(mat, 2, centers[i,], FUN="!="))
     }
   } else {
     # Centers entirely at random
-  	centers <-unique(sample.df(possible_centers, nclass))
+  	centers <-unique(mat[sample(centers_filter, nclass),])
   	last_processed = 0
     for (j in seq_len(nclass)) {
       
       for (i in last_processed+seq_len(nrow(centers)-last_processed)) {
-        distance[,i] = rowSums(sweep(mat, 2, centers[i,], FUN="=="))
+        distance[,i] = rowSums(sweep(mat, 2, centers[i,], FUN="!="))
       }
       
-  	  if (nrow(centers)==nclass) {
-  	    break # we have nclass unique centers
+      last_processed <- nrow(centers)
+  	  if (last_processed==nclass) {
+  	    break # Done. We have nclass unique centers
   	  }
       
-      possible_centers <- possible_centers[apply(possible_centers, 1, min, na.rm=TRUE) > 0, ]
+      # Add more centers since we do not have enough
+      center_inds <- centers_filter[apply(distance[centers_filter,], 1, min, na.rm=TRUE) > 0]
       
   	  centers <- unique(rbind(
   	    centers
-  		, sample.df(possible_centers, nclass-nrow(centers))
+  		, mat[sample(center_inds, nclass-nrow(centers)),]
   		))
   	}
   }
