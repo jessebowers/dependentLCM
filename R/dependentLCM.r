@@ -360,7 +360,7 @@ getStart_class_kmodes <- function(mat, hparams, ...) {
     tryCatch({
       kModesFit <- klaR::kmodes(mat, hparams$nclass, ...)
       out <- list(
-        classes = kModesFit$cluster
+        classes = kModesFit$cluster - 1
         , centers = kModesFit$modes
       )
       success <- TRUE
