@@ -690,7 +690,7 @@ sample.df <- function(x, size, ...) {
 #' @param size Number of rows to sample
 #' @param ... Other options per sample.int()
 #' @keywords internal
-sample.integers <- {
+sample.integers <- function(x, size, ...) {
   return(x[sample.int(n=length(x), size=size, ...)])
 }
 
