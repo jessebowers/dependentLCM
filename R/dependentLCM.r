@@ -304,9 +304,9 @@ getStart_bayes_params <- function(
     if (hparams$nclass == 1) {
       classes <- rep(0, dim(mat)[1])
     } else if (identical(class_init_method,"kmodes")) {
-      classes <- getStart_class_kmodes(mat, hparams)
+      classes <- getStart_class_kmodes(mat, hparams)$classes
     } else if (identical(class_init_method,"random")) {
-      classes <- getStart_class_random(mat, hparams)
+      classes <- getStart_class_random(mat, hparams)$classes
     } else if (identical(class_init_method,"random_centers")) {
       classes <- getStart_class_random_centers(mat, hparams, isWeighted=FALSE, isPolar=FALSE)$classes
     }  else if (identical(class_init_method,"random_centers_polar")) {
@@ -346,7 +346,7 @@ getStart_class_random <- function(mat, hparams) {
   ids <- sample.int(nobs, hparams$nclass)
   classes[ids] <- 0:(hparams$nclass-1)
   
-  return(classes)
+  return(list(classes=classes))
 }
 
 #' Choose class of each observation using kmodes
@@ -354,10 +354,16 @@ getStart_class_random <- function(mat, hparams) {
 #' @param hparams list. List of hyperparameters
 #' @keywords internal
 getStart_class_kmodes <- function(mat, hparams, ...) {
+  success <- FALSE
   for (i in seq_len(3)) { 
     # Repeated attempts because klaR sometimes errors randomly
     tryCatch({
-      clusters <- klaR::kmodes(mat, hparams$nclass, ...)$cluster-1
+      kModesFit <- klaR::kmodes(mat, hparams$nclass, ...)
+      out <- list(
+        classes = kModesFit$cluster
+        , centers = kModesFit$modes
+      )
+      success <- TRUE
       break
     }
     , error=function(cond) {
@@ -365,7 +371,14 @@ getStart_class_kmodes <- function(mat, hparams, ...) {
     }
     )
   }
-  return(clusters)
+  if (success == FALSE) {
+    warning_str <- "Warning: Issue with class_init_method = 'kmodes'. Using class_init_method = 'random_centers' instead."
+    message(warning_str)
+    out <- getStart_class_random_centers(mat, hparams, isWeighted=FALSE, isPolar=FALSE)
+    out$warning <- warning_str
+  }
+  
+  return(out)
 }
 
 #' Choose nclass random centers and put observations in their nearest center
