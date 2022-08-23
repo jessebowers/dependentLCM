@@ -60,9 +60,39 @@ thetas=TRUE to do gibbs on response probabilities, domains=TRUE to do metropolis
 
 \item{domains}{list. Initial values for domains/probabilites.}
 
-\item{class_init_method}{string. Decides how 'classes' is defaulted if NULL. One of "kmodes" or "random" or "random_centers"}
+\item{class_init_method}{string. Decides how 'classes' is defaulted if NULL. One of "kmodes" or "random" or "random_centers", "random_centers_polar"}
 
 \item{warmup_settings}{list. Optionally allows for an extra warmup cycle using different parameters vs the arguments given for the main process. Any parameters in the given list will overwrite the arguments of the same name in the wamrup cycle.}
+}
+\value{
+Returns a list with three items. hparams describes the hyperparmeters chosen by the model. These match the arguments input into the function plus any default values. mcmc describes the simulated (fitted) bayes parameter values. warmup describes extra/special warmup iterations using the 'warmup_settings' argument.
+
+The mcmc item includes the following values. mcmc does NOT discard any warmup iterations.
+\itemize{
+\item{"class_pi"}{A matrix describing the prior class probabilities of each class in each MCMC iteration. It contains one row per class one column per iteration, and each cell contains the prior probability of a subject being in that class.}
+\item{"classes"}{A matrix describing what class each subject belongs to. It contains one row per subject, one column per MCMC iteration, and each cell identifies the class of that subject in that iteration.}
+\item{"next_itr"}{Unimportant. Should equal maxitr+1.}
+\item{"maxitr"}{Gives the total number of iterations processed including warmup iterations}
+\item{"domains_accept"}{Each MCMC iteration, we attempt to change the domain structure #domain_nproposals times with a metropolis step. This 3-dimensional array describes whether the proposed change was accepted or rejected. A value of -2 indicates the proposal was rejected due to identifiability or max item constraints. A value of -1 or 2 indicates the proposed change is (equivalent to) no change. A value of 0 indicates the proposal was rejected. A value of 1 indicates the proposal was accepted.. The dimensions of the array are as follows. The third dimension has one slice per iteration. The first dimension gives one slice per 'domain_nproposals'. The second dimension has between 1 and nclass slices. A homogeneous DLCM has 1 slice, a heterogeneous DLCM has nclass slices, and a partially heterogeneous DLCM may be in-between.}
+\item{"class_loglik"}{A 3-dimensional array. The first dimension has one slice per class. The second dimension has one slice per subject/observation. The third dimension has one slice per MCMC iteration. Each cell contains the log likelihood that we would observe the response pattern given by this subject, if the subject was in this class, based on the parameters in this iteration.}
+\item{"troubleshooting"}{Used for investigationg bugs. Should be empty.}
+\item{".Random.seed"}{The state of the random seed before this function was executed. If you set the seed to this state and run again you should get the same result.}
+\item{"domains"}{Dataframe with one row for iteration X domain X pattern. For an MCMC iteration, it identifies what domains there are, and for each class what's the probability of getting a given response pattern to a given domain. It contains the following columns:
+\itemize{
+\item{"itr"}{What MCMC iteration is this?}
+\item{"class"}{What class are we calculating the response probabilities for?}
+\item{"domain"}{ID. What domain is this?}
+\item{"pattern_id"}{Integer uniquely identifying a response pattern to thie items in this domain. We will calculate the probability of this response pattern. pattern_id needs to be paired with a items_id to make sense of it.}
+\item{"items_id"}{Integer uniquely identifying what items (what set of items) are in this domain.}
+\item{"class2domain"}{For heterogeneous and partially heterogeneous DLCMs, this identifies which group of latent classes this domain belongs to.}
+\item{"prob"}{What's the probability of getting this response pattern?}
+\item{"nitems"}{How many items are in this domain?}
+\item{items"}{String listing the items in this domain. Function of items_id.}
+\item{item_#"}{For each item #, gives the specific value of that item in this response pattern. A value of -1 indicates this item is not in this domain. item_# is a function of (items_id, pattern_id).}
+}}
+\item{"domains_merged"}{Dataframe describing what domains were chosen for each MCMC iteration. There is one row for MCMC iteratation X class2domain. For (partially) heterogeneous DLCMs, class2domain allows different classes to have different domains. The string column domains_merged describes the domains with vertical bars "|" separating domains, and commas "," separating items wtihin a given domain.}
+\item{"runtimes"}{Describes how long the function ran in seconds. pre records the seconds of preprocessing before starting MCMC. mcmc describes how long it took to run the mcmc iterations. post describes how long it took to aggregate/transform the data after the MCMC is completed. Total gives the total time. There are 'secret' troubleshooting steps to get the runtime of specific C++ functions executed by this algorithm (these are stored under 'troubleshooting').}
+}
 }
 \description{
 Fits a bayesian dependent LCM model
@@ -74,7 +104,7 @@ data(probability, package="pks")
 xdf <- probability[,c("b101", "b102", "b103", "b104", "b105", "b106", "b107", "b108", "b109", "b110", "b111", "b112", "b201", "b202", "b203", "b204", "b205", "b206", "b207", "b208", "b209", "b210", "b211", "b212")]
 set.seed(4)
 dlcm <- dependentLCM_fit(
-  nitr = 600
+  nitr = 6000
   , df=xdf
   , nclass=3
 )

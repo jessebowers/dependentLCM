@@ -10,4 +10,4 @@ Encoding: UTF-8
 LazyData: true
 Imports: Rcpp (>= 1.0.6),klaR (>= 0.6-15),abind (>= 1.4-5),dplyr (>= 1.0.2)
 LinkingTo: Rcpp
-RoxygenNote: 7.1.2
+RoxygenNote: 7.2.1

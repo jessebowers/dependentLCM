@@ -22,6 +22,7 @@ FUTURE ENHANCEMENTS:
    > Use .data$varname for dplyr
    > CPP: Fix is free text not code as expected at: @examples Suppose we
  * Maybe make 'get pooled domains' an exportable function? Do we care?
+ * allow pre-specified structual zeroes. allow prespecified domains (latter is possible already but requires preprocessing)
 
 
 ###################
