@@ -96,6 +96,8 @@ devtools::install("dependentLCM")
 
 roxygen2::roxygenize("~/dependentLCM", clean=TRUE) # Documentation
 
+rstudioapi::previewRd("~/dependentLCM/man/thisDocumentationFile.Rd") # View formatted documentation file
+
 devtools::build_manual("~/dependentLCM") # pdf
 
 # Useful reference: https://cran.rstudio.com/doc/manuals/r-release/R-exts.html#Using-C_002b_002b11-code
