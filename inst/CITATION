@@ -1,13 +1,12 @@
 citHeader("To cite dependentLCM in publications use:")
 
 citEntry(
-  doi = {10.48550/ARXIV.2205.08677},
-  url = {https://arxiv.org/abs/2205.08677},
-  author = {Bowers,  Jesse and Culpepper,  Steve},
-  keywords = {Machine Learning (stat.ML),  Statistics Theory (math.ST),  FOS: Computer and information sciences,  FOS: Computer and information sciences,  FOS: Mathematics,  FOS: Mathematics},
-  title = {Dependent Latent Class Models},
-  publisher = {arXiv},
-  year = {2022},
-  copyright = {arXiv.org perpetual,  non-exclusive license}
+  entry    = "misc",
+  doi = "10.48550/ARXIV.2205.08677",
+  url = "https://arxiv.org/abs/2205.08677",
+  author = c(person("Jesse", "Bowers"), person("Steve", "Culpepper")),
+  title = "Dependent Latent Class Models",
+  publisher = "arXiv",
+  year = 2022,
+  textVersion = "Bowers, J., & Culpepper, S. (2022). Dependent Latent Class Models (Version 1). arXiv. https://doi.org/10.48550/ARXIV.2205.08677"
 )
-

@@ -13,10 +13,14 @@ dlcm.summary(dlcm, nwarmup = NULL)
 }
 \value{
 List with:
-thetas_avg = average response probabilities for different patterns
-domain_items = Which items are commonly grouped together in the same domain
-domain_nitems = How often the domains are of size k.
-domain_accept = How often our metropolis step accepts its proposal
+\itemize{
+\item{"thetas_avg"}{= average response probabilities for different patterns}
+\item{"domain_items"}{= Which items are commonly grouped together in the same domain}
+\item{"domain_items_all"}{= What are the most common domain structures? In the column "items" bars "|" separate domains and commas "," separate items within a domain. Column 'n' gives the number of post-warmup iterations this domain structure appeared in. Column class2domain is used to differentiate what class(es) a domain structure applies to in (partially) heterogeneous DLCMs.}
+\item{"domain_accept"}{= How often our metropolis step accepts its proposal. See dependentLCM_fit > domains_accept for details.}
+\item{"classes"}{=For each subject this vector gives the most common class that observation belongs to.}
+\item{"classes_pi"}{=The average prior probability of each class.}
+}
 }
 \description{
 Get some summary statistics from fitted dependent LCM
