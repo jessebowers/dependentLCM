@@ -1872,8 +1872,8 @@ int BayesParameter::domain_next(int class2domain_id, const Rcpp::IntegerMatrix& 
 void BayesParameter::domains_next(const Rcpp::IntegerMatrix& x, Hyperparameter& hparams) {
   TROUBLE_START(("BayesParameter::domains_next"));
   
-  for (int iclass2domain=0; iclass2domain < hparams.nclass2domain; iclass2domain++) {
-    for (int i=0; i < hparams.domain_nproposals; i++) {
+  for (int i=0; i < hparams.domain_nproposals; i++) {
+    for (int iclass2domain=0; iclass2domain < hparams.nclass2domain; iclass2domain++) {
       domains_accept(i, iclass2domain) = domain_next(iclass2domain, x, hparams);
     }
   }
