@@ -99,15 +99,30 @@ Fits a bayesian dependent LCM model
 }
 \examples{
 \dontrun{
+library(dependentLCM)
+
+# Get Data
 library(pks)
 data(probability, package="pks")
-xdf <- probability[,c("b101", "b102", "b103", "b104", "b105", "b106", "b107", "b108", "b109", "b110", "b111", "b112", "b201", "b202", "b203", "b204", "b205", "b206", "b207", "b208", "b209", "b210", "b211", "b212")]
+xdf <- na.omit(probability[,c("b101", "b102", "b103", "b104", "b105", "b106", "b107", "b108", "b109", "b110", "b111", "b112", "b201", "b202", "b203", "b204", "b205", "b206", "b207", "b208", "b209", "b210", "b211", "b212")])
+
+# Run Model
 set.seed(4)
 dlcm <- dependentLCM_fit(
   nitr = 6000
   , df=xdf
   , nclass=3
 )
-dlcm$summary <- dlcm.summary(dlcm)
+dlcm$summary <- dlcm.summary(dlcm, nwarmup=1000)
+
+
+# Class of each observation
+dlcm$summary$classes
+
+# How dependent items are grouped into 'domains'. See ?dlcm.summary
+dlcm$summary$domain_items_all
+
+# Average response probabilities
+dlcm$summary$thetas_avg_mode
 }
 }

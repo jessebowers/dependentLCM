@@ -15,8 +15,10 @@ dlcm.summary(dlcm, nwarmup = NULL)
 List with:
 \itemize{
 \item{"thetas_avg"}{= average response probabilities for different patterns}
+\item{"thetas_avg_mode"}{= same information as thetas_avg, but just for the most common domain structure}
 \item{"domain_items"}{= Which items are commonly grouped together in the same domain}
-\item{"domain_items_all"}{= What are the most common domain structures? In the column "items" bars "|" separate domains and commas "," separate items within a domain. Column 'n' gives the number of post-warmup iterations this domain structure appeared in. Column class2domain is used to differentiate what class(es) a domain structure applies to in (partially) heterogeneous DLCMs.}
+\item{"domain_items_all"}{= What are the most common domain structures? The column 'domains_merged' describes the domain structure as a string listing each item. Bars "|" separate domains, and commas "," separate items within a domain. For (partially) heterogeneous DLCMs, pluses "+" separate groups of classes (class2domain's) which may have different domain structures. Column 'n' gives the number of post-warmup iterations this domain structure appeared in.}
+\item{"mode_domains"}{= Describes the single most common domain structure. Each row indicates one domain.}
 \item{"domain_accept"}{= How often our metropolis step accepts its proposal. See dependentLCM_fit > domains_accept for details.}
 \item{"classes"}{=For each subject this vector gives the most common class that observation belongs to.}
 \item{"classes_pi"}{=The average prior probability of each class.}

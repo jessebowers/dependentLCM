@@ -66,16 +66,31 @@ CLASS2DOMAINS = names(CLASS2DOMAIN_FUNS)
 #' }
 #' @examples
 #' \dontrun{
+#' library(dependentLCM)
+#' 
+#' # Get Data
 #' library(pks)
 #' data(probability, package="pks")
-#' xdf <- probability[,c("b101", "b102", "b103", "b104", "b105", "b106", "b107", "b108", "b109", "b110", "b111", "b112", "b201", "b202", "b203", "b204", "b205", "b206", "b207", "b208", "b209", "b210", "b211", "b212")]
+#' xdf <- na.omit(probability[,c("b101", "b102", "b103", "b104", "b105", "b106", "b107", "b108", "b109", "b110", "b111", "b112", "b201", "b202", "b203", "b204", "b205", "b206", "b207", "b208", "b209", "b210", "b211", "b212")])
+#' 
+#' # Run Model
 #' set.seed(4)
 #' dlcm <- dependentLCM_fit(
 #'   nitr = 6000
 #'   , df=xdf
 #'   , nclass=3
 #' )
-#' dlcm$summary <- dlcm.summary(dlcm)
+#' dlcm$summary <- dlcm.summary(dlcm, nwarmup=1000)
+#' 
+#' 
+#' # Class of each observation
+#' dlcm$summary$classes
+#' 
+#' # How dependent items are grouped into 'domains'. See ?dlcm.summary
+#' dlcm$summary$domain_items_all
+#' 
+#' # Average response probabilities
+#' dlcm$summary$thetas_avg_mode
 #' }
 #' @export
 dependentLCM_fit <- function(
@@ -186,7 +201,7 @@ dependentLCM_fit <- function(
   
   # domains_patterns 
   dlcm$domains_patterns <- itemid2patterns(dlcm$domains_id["pattern_id",], dlcm$domains_id["items_id",], hparams[["item_nlevels"]])
-  rownames(dlcm$domains_patterns) <- paste0("item_", 1:(nrow(dlcm$domains_patterns)))
+  rownames(dlcm$domains_patterns) <- paste0("item_", seq_len(nrow(dlcm$domains_patterns)))
   mode(dlcm$domains_patterns) <- "integer"
   
   # Supplemental
@@ -312,7 +327,7 @@ getStart_matrix <- function(df) {
   # Purpose: Convert to factor in integer form (0:k-1) and remove NA rows
   
   df <- as.data.frame(df)
-  for (i in 1:ncol(df)) {
+  for (i in seq_len(ncol(df))) {
     df[, i] <- as.integer(factor(df[, i])) - 1
   }
   df <- as.matrix(df)
@@ -495,7 +510,7 @@ getStart_domains <- function(mat, classes, hparams) {
   domains_list = list()
   for (iclass in 0:(hparams$nclass-1)) {
     domains_list[[iclass+1]] <- lapply(
-      1:hparams$nitems
+      seq_len(hparams$nitems)
       , function(icol) {
         ix = c(mat[classes==iclass, icol] # actual data
                , seq_len(hparams$item_nlevels[icol])-1 # +1 of each category (avoid zeros)
@@ -745,8 +760,10 @@ sample.integers <- function(x, size, ...) {
 #' @return List with:
 #' \itemize{
 #' \item{"thetas_avg"}{= average response probabilities for different patterns}
+#' \item{"thetas_avg_mode"}{= same information as thetas_avg, but just for the most common domain structure}
 #' \item{"domain_items"}{= Which items are commonly grouped together in the same domain}
-#' \item{"domain_items_all"}{= What are the most common domain structures? In the column "items" bars "|" separate domains and commas "," separate items within a domain. Column 'n' gives the number of post-warmup iterations this domain structure appeared in. Column class2domain is used to differentiate what class(es) a domain structure applies to in (partially) heterogeneous DLCMs.}
+#' \item{"domain_items_all"}{= What are the most common domain structures? The column 'domains_merged' describes the domain structure as a string listing each item. Bars "|" separate domains, and commas "," separate items within a domain. For (partially) heterogeneous DLCMs, pluses "+" separate groups of classes (class2domain's) which may have different domain structures. Column 'n' gives the number of post-warmup iterations this domain structure appeared in.}
+#' \item{"mode_domains"}{= Describes the single most common domain structure. Each row indicates one domain.}
 #' \item{"domain_accept"}{= How often our metropolis step accepts its proposal. See dependentLCM_fit > domains_accept for details.}
 #' \item{"classes"}{=For each subject this vector gives the most common class that observation belongs to.}
 #' \item{"classes_pi"}{=The average prior probability of each class.}
@@ -755,36 +772,87 @@ sample.integers <- function(x, size, ...) {
 dlcm.summary <- function(dlcm, nwarmup=NULL) {
   
   if (is.null(nwarmup)) {
-    nwarmup = min(1000, floor(dlcm$mcmc$maxitr/2))
+    nwarmup = floor(min(c(1000, dlcm$mcmc$maxitr/2)))
   }
   
-  dlcm$mcmc$domains$item_value <- apply(
-    dlcm$mcmc$domains[, dlcm$hparams$domain_item_cols]
-    , 1, function(x) paste0(x[x>-1], collapse=", ")
-  )
-  thetas_avg <- dlcm$mcmc$domains %>% dplyr::filter(itr > nwarmup) %>% dplyr::group_by(class, items_id, pattern_id) %>% dplyr::summarize(
-    items = dplyr::first(items)
-    , item_value = dplyr::first(item_value)
-    , n=dplyr::n()
-    , prob=mean(prob)
-    , .groups="keep")
+  { # Summarize most common domain structures
+    
+    # Per domain
+    domain_items <- (
+      dlcm$mcmc$domains 
+      %>% dplyr::filter(pattern_id==0, itr > nwarmup) 
+      %>% dplyr::group_by(class2domain, items) 
+      %>% dplyr::filter(class == min(class)) 
+      %>% dplyr::summarize(nitems=max(nitems), n=dplyr::n(), .groups="keep") 
+      %>% dplyr::arrange(-n)
+    )
+    
+    # Per domains structure
+    domain_items_all_raw <- (
+      dlcm$mcmc$domains_merged
+      %>% dplyr::group_by(itr) 
+      # %>% dplyr::arrange(class2domain) # should already be ordered 
+      %>% dplyr::summarize(domains_merged=paste0(domains_merged, collapse="+"))
+    )
+    domain_items_all <- (
+      domain_items_all_raw
+      %>% dplyr::filter(itr > nwarmup)
+      %>% dplyr::group_by(domains_merged) 
+      %>% dplyr::summarize(n=dplyr::n())
+      %>% dplyr::mutate(perc=n/sum(n))
+      %>% dplyr::arrange(-n)
+    )
+    
+    # single most common domain structure
+    first_mode_domain_itr <- unlist(domain_items_all_raw[which(domain_items_all_raw$domains_merged == unclass(domain_items_all[1,"domains_merged"]))[1],"itr"])
+    mode_domains <- unique(dlcm$mcmc$domains %>% dplyr::filter(itr==first_mode_domain_itr, pattern_id==0) %>% .[,c("class2domain", "items_id", "items")]) %>% dplyr::mutate(is_one=1)
+    
+    rm(domain_items_all_raw)
+  }
   
-  domain_items_all <- dlcm$mcmc$domains_merged %>% dplyr::filter(itr > nwarmup) %>% dplyr::group_by(class2domain, items=domains_merged) %>% dplyr::summarize(n=dplyr::n(), .groups="keep")
-  domain_items_all <- domain_items_all %>% dplyr::group_by(class2domain) %>% dplyr::mutate(perc = n / sum(n)) %>% dplyr::arrange(-perc)
-  domain_items <- dlcm$mcmc$domains %>% dplyr::filter(pattern_id==0, itr > nwarmup) %>% dplyr::group_by(class2domain, items) %>% dplyr::filter(class == min(class)) %>% dplyr::summarize(nitems=max(nitems), n=dplyr::n(), .groups="keep") %>% dplyr::arrange(-n)
+  { # Response probabilities (thetas)
+    dlcm$mcmc$domains$item_value <- apply(
+      dlcm$mcmc$domains[, dlcm$hparams$domain_item_cols]
+      , 1, function(x) paste0(x[x>-1], collapse=", ")
+    )
+    dlcm$mcmc$domains <- (
+      dlcm$mcmc$domains
+      %>% dplyr::left_join(mode_domains[,c("class2domain", "items_id", "is_one")], by=c("class2domain", "items_id"))
+      %>% dplyr::mutate(is_mode= !is.na(is_one), is_one=NULL) # convert is_one to is_mode
+    )
+    
+    thetas_avg <- (
+      dlcm$mcmc$domains 
+      %>% dplyr::filter(itr > nwarmup) 
+      %>% dplyr::group_by(class, items_id, pattern_id) 
+      %>% dplyr::summarize(
+        items = dplyr::first(items)
+        , item_value = dplyr::first(item_value)
+        , is_mode = dplyr::first(is_mode)
+        , n=dplyr::n()
+        , prob=mean(prob)
+        , .groups="keep")
+    )
+    
+    thetas_avg_mode <- reshape2::dcast(
+      data=thetas_avg %>% dplyr::filter(is_mode==TRUE)
+      , formula = items_id + pattern_id + items + item_value ~ class
+      , value.var = "prob"
+    )
+  }
   
   # domain_nitems <- table((dlcm$mcmc$domains %>% dplyr::filter(pattern_id==0, itr > nwarmup))$nitems)
   
-  domain_accept <- table(dlcm$mcmc$domains_accept[, , -(1:nwarmup)])
+  domain_accept <- table(dlcm$mcmc$domains_accept[, , -seq_len(nwarmup)])
   
   waic <- dlcm.get_waic(dlcm, itrs=nwarmup:dlcm$mcmc$maxitr)
   names(waic) <- paste0("waic_", names(waic))
   
-  classes <- unname(apply(dlcm$mcmc$classes[,-(1:nwarmup)], 1, getMode))
-  class_pi = rowMeans(dlcm$mcmc$class_pi[,-(1:nwarmup), drop=FALSE])
+  classes <- unname(apply(dlcm$mcmc$classes[,-seq_len(nwarmup)], 1, getMode))
+  class_pi = rowMeans(dlcm$mcmc$class_pi[,-seq_len(nwarmup), drop=FALSE])
   
   return(c(
-    list("thetas_avg"=thetas_avg, "domain_items"=domain_items, "domain_items_all"=domain_items_all, "domain_accept"=domain_accept, "classes"=classes, "class_pi"=class_pi)
+    list("thetas_avg"=thetas_avg, "domain_items"=domain_items, "domain_items_all"=domain_items_all, "domain_accept"=domain_accept, "classes"=classes, "class_pi"=class_pi, "thetas_avg_mode"=thetas_avg_mode, "mode_domains"=mode_domains, "first_mode_domain_itr"=first_mode_domain_itr)
     , waic
     ))
 }
@@ -799,7 +867,7 @@ dlcm.get_waic <- function(this_sim, itrs=NULL) {
   
   if (is.null(itrs)) {
     # default in all iterations
-    itrs = 1:this_sim$mcmc$maxitr
+    itrs = seq_len(this_sim$mcmc$maxitr)
   }
   
   #
@@ -871,7 +939,7 @@ dlcm.get_waic <- function(this_sim, itrs=NULL) {
 theta_item_probs <- function(items, this_sim, itrs=NULL, merge_itrs=TRUE, classes=NULL) {
   
   if (is.null(itrs)) {
-    itrs <- 1:this_sim$mcmc$maxitr
+    itrs <- seq_len(this_sim$mcmc$maxitr)
   }
   
   class_filter <- TRUE
@@ -903,7 +971,7 @@ theta_item_probs <- function(items, this_sim, itrs=NULL, merge_itrs=TRUE, classe
     , this_sim$mcmc$domains[afilter, ]
     , sum
   )
-  thetas_agg <- thetas_agg[!(rowSums(thetas_agg[, 1:nitems, drop=FALSE]) == -nitems), ] # Remove unrelated rows
+  thetas_agg <- thetas_agg[!(rowSums(thetas_agg[, seq_len(nitems), drop=FALSE]) == -nitems), ] # Remove unrelated rows
   thetas_agg$prob_log <- log(thetas_agg$prob)
   thetas_agg$class_pi <- this_sim$mcmc$class_pi[cbind(thetas_agg$class+1, thetas_agg$itr)]
   
@@ -916,8 +984,8 @@ theta_item_probs <- function(items, this_sim, itrs=NULL, merge_itrs=TRUE, classe
     # Purpose: Calculate the probability for this pattern
     # Implict: thetas_agg, this_sim, nitr, nitems
     imatch_pattern <- rowSums(
-      sweep(thetas_agg[,1:nitems, drop=FALSE], 2, ipattern, "==") # Matches pattern
-      | thetas_agg[,1:nitems, drop=FALSE] < 0 # Or is undefined
+      sweep(thetas_agg[,seq_len(nitems), drop=FALSE], 2, ipattern, "==") # Matches pattern
+      | thetas_agg[,seq_len(nitems), drop=FALSE] < 0 # Or is undefined
     ) == nitems
     iprobs <- (
       thetas_agg 
@@ -1018,9 +1086,9 @@ simulate_lcm <- function(n, pis, thetas) {
   } else if (class(thetas) == "list") {
     nitems <- length(thetas[[1]])
     responses <- matrix(NA, nrow=n, ncol=nitems)
-    for (iclass in 1:nclasses) {
+    for (iclass in seq_len(nclasses)) {
       ifilter <- classes==iclass
-      for (iitem in 1:nitems) {
+      for (iitem in seq_len(nitems)) {
         responses[ifilter, iitem] = apply(
           rmultinom(sum(ifilter), 1, thetas[[iclass]][[iitem]])
           , 2, function(x) which(x==1))
@@ -1041,7 +1109,7 @@ simulate_lcm <- function(n, pis, thetas) {
 sim_logprob_one <- function(xobs, pis, thetas) {
   nclass <-length(pis)
   class_logprobs <- sapply(
-    1:nclass
+    seq_len(nclass)
     , function(iclass){
       sum(log(mapply(
         function(theta, xobs) theta[xobs+1]
@@ -1062,3 +1130,181 @@ sim_logprob_one <- function(xobs, pis, thetas) {
 sim_logprobs <- function(x, pis, thetas) {
   return(apply(x, 1, sim_logprob_one, pis=pis, thetas=thetas))
 }
+
+
+##############
+############## LABEL SWAPPING
+##############
+
+#' For each iteration, identify which class labels are swapped and should be relabeled.
+#' See identify_swaps() for procedure.
+#' @param sim_classes Integer matrix describing what class each observation belongs to in each iteration. There should be one row per observation and one column per iteration as in dlcm$mcmc$classes.
+#' @param classes_mode Integer vector describing the most likely (mode) class of each observation.
+#' @param maxitr integer. How many attempts to make.
+#' @keywords internal
+identify_swaps_helper <- function(sim_classes, classes_mode, maxitr) {
+  
+  nclass <- dlcm$hparams$nclass
+  
+  class_levels <- paste0(seq_len(nclass)-1)
+  classes_mode <- factor(classes_mode, levels=class_levels)
+  counts <- apply(
+    sim_classes
+    , 2, function(x) table(
+      classes_mode
+      , factor(x, levels=class_levels)
+    )
+  )
+  
+  e1071.matchClasses <- apply(
+    counts, 2
+    , function(icounts) {
+      icounts <- matrix(icounts, nrow=nclass, ncol=nclass)
+      as.integer(e1071::matchClasses(icounts, nclass, method="exact", verbose=FALSE))
+    }
+  )
+  rownames(e1071.matchClasses) <- paste0("class_matches", seq_len(nrow(e1071.matchClasses)))
+  e1071.matchClasses_id <- factor(apply(e1071.matchClasses-1, 2, paste0, collapse=","))
+  identify_out <- data.frame(
+    itr = seq_along(e1071.matchClasses_id)
+    , valueIsOldClassName_positionIsNewClassIndex_string = e1071.matchClasses_id
+    , t(e1071.matchClasses-1)
+  )
+  
+  return(identify_out)
+}
+
+#' Applies label swapping based on an output from identify_swaps_helper.
+#' @param dlcm An dependent latent class model from dependentLCM_fit().
+#' @param identify_out Output from identify_swaps_helper.
+#' @param nwarmup integer. Which iterations are warmup iterations?
+#' @keywords internal
+apply_swaps_helper <- function(
+    dlcm # Single chain simulation
+    , identify_out # Information on swaps. One row per iteration giving 1) ichain, 2) itr (assumes ordered), 3) valueIsOldClassName_positionIsNewClassIndex_string 4) class_matches
+    , nwarmup
+) {
+  
+  if (is.null(dlcm$label_swapping)) {
+    dlcm$label_swapping <- list() # initialize
+  }
+  
+  idcols <- c(1,2)
+  unique_valueIsOldClassName_positionIsNewClassIndex_strings <- unique(identify_out$valueIsOldClassName_positionIsNewClassIndex_string)
+  any_change <- FALSE
+  
+  for (istr in unique_valueIsOldClassName_positionIsNewClassIndex_strings) {
+    
+    itrs_swap <- ((identify_out %>% .[,"valueIsOldClassName_positionIsNewClassIndex_string"]) == istr)
+    valueIsOldClassName_positionIsNewClassIndex <- unlist(identify_out %>% dplyr::filter(valueIsOldClassName_positionIsNewClassIndex_string==istr) %>% .[1,-idcols]) # setNames(stats_ordered_by_oldclass, nm=originalClasses)[paste0(valueIsOldClassName_positionIsNewClassIndex)] -> stats_ordered_by_newclass
+    valueIsOldClassIndex_positionIsNewClassIndex <- valueIsOldClassName_positionIsNewClassIndex+1 # stats_ordered_by_oldclass[valueIsOldClassIndex_positionIsNewClassIndex] -> stats_ordered_by_newclass
+    valueIsNewClassName_positionIsOldClassIndex <- order(valueIsOldClassName_positionIsNewClassIndex)-1 # valueIsNewClassName_positionIsOldClassIndex[old_class_id+1] -> new_class_id
+    
+    # # Examples to understand valueIsOldClassName_positionIsNewClassIndex vs valueIsOldClassIndex_positionIsNewClassIndex vs valueIsNewClassName_positionIsOldClassIndex above
+    # class_levels <- (seq_len(dlcm$hparams$nclass)-1)
+    # iitr <- which(itrs_swap)[1] # or other iteration applicable to this loop...
+    # classes_mode <- factor(dlcm$label_swapping$classes, levels=class_levels)
+    # classes_iitr <- factor(dlcm$mcmc$classes[,iitr], levels=class_levels)
+    # counts <- table(classes_mode, classes_iitr)
+    # counts # original, bad
+    # counts[,paste0(valueIsOldClassName_positionIsNewClassIndex)] # fixed
+    # counts[,valueIsOldClassIndex_positionIsNewClassIndex] # fixed
+    # old_classes <- c(0,0,1,1,2,2)
+    # valueIsNewClassName_positionIsOldClassIndex[old_classes+1] # new class IDs for old_classes observations
+    
+    if (identical(valueIsNewClassName_positionIsOldClassIndex, seq_along(valueIsNewClassName_positionIsOldClassIndex)-1)) {
+      next # Nothing to reorder
+    } else {
+      any_change <- TRUE
+    }
+    
+    dlcm$mcmc$class_pi[,itrs_swap] <- dlcm$mcmc$class_pi[valueIsOldClassIndex_positionIsNewClassIndex,itrs_swap]
+    
+    dlcm$label_swapping$valueIsNewClassName_positionIsOldClassIndex[, itrs_swap] <- valueIsNewClassName_positionIsOldClassIndex[dlcm$label_swapping$valueIsNewClassName_positionIsOldClassIndex[,itrs_swap]+1]
+    
+    ifilter <- matrix(
+      data = itrs_swap
+      , nrow=nrow(dlcm$mcmc$classes)
+      , ncol=ncol(dlcm$mcmc$classes)
+      , byrow=TRUE
+    )
+    dlcm$mcmc$classes[ifilter] <- valueIsNewClassName_positionIsOldClassIndex[dlcm$mcmc$classes[ifilter]+1]
+    
+    ifilter <- dlcm$mcmc$domains$itr %in% which(itrs_swap)
+    dlcm$mcmc$domains$class[ifilter] <- valueIsNewClassName_positionIsOldClassIndex[dlcm$mcmc$domains$class[ifilter]+1]
+  }
+  
+  if (any_change==TRUE) {
+    dlcm$label_swapping$classes <- unname(apply(dlcm$mcmc$classes[,-seq_len(nwarmup)], 1, getMode))
+  }
+  
+  return(dlcm)
+}
+
+#' Identifies and fixes label swapping among classes. 
+#' For each iteration, it relabels class to most align with the overall most common (mode) class of each observation.
+#' Warning01: Best for homogeneous DLCMs. Potentially fine for heterogenous DLCMs. Not appropriate for *partially* heterogeneous DLCMs.
+#' Warning02: May not be appropriate if a single class is too small and never showes up as the mode for any observation.
+#' Warning03: Relabels warmup iterations which may be unnecessary.
+#' @param dlcm An dependent latent class model from dependentLCM_fit().
+#' @param nwarmup integer. Which iterations are warmup iterations?
+#' @param maxitr integer. How many attempts should we make to correct label swapping?
+#' @return Returns an updated DLCM with corrected classes. Summary information (e.g. dlcm.summary()) is not modified. 
+#' Information on what labels were swapped is given in output$label_swapping.
+#' \itemize{
+#' \item{"classes"}{= Integer vector. The most common (mode) class of each observation after relabeling. This serves as the target for relabeling (done iteratively).}
+#' \item{"valueIsNewClassName_positionIsOldClassIndex"}{= Dataframe with one row per MCMC iteration describing what label swapping was done in that iteration (if any). Each iteration has a vector indexed by the original classes. For each old class index, we provide the new class name.}
+#' \item{"valueIsOldClassName_positionIsNewClassIndex"}{= Dataframe with one row per MCMC iteration describing what label swapping was done in that iteration (if any). Each iteration has a vector indexed by the new classes. For each new class index, we provide the old class name.}
+#' \item{"any_swaps"}{= Boolean. Did we do any label swapping? Same as nitrs_with_changes>0}
+#' \item{"nitrs_attempted"}{= Integer. How many iterations did we run?}
+#' \item{"nitrs_with_changes"}{= Integer. In how many iterations did we actually change class labels?}
+#' }
+#' @export
+fix_class_label_switching <- function(dlcm, nwarmup, maxitr=3) {
+  
+  # we need the most common class of each observation: dlcm$label_swapping$classes
+  nclass <- dlcm$hparams$nclass
+  dlcm$label_swapping <- list(
+    classes = unname(apply(dlcm$mcmc$classes[,-seq_len(nwarmup)], 1, getMode))
+    , valueIsNewClassName_positionIsOldClassIndex = matrix(data=seq_len(nclass)-1, nrow=nclass, ncol=ncol(dlcm$mcmc$classes)) # i.e. valueIsNewClassName_positionIsOldClassIndex
+  )
+  dlcm_copy <- dlcm
+  
+  # Find and correct for label switching
+  nitrs_with_changes <- 0
+  for (jitr in seq_len(maxitr)) {
+    
+    identify_out <- identify_swaps_helper(sim_classes=dlcm_copy$mcmc$classes, classes_mode=dlcm_copy$label_swapping$classes, maxitr=maxitr)
+    dlcm_copy <- apply_swaps_helper(dlcm=dlcm_copy, identify_out=identify_out, nwarmup = nwarmup)
+    
+    if (length(unique(identify_out[-seq_len(nwarmup),"valueIsOldClassName_positionIsNewClassIndex_string"])) <= 1) {
+      break # Done
+    }
+    
+    nitrs_with_changes <- nitrs_with_changes + 1
+  }
+  
+  identify_out_fn <- identify_out
+  if (jitr>1) {
+    # Put swaps in terms of the original dlcm
+    id_cols <- c(1,2)
+    identify_out_fn[,-id_cols] <- t(apply(dlcm_copy$label_swapping$valueIsNewClassName_positionIsOldClassIndex, 2, order))
+    identify_out_fn$valueIsOldClassName_positionIsNewClassIndex_string <- apply(identify_out_fn[,-id_cols], 1, paste0, collapse=",")
+  }
+  
+  valueIsNewClassName_positionIsOldClassIndex_df <- data.frame(
+    itr=seq_len(ncol(dlcm_copy$label_swapping$valueIsNewClassName_positionIsOldClassIndex))
+    , valueIsNewClassName_positionIsOldClassIndex_string = apply(dlcm_copy$label_swapping$valueIsNewClassName_positionIsOldClassIndex, 2, paste0, collapse=",")
+    , t(dlcm_copy$label_swapping$valueIsNewClassName_positionIsOldClassIndex)
+    , row.names=paste0("itr", seq_len(ncol(dlcm_copy$label_swapping$valueIsNewClassName_positionIsOldClassIndex)))
+  )
+  dlcm_copy$label_swapping$valueIsOldClassName_positionIsNewClassIndex <- identify_out_fn
+  dlcm_copy$label_swapping$any_swaps <- (nitrs_with_changes>0)
+  dlcm_copy$label_swapping$nitrs_attempted <- jitr
+  dlcm_copy$label_swapping$nitrs_with_changes <- nitrs_with_changes
+  dlcm_copy$label_swapping$valueIsNewClassName_positionIsOldClassIndex <- valueIsNewClassName_positionIsOldClassIndex_df
+  dlcm_copy$mcmc$domains$class_original <- dlcm$mcmc$domains$class
+  dlcm_copy$mcmc$classes_original <- dlcm$mcmc$classes
+  return(dlcm_copy)
+}
+

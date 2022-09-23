@@ -5,9 +5,9 @@ Version: 0.1.0
 Author: Jesse Bowers
 Maintainer: Jesse Bowers <jessemb2@illinois.edu>
 Description: Dependent Latent Class Model
-License: Private. Do not use.
+License: GNU GENERAL PUBLIC LICENSE
 Encoding: UTF-8
 LazyData: true
-Imports: Rcpp (>= 1.0.6),klaR (>= 0.6-15),abind (>= 1.4-5),dplyr (>= 1.0.2)
+Imports: Rcpp (>= 1.0.6),klaR (>= 0.6-15),abind (>= 1.4-5),dplyr (>= 1.0.2),reshape2 (>= 1.4.4),e1071 (>= 1.7-9)
 LinkingTo: Rcpp
 RoxygenNote: 7.2.1

@@ -3,6 +3,7 @@
 export(dependentLCM_fit)
 export(dlcm.get_waic)
 export(dlcm.summary)
+export(fix_class_label_switching)
 export(get_class_probs)
 export(id2pattern)
 export(is_identifiable)
