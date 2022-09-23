@@ -119,7 +119,7 @@ dlcm$summary <- dlcm.summary(dlcm, nwarmup=1000)
 # Class of each observation
 dlcm$summary$classes
 
-# How dependent items are grouped into 'domains'. See ?dlcm.summary
+# Which items are grouped together because they show local dependence? See ?dlcm.summary. We call groups of locally dependent items 'domains'.
 dlcm$summary$domain_items_all
 
 # Average response probabilities
