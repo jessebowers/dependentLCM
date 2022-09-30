@@ -35,7 +35,7 @@ CLASS2DOMAINS = names(CLASS2DOMAIN_FUNS)
 #' @param nitr integer. Number of iterations to run the bayes MCMC
 #' @inheritParams getStart_hparams
 #' @inheritParams getStart_bayes_params
-#' @param warmup_settings list. Optionally allows for an extra warmup cycle using different parameters vs the arguments given for the main process. Any parameters in the given list will overwrite the arguments of the same name in the wamrup cycle.
+#' @inheritParams doWarmup
 #' @return Returns a list with three items. hparams describes the hyperparmeters chosen by the model. These match the arguments input into the function plus any default values. mcmc describes the simulated (fitted) bayes parameter values. warmup describes extra/special warmup iterations using the 'warmup_settings' argument.
 #' 
 #' The mcmc item includes the following values. mcmc does NOT discard any warmup iterations.
@@ -94,17 +94,17 @@ CLASS2DOMAINS = names(CLASS2DOMAIN_FUNS)
 #' }
 #' @export
 dependentLCM_fit <- function(
-  nitr
-  # Data
-  , df=NULL, mat=NULL
-  # Hyperparameters
-  ,nclass=NCLASS, ndomains=NULL, class2domain=CLASS2DOMAINS[1], classPi_alpha=CLASSPI_ALPHA, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_nproposals=NULL, steps_active = STEPS_ACTIVE
-  # Bayes parameters
-  , class_pi = NULL, classes = NULL, domains = NULL
-  # Misc
-  , class_init_method = CLASS_INIT_METHODS[1]
-  , warmup_settings = "default"
-  ) {
+    nitr
+    # Data
+    , df=NULL, mat=NULL
+    # Hyperparameters
+    ,nclass=NCLASS, ndomains=NULL, class2domain=CLASS2DOMAINS[1], classPi_alpha=CLASSPI_ALPHA, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_nproposals=NULL, steps_active = STEPS_ACTIVE
+    # Bayes parameters
+    , class_pi = NULL, classes = NULL, domains = NULL
+    # Misc
+    , class_init_method = CLASS_INIT_METHODS[1]
+    , warmup_settings = "default", warmup_dlcm=NULL
+) {
   
   #
   # Save starting info
@@ -120,20 +120,8 @@ dependentLCM_fit <- function(
   .Random.seed_start <- .Random.seed
   
   #
-  # Set starting values
+  # Set initial parameter values
   #
-  
-  if (identical(warmup_settings, "default")) {
-    if (identical(class2domain, "HET") | identical(class2domain, "het")) {
-      # Default warmup for HET
-      warmup_settings <- list()
-      warmup_settings$nitr <- round(median(c(100, 1000, nitr/20)))
-      warmup_settings$class2domain <- "HOMO"
-    } else {
-      # Otherwise default is no warmup
-      warmup_settings = NULL
-    }
-  }
   
   if (is.null(mat)) {
     mat <- getStart_matrix(df)
@@ -145,23 +133,17 @@ dependentLCM_fit <- function(
     ,nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, domain_proposal_empty=domain_proposal_empty, domain_nproposals=domain_nproposals, steps_active=steps_active
   )
   
-  if (is.null(warmup_settings)) {
-    # no warmup
-    bayesparams <- getStart_bayes_params(
-      mat=mat, hparams=hparams
-      , class_pi = class_pi, classes = classes, domains = domains
-      # Misc
-      , class_init_method = class_init_method
-    )
-    warmup_sims <- NULL
-  } else {
-    # warmup
-    warmup_args <- args # as.list(match.call())[-1]
-    warmup_args[names(warmup_settings)] <- warmup_settings
-    warmup_args$warmup_settings <- NULL
-    warmup_sims <- do.call(dependentLCM_fit, warmup_args)
-    bayesparams <- dlcm2paramargs(warmup_sims)$bayesparams
-  }
+  warmup_dlcm <- doWarmup(
+    args=args, warmup_settings=warmup_settings, warmup_dlcm=warmup_dlcm
+  )
+  
+  bayesparams <- getStart_bayes_params(
+    mat=mat, hparams=hparams
+    , class_pi = class_pi, classes = classes, domains = domains
+    # Misc
+    , class_init_method = class_init_method
+    , warmup_dlcm = warmup_dlcm
+  )
   
   all_params <- list(
     mat = mat
@@ -247,7 +229,7 @@ dependentLCM_fit <- function(
   dlcm$runtimes <- as.numeric(c(diff(datetimes), total=tail(datetimes,1)-datetimes[1]))
   names(dlcm$runtimes) <- c("pre", "mcmc", "post", "total")
   
-  return(list(hparams=all_params$hparams, mcmc=dlcm, warmup=warmup_sims))
+  return(list(hparams=all_params$hparams, mcmc=dlcm, warmup=warmup_dlcm))
 }
 
 
@@ -271,9 +253,9 @@ dependentLCM_fit <- function(
 #' "average" [depreciated] for theta~Dirichlet(theta_alpha * sum(npattens_i)/npatterns rep(1, npatterns)). Unstable for large domains
 #' @keywords internal
 getStart_hparams <- function(
-  df=NULL, nitems=NULL
-  # Hyperparameters
-  ,nclass=NCLASS, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_nproposals=NULL, steps_active=STEPS_ACTIVE
+    df=NULL, nitems=NULL
+    # Hyperparameters
+    ,nclass=NCLASS, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_nproposals=NULL, steps_active=STEPS_ACTIVE
 ) {
   # Purpose: Add default hyperparameters
   
@@ -294,7 +276,7 @@ getStart_hparams <- function(
   }
   class2domain <- as.integer(factor(class2domain))-1 # Make sequential starting at 0
   nclass2domain <- length(unique(class2domain))
-
+  
   # classPi_alpha
   if (length(classPi_alpha)==1) {
     classPi_alpha <- rep(classPi_alpha, nclass)
@@ -344,13 +326,22 @@ getStart_matrix <- function(df) {
 #' @param classes integer vector size nrow(df). Initial condition for subject classes.
 #' @param domains list. Initial values for domains/probabilites.
 #' @param class_init_method string. Decides how 'classes' is defaulted if NULL. One of "kmodes" or "random" or "random_centers", "random_centers_polar"
+#' @param warmup_dlcm list. A past DLCM fit (from dependentLCM_fit). The last iteration of the DLCM is used as the Bayes parameters.
 #' @keywords internal
 getStart_bayes_params <- function(
-  mat, hparams
-  , class_pi = NULL, classes = NULL, domains = NULL
-  # Misc
-  , class_init_method = CLASS_INIT_METHODS[1]
+    mat, hparams
+    , class_pi = NULL, classes = NULL, domains = NULL
+    # Misc
+    , class_init_method = CLASS_INIT_METHODS[1]
+    , warmup_dlcm = NULL
 ) {
+  
+  # warmup_dlcm takes precidence
+  # maybe in the future allow other parameters to overwrite??
+  if (!is.null(warmup_dlcm)) {
+    bayesparams <- dlcm2paramargs(warmup_dlcm)$bayesparams
+    return(bayesparams)
+  }
   
   # classes
   if (is.null(classes)) {
@@ -383,6 +374,48 @@ getStart_bayes_params <- function(
   return(list(
     class_pi = class_pi, classes = classes, domains = domains
   ))
+}
+
+#' Does *EXTRA* MCMC warmup step if applicable
+#' @param args list All arguments given to dependentLCM_fit
+#' @param warmup_settings list. Optionally allows for an extra warmup cycle using different parameters vs the arguments given for the main process. Any parameters in the given list will overwrite the arguments of the same name in the warmup cycle.
+#' @param warmup_dlcm list. A past DLCM fit (from dependentLCM_fit). The last iteration of the DLCM is used as the Bayes parameters. Takes precidence over warmup_settings.
+#' @keywords internal
+doWarmup <- function(args, warmup_settings=NULL, warmup_dlcm=NULL) {
+  
+  if (!is.null(warmup_dlcm)) {
+    return(warmup_dlcm) # takes precedence
+  }
+  
+  # get default warmup_settings
+  class2domain <- args[["class2domain"]]
+  nitr <- args[["nitr"]]
+  if (identical(warmup_settings, "default")) {
+    if (identical(class2domain, "HET") | identical(class2domain, "het") | (length(unique(class2domain))>1)) {
+      # HET and partially HET default
+      warmup_settings <- list()
+      warmup_settings$nitr <- round(median(c(100, 1000, nitr/20)))
+      warmup_settings$class2domain <- "HOMO"
+    } else {
+      # Other situations have no default
+      warmup_settings = NULL
+    }
+  }
+  
+  if (is.null(warmup_settings)) {
+    return(NULL) # No warmup to do
+  }
+  
+  
+  # use args anywhere warmup_settings is not specified
+  warmup_settings <- c(
+    warmup_settings
+    , args[-which(names(args) %in% c(names(warmup_settings), "warmup_settings", "warmup_dlcm"))]
+  )
+  
+  warmup_dlcm <- do.call(dependentLCM_fit, warmup_settings)
+  
+  return(warmup_dlcm)
 }
 
 
@@ -461,16 +494,16 @@ getStart_class_random_centers <- function(mat, hparams, isWeighted, isPolar) {
     centers[1,] <-mat[sample.integers(x=centers_filter, size=1),]
     distance[,1] <- rowSums(sweep(mat, 2, centers[1,], FUN="!="))
     for (i in seq_len(nclass-1)+1) {
-  	  # choose the center farthest from the current centers
-  	  min_dist <- apply(distance[centers_filter,], 1, min, na.rm=TRUE)
-  	  center_inds <- centers_filter[which(min_dist==max(min_dist))]
-  	  centers[i,] <- mat[sample.integers(x=center_inds, size=1),]
-  	  distance[,i] = rowSums(sweep(mat, 2, centers[i,], FUN="!="))
+      # choose the center farthest from the current centers
+      min_dist <- apply(distance[centers_filter,], 1, min, na.rm=TRUE)
+      center_inds <- centers_filter[which(min_dist==max(min_dist))]
+      centers[i,] <- mat[sample.integers(x=center_inds, size=1),]
+      distance[,i] = rowSums(sweep(mat, 2, centers[i,], FUN="!="))
     }
   } else {
     # Centers entirely at random
-  	centers <-unique(mat[sample.integers(x=centers_filter, size=nclass),])
-  	last_processed = 0
+    centers <-unique(mat[sample.integers(x=centers_filter, size=nclass),])
+    last_processed = 0
     for (j in seq_len(nclass)) {
       
       for (i in last_processed+seq_len(nrow(centers)-last_processed)) {
@@ -478,18 +511,18 @@ getStart_class_random_centers <- function(mat, hparams, isWeighted, isPolar) {
       }
       
       last_processed <- nrow(centers)
-  	  if (last_processed==nclass) {
-  	    break # Done. We have nclass unique centers
-  	  }
+      if (last_processed==nclass) {
+        break # Done. We have nclass unique centers
+      }
       
       # Add more centers since we do not have enough
       center_inds <- centers_filter[apply(distance[centers_filter,], 1, min, na.rm=TRUE) > 0]
       
-  	  centers <- unique(rbind(
-  	    centers
-  		, mat[sample.integers(x=center_inds, size=nclass-nrow(centers)),]
-  		))
-  	}
+      centers <- unique(rbind(
+        centers
+        , mat[sample.integers(x=center_inds, size=nclass-nrow(centers)),]
+      ))
+    }
   }
   
   # Associate observation to nearest class
@@ -514,7 +547,7 @@ getStart_domains <- function(mat, classes, hparams) {
       , function(icol) {
         ix = c(mat[classes==iclass, icol] # actual data
                , seq_len(hparams$item_nlevels[icol])-1 # +1 of each category (avoid zeros)
-               )
+        )
         ithetas = as.vector(table(ix)) / length(ix)
         iout = list(
           items=c(icol-1)
@@ -854,7 +887,7 @@ dlcm.summary <- function(dlcm, nwarmup=NULL) {
   return(c(
     list("thetas_avg"=thetas_avg, "domain_items"=domain_items, "domain_items_all"=domain_items_all, "domain_accept"=domain_accept, "classes"=classes, "class_pi"=class_pi, "thetas_avg_mode"=thetas_avg_mode, "mode_domains"=mode_domains, "first_mode_domain_itr"=first_mode_domain_itr)
     , waic
-    ))
+  ))
 }
 
 #' Calculate likelihood and WAIC

@@ -10,7 +10,8 @@ getStart_bayes_params(
   class_pi = NULL,
   classes = NULL,
   domains = NULL,
-  class_init_method = CLASS_INIT_METHODS[1]
+  class_init_method = CLASS_INIT_METHODS[1],
+  warmup_dlcm = NULL
 )
 }
 \arguments{
@@ -25,6 +26,8 @@ getStart_bayes_params(
 \item{domains}{list. Initial values for domains/probabilites.}
 
 \item{class_init_method}{string. Decides how 'classes' is defaulted if NULL. One of "kmodes" or "random" or "random_centers", "random_centers_polar"}
+
+\item{warmup_dlcm}{list. A past DLCM fit (from dependentLCM_fit). The last iteration of the DLCM is used as the Bayes parameters.}
 }
 \description{
 Generates initial values for bayes parameters

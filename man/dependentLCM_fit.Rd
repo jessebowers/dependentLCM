@@ -21,7 +21,8 @@ dependentLCM_fit(
   classes = NULL,
   domains = NULL,
   class_init_method = CLASS_INIT_METHODS[1],
-  warmup_settings = "default"
+  warmup_settings = "default",
+  warmup_dlcm = NULL
 )
 }
 \arguments{
@@ -62,7 +63,9 @@ thetas=TRUE to do gibbs on response probabilities, domains=TRUE to do metropolis
 
 \item{class_init_method}{string. Decides how 'classes' is defaulted if NULL. One of "kmodes" or "random" or "random_centers", "random_centers_polar"}
 
-\item{warmup_settings}{list. Optionally allows for an extra warmup cycle using different parameters vs the arguments given for the main process. Any parameters in the given list will overwrite the arguments of the same name in the wamrup cycle.}
+\item{warmup_settings}{list. Optionally allows for an extra warmup cycle using different parameters vs the arguments given for the main process. Any parameters in the given list will overwrite the arguments of the same name in the warmup cycle.}
+
+\item{warmup_dlcm}{list. A past DLCM fit (from dependentLCM_fit). The last iteration of the DLCM is used as the Bayes parameters.}
 }
 \value{
 Returns a list with three items. hparams describes the hyperparmeters chosen by the model. These match the arguments input into the function plus any default values. mcmc describes the simulated (fitted) bayes parameter values. warmup describes extra/special warmup iterations using the 'warmup_settings' argument.
