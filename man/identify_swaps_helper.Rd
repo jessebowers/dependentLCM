@@ -5,7 +5,7 @@
 \title{For each iteration, identify which class labels are swapped and should be relabeled.
 See identify_swaps() for procedure.}
 \usage{
-identify_swaps_helper(sim_classes, classes_mode, maxitr)
+identify_swaps_helper(sim_classes, classes_mode, maxitr, nclass)
 }
 \arguments{
 \item{sim_classes}{Integer matrix describing what class each observation belongs to in each iteration. There should be one row per observation and one column per iteration as in dlcm$mcmc$classes.}
@@ -13,6 +13,8 @@ identify_swaps_helper(sim_classes, classes_mode, maxitr)
 \item{classes_mode}{Integer vector describing the most likely (mode) class of each observation.}
 
 \item{maxitr}{integer. How many attempts to make.}
+
+\item{nclass}{integer. Number of classes supported by the DLCM}
 }
 \description{
 For each iteration, identify which class labels are swapped and should be relabeled.

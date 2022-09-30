@@ -1174,10 +1174,9 @@ sim_logprobs <- function(x, pis, thetas) {
 #' @param sim_classes Integer matrix describing what class each observation belongs to in each iteration. There should be one row per observation and one column per iteration as in dlcm$mcmc$classes.
 #' @param classes_mode Integer vector describing the most likely (mode) class of each observation.
 #' @param maxitr integer. How many attempts to make.
+#' @param nclass integer. Number of classes supported by the DLCM
 #' @keywords internal
-identify_swaps_helper <- function(sim_classes, classes_mode, maxitr) {
-  
-  nclass <- dlcm$hparams$nclass
+identify_swaps_helper <- function(sim_classes, classes_mode, maxitr, nclass) {
   
   class_levels <- paste0(seq_len(nclass)-1)
   classes_mode <- factor(classes_mode, levels=class_levels)
@@ -1293,7 +1292,7 @@ apply_swaps_helper <- function(
 #' \item{"nitrs_with_changes"}{= Integer. In how many iterations did we actually change class labels?}
 #' }
 #' @export
-fix_class_label_switching <- function(dlcm, nwarmup, maxitr=3) {
+fix_class_label_switching <- function(dlcm, nwarmup, maxitr=5) {
   
   # we need the most common class of each observation: dlcm$label_swapping$classes
   nclass <- dlcm$hparams$nclass
@@ -1307,7 +1306,7 @@ fix_class_label_switching <- function(dlcm, nwarmup, maxitr=3) {
   nitrs_with_changes <- 0
   for (jitr in seq_len(maxitr)) {
     
-    identify_out <- identify_swaps_helper(sim_classes=dlcm_copy$mcmc$classes, classes_mode=dlcm_copy$label_swapping$classes, maxitr=maxitr)
+    identify_out <- identify_swaps_helper(sim_classes=dlcm_copy$mcmc$classes, classes_mode=dlcm_copy$label_swapping$classes, maxitr=maxitr, nclass=dlcm_copy$hparams$nclass)
     dlcm_copy <- apply_swaps_helper(dlcm=dlcm_copy, identify_out=identify_out, nwarmup = nwarmup)
     
     if (length(unique(identify_out[-seq_len(nwarmup),"valueIsOldClassName_positionIsNewClassIndex_string"])) <= 1) {

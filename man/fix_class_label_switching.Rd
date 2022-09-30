@@ -8,7 +8,7 @@ Warning01: Best for homogeneous DLCMs. Potentially fine for heterogenous DLCMs. 
 Warning02: May not be appropriate if a single class is too small and never showes up as the mode for any observation.
 Warning03: Relabels warmup iterations which may be unnecessary.}
 \usage{
-fix_class_label_switching(dlcm, nwarmup, maxitr = 3)
+fix_class_label_switching(dlcm, nwarmup, maxitr = 5)
 }
 \arguments{
 \item{dlcm}{An dependent latent class model from dependentLCM_fit().}
