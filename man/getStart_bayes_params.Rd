@@ -23,7 +23,23 @@ getStart_bayes_params(
 
 \item{classes}{integer vector size nrow(df). Initial condition for subject classes.}
 
-\item{domains}{list. Initial values for domains/probabilites.}
+\item{domains}{list. Initial values for domains/probabilites. Should be of the form:
+domains = list(
+class1 = list(
+  domain1 = list(
+    items = c(...) # items in this domain
+    , thetas = c(...) # probabilities of each response to these items ordered per dependentLCM::id2pattern()
+  )
+  , domain2 = list(items=c(...), thetas=c(...))
+  , ...
+)
+, class2 = list(
+  domain1 = list(items=c(...), thetas=c(...))
+  , domain2 = list(items=c(...), thetas=c(...))
+  , ...
+)
+, ...
+)}
 
 \item{class_init_method}{string. Decides how 'classes' is defaulted if NULL. One of "kmodes" or "random" or "random_centers", "random_centers_polar"}
 

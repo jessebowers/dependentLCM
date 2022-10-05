@@ -8,7 +8,7 @@ Ignores identifiability restrictions}
 ldomain_prior(x, ndomains, specific_items = FALSE, log = TRUE)
 }
 \arguments{
-\item{x}{numeric vector in log scale}
+\item{x}{IntegerVector. The number of items in each domain. Ok to omit 0's}
 
 \item{ndomains}{Integer. The total number of domains (including empty domains)}
 
@@ -16,8 +16,7 @@ ldomain_prior(x, ndomains, specific_items = FALSE, log = TRUE)
 If FALSE, we look for any domain which produces domains of this size regardless of what specific items they contain.
 IF TRUE, we fix which items are in which domain, and calculate the probability of grouping these specific items together.}
 
-\item{log}{Boolean. If TRUE give probability in log scale.
-Assumes x are logged values. Calculates sum(e^x) and then converts back to log scale}
+\item{log}{Boolean. If TRUE give probability in log scale.}
 }
 \description{
 What is the prior probability of this choice of domains?

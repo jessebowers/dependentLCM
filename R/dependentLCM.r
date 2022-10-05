@@ -324,7 +324,23 @@ getStart_matrix <- function(df) {
 #' @param hparams list. List of hyperparameters from getStart_hparams.
 #' @param class_pi numeric vector size nclass. Initial condition for bayes parameter pi.
 #' @param classes integer vector size nrow(df). Initial condition for subject classes.
-#' @param domains list. Initial values for domains/probabilites.
+#' @param domains list. Initial values for domains/probabilites. Should be of the form:
+#' domains = list(
+#' class1 = list(
+#'   domain1 = list(
+#'     items = c(...) # items in this domain
+#'     , thetas = c(...) # probabilities of each response to these items ordered per dependentLCM::id2pattern()
+#'   )
+#'   , domain2 = list(items=c(...), thetas=c(...))
+#'   , ...
+#' )
+#' , class2 = list(
+#'   domain1 = list(items=c(...), thetas=c(...))
+#'   , domain2 = list(items=c(...), thetas=c(...))
+#'   , ...
+#' )
+#' , ...
+#' )
 #' @param class_init_method string. Decides how 'classes' is defaulted if NULL. One of "kmodes" or "random" or "random_centers", "random_centers_polar"
 #' @param warmup_dlcm list. A past DLCM fit (from dependentLCM_fit). The last iteration of the DLCM is used as the Bayes parameters.
 #' @keywords internal
@@ -642,8 +658,6 @@ dlcm2paramargs <- function(dlcm, iter=NULL) {
 #' If FALSE, we look for any domain which produces domains of this size regardless of what specific items they contain.
 #' IF TRUE, we fix which items are in which domain, and calculate the probability of grouping these specific items together.
 #' @param log Boolean. If TRUE give probability in log scale.
-#' Assumes x are logged values. Calculates sum(e^x) and then converts back to log scale
-#' @param x numeric vector in log scale
 #' @export
 ldomain_prior <- function(x, ndomains, specific_items=FALSE, log=TRUE) {
   
