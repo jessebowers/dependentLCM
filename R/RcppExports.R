@@ -588,3 +588,14 @@ itemid2patterns <- function(pattern_ids, items_ids, item_nlevels) {
     .Call(`_dependentLCM_itemid2patterns`, pattern_ids, items_ids, item_nlevels)
 }
 
+#' @name get_which_strs
+#' @title get_which_strs
+#' @description Helper function. For each column of matrix x, identify which cells are true with a string.
+#' Same as R code: apply(x, 2, function(x) paste0(c("", which(x), ""), collapse=",")). Implemented in C++ to improve speed.
+#' @param x matrix. One observation per column and item (boolean) item per row.
+#' @return Returns a vector of strings. For each column, give the indices which are TRUE. For instance column [TRUE,FALSE,TRUE,FALSE,FALSE,TRUE] gives ",1,3,6,".
+#' @keywords internal
+get_which_strs <- function(x) {
+    .Call(`_dependentLCM_get_which_strs`, x)
+}
+

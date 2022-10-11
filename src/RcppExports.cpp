@@ -62,12 +62,24 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// get_which_strs
+Rcpp::StringVector get_which_strs(Rcpp::LogicalMatrix x);
+RcppExport SEXP _dependentLCM_get_which_strs(SEXP xSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::LogicalMatrix >::type x(xSEXP);
+    rcpp_result_gen = Rcpp::wrap(get_which_strs(x));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_dependentLCM_is_identifiable", (DL_FUNC) &_dependentLCM_is_identifiable, 3},
     {"_dependentLCM_dependentLCM_fit_cpp", (DL_FUNC) &_dependentLCM_dependentLCM_fit_cpp, 4},
     {"_dependentLCM_id2pattern", (DL_FUNC) &_dependentLCM_id2pattern, 2},
     {"_dependentLCM_itemid2patterns", (DL_FUNC) &_dependentLCM_itemid2patterns, 3},
+    {"_dependentLCM_get_which_strs", (DL_FUNC) &_dependentLCM_get_which_strs, 1},
     {NULL, NULL, 0}
 };
 

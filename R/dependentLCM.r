@@ -187,14 +187,9 @@ dependentLCM_fit <- function(
   mode(dlcm$domains_patterns) <- "integer"
   
   # Supplemental
-  domains_items <- apply(
-    dlcm$domains_patterns > -1
-    , 2, function(x) paste0(c("", which(x), ""), collapse=",")
-  )
+  domains_items <- get_which_strs(dlcm$domains_patterns > -1)
   domains_nitems <- as.integer(colSums(dlcm$domains_patterns > -1))
   domains_class2domain <- all_params$hparams$class2domain[dlcm$domains_id["class",,drop=TRUE]+1]
-  domains_domain_id <- as.data.frame(t(rbind(dlcm$domains_id, domains_class2domain)))
-  domains_domain_id <- do.call(paste, domains_domain_id) # paste rows together, faster than apply
   dlcm$domains_id["itr",] <- dlcm$domains_id["itr",] + 1L # start at 1
   dlcm$.Random.seed <- .Random.seed_start
   

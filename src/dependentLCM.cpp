@@ -2200,3 +2200,35 @@ Rcpp::IntegerVector itemid2patterns(const Rcpp::IntegerVector& pattern_ids, cons
   
   return patterns;
 }
+
+//' @name get_which_strs
+//' @title get_which_strs
+//' @description Helper function. For each column of matrix x, identify which cells are true with a string.
+//' Same as R code: apply(x, 2, function(x) paste0(c("", which(x), ""), collapse=",")). Implemented in C++ to improve speed.
+//' @param x matrix. One observation per column and item (boolean) item per row.
+//' @return Returns a vector of strings. For each column, give the indices which are TRUE. For instance column [TRUE,FALSE,TRUE,FALSE,FALSE,TRUE] gives ",1,3,6,".
+//' @keywords internal
+// [[Rcpp::export]]
+Rcpp::StringVector get_which_strs(Rcpp::LogicalMatrix x) {
+  std::string astring;
+  int nrows = x.nrow();
+  int ncols = x.ncol();
+  Rcpp::StringVector out (ncols);
+  bool is_first;
+  
+  for (int icol=0; icol<ncols; icol++) {
+    astring = "";
+    
+    for (int irow=0; irow<nrows; irow++) {
+      if (x(irow, icol)==true) {
+        astring += "," + std::to_string(irow+1); // is this the fastest way to do this?
+      }
+    }
+    
+    if (astring.size()>0) {
+      astring += ",";
+    }
+    out[icol] = astring;
+  }
+  return(out);
+}
