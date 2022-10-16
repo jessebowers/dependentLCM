@@ -807,7 +807,8 @@ sample.integers <- function(x, size, ...) {
 #' \item{"domain_items_all"}{= What are the most common domain structures? The column 'domains_merged' describes the domain structure as a string listing each item. Bars "|" separate domains, and commas "," separate items within a domain. For (partially) heterogeneous DLCMs, pluses "+" separate groups of classes (class2domain's) which may have different domain structures. Column 'n' gives the number of post-warmup iterations this domain structure appeared in.}
 #' \item{"mode_domains"}{= Describes the single most common domain structure. Each row indicates one domain.}
 #' \item{"domain_accept"}{= How often our metropolis step accepts its proposal. See dependentLCM_fit > domains_accept for details.}
-#' \item{"classes"}{=For each subject this vector gives the most common class that observation belongs to.}
+#' \item{"classes"}{= For each subject this vector gives the most common class that observation belongs to.}
+#' \item{"classes_cnts"}{= For each subject, in what number of iterations was this subject in each class?}
 #' \item{"classes_pi"}{=The average prior probability of each class.}
 #' }
 #' @export
@@ -883,6 +884,23 @@ dlcm.summary <- function(dlcm, nwarmup=NULL) {
     )
   }
   
+  { # Summarize Classes
+    
+    classes_cnts <- apply(
+      dlcm$mcmc$classes[,-seq_len(nwarmup)], 1
+      , function(iclasses, class_vec_default) {
+        table_cnts <- table(iclasses)
+        out <- class_vec_default
+        out[names(table_cnts)] <- table_cnts
+        return(out)
+      }
+      , class_vec_default = setNames(rep(0, dlcm$hparams$nclass), paste0(seq_len(dlcm$hparams$nclass)-1))
+    )
+    rownames(classes_cnts) <- paste0("class", rownames(classes_cnts))
+    
+    classes <- apply(classes_cnts, 2, which.max) - 1 # unname(apply(dlcm$mcmc$classes[,-seq_len(nwarmup)], 1, getMode))
+  }
+  
   # domain_nitems <- table((dlcm$mcmc$domains %>% dplyr::filter(pattern_id==0, itr > nwarmup))$nitems)
   
   domain_accept <- table(dlcm$mcmc$domains_accept[, , -seq_len(nwarmup)])
@@ -890,11 +908,10 @@ dlcm.summary <- function(dlcm, nwarmup=NULL) {
   waic <- dlcm.get_waic(dlcm, itrs=nwarmup:dlcm$mcmc$maxitr)
   names(waic) <- paste0("waic_", names(waic))
   
-  classes <- unname(apply(dlcm$mcmc$classes[,-seq_len(nwarmup)], 1, getMode))
   class_pi = rowMeans(dlcm$mcmc$class_pi[,-seq_len(nwarmup), drop=FALSE])
   
   return(c(
-    list("thetas_avg"=thetas_avg, "domain_items"=domain_items, "domain_items_all"=domain_items_all, "domain_accept"=domain_accept, "classes"=classes, "class_pi"=class_pi, "thetas_avg_mode"=thetas_avg_mode, "mode_domains"=mode_domains, "first_mode_domain_itr"=first_mode_domain_itr)
+    list("thetas_avg"=thetas_avg, "domain_items"=domain_items, "domain_items_all"=domain_items_all, "domain_accept"=domain_accept, "classes"=classes, "class_pi"=class_pi, "thetas_avg_mode"=thetas_avg_mode, "mode_domains"=mode_domains, "first_mode_domain_itr"=first_mode_domain_itr, "classes_cnts"=classes_cnts)
     , waic
   ))
 }
@@ -1284,11 +1301,12 @@ apply_swaps_helper <- function(
 
 #' Identifies and fixes label swapping among classes. 
 #' For each iteration, it relabels class to most align with the overall most common (mode) class of each observation.
-#' Warning01: Best for homogeneous DLCMs. Potentially fine for heterogenous DLCMs. Not appropriate for *partially* heterogeneous DLCMs.
-#' Warning02: May not be appropriate if a single class is too small and never showes up as the mode for any observation.
+#' Warning01: Best for homogeneous DLCMs. Potentially fine for heterogenous DLCMs (label swapping allowed, but not informed by domains here). Not appropriate for *partially* heterogeneous DLCMs.
+#' Warning02: May not be appropriate if a single class is too small and therefore never shows up as the mode for any observation.
 #' Warning03: Relabels warmup iterations which may be unnecessary.
 #' @param dlcm An dependent latent class model from dependentLCM_fit().
 #' @param nwarmup integer. Which iterations are warmup iterations?
+#' @param initial_target_classes integer vector with one value per observation. What set of class labels should we try to mirror, initially? If blank defaults to the most common class for each observation.
 #' @param maxitr integer. How many attempts should we make to correct label swapping?
 #' @return Returns an updated DLCM with corrected classes. Summary information (e.g. dlcm.summary()) is not modified. 
 #' Information on what labels were swapped is given in output$label_swapping.
@@ -1301,12 +1319,14 @@ apply_swaps_helper <- function(
 #' \item{"nitrs_with_changes"}{= Integer. In how many iterations did we actually change class labels?}
 #' }
 #' @export
-fix_class_label_switching <- function(dlcm, nwarmup, maxitr=5) {
+fix_class_label_switching <- function(dlcm, nwarmup, initial_target_classes=NULL, maxitr=5) {
   
-  # we need the most common class of each observation: dlcm$label_swapping$classes
+  if (is.null(initial_target_classes)) {
+    initial_target_classes <- unname(apply(dlcm$mcmc$classes[,-seq_len(nwarmup)], 1, getMode))
+  }
   nclass <- dlcm$hparams$nclass
   dlcm$label_swapping <- list(
-    classes = unname(apply(dlcm$mcmc$classes[,-seq_len(nwarmup)], 1, getMode))
+    classes = initial_target_classes
     , valueIsNewClassName_positionIsOldClassIndex = matrix(data=seq_len(nclass)-1, nrow=nclass, ncol=ncol(dlcm$mcmc$classes)) # i.e. valueIsNewClassName_positionIsOldClassIndex
   )
   dlcm_copy <- dlcm
