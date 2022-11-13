@@ -1,120 +1,6 @@
 // [[Rcpp::plugins(cpp11)]]
 #include <Rcpp.h>
-
-#define TROUBLESHOOT 0
-
-#if TROUBLESHOOT == 2
-#include <chrono>
-typedef std::chrono::time_point<std::chrono::high_resolution_clock> ttime;
-#endif
-
-/*****************************************************
- ****** TROUBLESHOOT
- *****************************************************/
-
-#if TROUBLESHOOT == 1
-// Print progress
-
-//' @name trouble_start
-//' @title trouble_start
-//' @description When troubleshooting, run this at start of all functions. Tracks progress.
-//' @param function_name name of the function in question
-//' @returns An ID identifying this specific execution of this specific function
-//' @keywords internal
-unsigned long long int trouble_start(std::string function_name) {
-  // Print progress (good for troubleshooting fatal errors when paired with R::sink)
-  Rcpp::Rcout << function_name << " START"<< "\n";
-  return 0;
-}
-
-//' @name trouble_end
-//' @title trouble_end
-//' @description When troubleshooting, run this at end of all functions. Concludes tracking of progress
-//' @param trouble_id ID identifying the executing of the current function taken from trouble_start
-//' @param function_name name of the current function
-//' @keywords internal
-void trouble_end(unsigned long long int trouble_id, std::string function_name) {
-  // Print progress (good for troubleshooting fatal errors when paired with R::sink)
-  Rcpp::Rcout << function_name << " END"<< "\n";
-}
-
-//' @name trouble_init
-//' @title trouble_init
-//' @description When troubleshooting, initializes globals
-//' @keywords internal
-void trouble_init() {
-  // nothing
-}
-
-#elif TROUBLESHOOT == 2
-// Save runtimes
-
-// define globals
-unsigned long long int _trouble_id = 0;
-std::map<unsigned long long int, ttime> _trouble_start_times;
-std::vector<std::string> TROUBLE_FUNCTION_NAMES = {"colMax", "rDirichlet", "rCategorical", "count_unique", "lbeta", "which", "count_integers", "map_get", "minimum", "id2pattern", "insertSorted", "mmult", "equal_to_adjmat", "helper_compare_adjmat", "adjmat_to_equal", "product", "powl", "Hyperparameter::set_hparams #V1", "Hyperparameter::set_hparams #V2", "Hyperparameter::set_dataInfo", "Hyperparameter::print", "DomainCount::set_initial #V1", "DomainCount::set_pattern2id_map", "DomainCount::set_initial #V2", "DomainCount::reduce_items", "DomainCount::drop_item", "DomainCount::pattern2id", "DomainCount::get_ltheta", "DomainCount::id2pattern #V1", "DomainCount::id2pattern #V2", "DomainCount::countAdd", "DomainCount::list2domains", "DomainCount::copy", "DomainCount::itemsid_calc", "DomainCount::theta_alpha", "DomainCount::getloglik_marginal", "DomainCount::print", "BayesParameter::set_initial #V1", "BayesParameter::set_initial #V2", "BayesParameter::class_lprob #V1", "BayesParameter::class_lprob #V2", "BayesParameter::set_class_loglik", "BayesParameter::domain_resetCounts #V1", "BayesParameter::domain_resetCounts #V2", "BayesParameter::domain_addCount #V1", "BayesParameter::domain_addCount #V2", "BayesParameter::domain_addCounts #V1", "BayesParameter::domain_addCounts #V2", "BayesParameter::item2domainid_calc", "BayesParameter::domain_prior", "BayesParameter::get_superdomains", "BayesParameter::is_identifiable #V1", "BayesParameter::is_identifiable #V2", "BayesParameter::domain_id_new", "BayesParameter::class_pi_args", "BayesParameter::class_pi_next", "BayesParameter::classes_next", "BayesParameter::thetas_next", "BayesParameter::domain_proposal", "BayesParameter::domain_accept", "BayesParameter::domain_next", "BayesParameter::domains_next", "Archive::set_initial", "Archive::domains2mat", "Archive::add", "BayesContainer::set_initial", "BayesContainer::run", "BayesContainer::run_init", "dependentLCM_fit_cpp", "is_identifiable"};
-Rcpp::NumericVector _trouble_runtimes = Rcpp::NumericVector::create();
-Rcpp::IntegerVector _trouble_runcounts = Rcpp::IntegerVector::create();
-
-// see trouble_start above
-unsigned long long int trouble_start(std::string function_name) {
-  // Track runtime
-  _trouble_runcounts(function_name) = _trouble_runcounts(function_name) + 1;
-  _trouble_id += 1;
-  _trouble_start_times[_trouble_id] = std::chrono::high_resolution_clock::now();
-  return _trouble_id;
-}
-
-// see trouble_end above
-void trouble_end(unsigned long long int trouble_id, std::string function_name) {
-  // Track runtime
-  ttime end_time = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double, std::milli> ms_double = end_time - _trouble_start_times[trouble_id];
-  _trouble_runtimes(function_name) = _trouble_runtimes(function_name) + ms_double.count();
-  _trouble_start_times.erase(trouble_id);
-}
-
-// see trouble_init above
-void trouble_init() {
-  _trouble_id = 0;
-  
-  // Reset times&counts
-  int nfuns = int(TROUBLE_FUNCTION_NAMES.size());
-  _trouble_runtimes = Rcpp::NumericVector(nfuns);
-  _trouble_runcounts = Rcpp::IntegerVector(nfuns);
-  _trouble_runtimes.names() = TROUBLE_FUNCTION_NAMES;
-  _trouble_runcounts.names() = TROUBLE_FUNCTION_NAMES;
-}
-#endif
-
-#if TROUBLESHOOT > 0
-// Wrap troubleshooting functions for compiler
-#define TROUBLE_START(str) std::string trouble_function_name = str; unsigned long long int trouble_id = trouble_start(trouble_function_name);
-#define TROUBLE_END trouble_end(trouble_id, trouble_function_name);
-#define TROUBLE_INIT trouble_init();
-
-#else
-// else if TROUBLSHOOT=0 then ignore these functions
-#define TROUBLE_START(str)
-#define TROUBLE_END
-#define TROUBLE_INIT
-
-#endif
-
-//' @name trouble_list
-//' @title trouble_list
-//' @description Used to output troubleshooting information
-//' @keywords internal
-Rcpp::List trouble_list() {
-#if TROUBLESHOOT == 2
-  return Rcpp::List::create(
-    Rcpp::Named("runtimes") = _trouble_runtimes
-  , Rcpp::Named("runcounts") = _trouble_runcounts
-  );
-#else
-  return Rcpp::List::create();
-#endif
-}
+#include "troubleshoot.h"
 
 /*****************************************************
  ****** UTILITIES
@@ -2125,7 +2011,7 @@ Rcpp::List dependentLCM_fit_cpp(Rcpp::IntegerMatrix& x_in, Rcpp::List hparams_li
     , Rcpp::Named("maxitr") = bcontainer.archive.maxitr
     , Rcpp::Named("domains_accept") = bcontainer.archive.domains_accept
     , Rcpp::Named("class_loglik") = bcontainer.archive.class_loglik
-    , Rcpp::Named("troubleshooting") = trouble_list()
+    , Rcpp::Named("troubleshooting") = TROUBLE_LIST
   );
 }
 
@@ -2214,7 +2100,6 @@ Rcpp::StringVector get_which_strs(Rcpp::LogicalMatrix x) {
   int nrows = x.nrow();
   int ncols = x.ncol();
   Rcpp::StringVector out (ncols);
-  bool is_first;
   
   for (int icol=0; icol<ncols; icol++) {
     astring = "";
