@@ -106,9 +106,3 @@ Rcpp::List trouble_list_time() {
 }
 
 #endif
-
-
-// [[Rcpp::export]]
- double timesTwo(double x) { // tk
-  return x * 2;
-}
