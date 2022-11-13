@@ -701,8 +701,15 @@ int DomainCount::pattern2id(const vectype& xobs) {
 double DomainCount::get_ltheta(const Rcpp::IntegerMatrix::ConstRow& xobs) {
   TROUBLE_START(("DomainCount::get_ltheta"));
   double out;
+  int id;
+  
   if (npatterns > 0) {
-    out = lthetas(pattern2id(xobs));
+    std::string trouble_function_name2 = "DomainCount::get_ltheta: id = pattern2id(xobs)"; unsigned long long int trouble_id2 = trouble_start_time(trouble_function_name2);
+    id = pattern2id(xobs);
+    trouble_end_time(trouble_id2, trouble_function_name2);
+    std::string trouble_function_name3 = "DomainCount::get_ltheta: out = lthetas(id);"; unsigned long long int trouble_id3 = trouble_start_time(trouble_function_name3);
+    out = lthetas(id);
+    trouble_end_time(trouble_id3, trouble_function_name3);
   } else {
     out = 0; // log 1
   }
