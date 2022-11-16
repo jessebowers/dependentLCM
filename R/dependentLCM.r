@@ -23,7 +23,7 @@ CLASSPI_ALPHA = 1
 THETA_ALPHA = 1
 CLASS_INIT_METHODS = c("random_centers_polar", "random_centers", "random", "kmodes")
 DOMAIN_PROPOSAL_EMPTY = 0.3
-STEPS_ACTIVE = c("thetas"=TRUE, "domains"=TRUE, "class_pi"=TRUE, "classes"=TRUE, "identifiable"=TRUE)
+STEPS_ACTIVE = c("thetas"=TRUE, "domains"=TRUE, "class_pi"=TRUE, "classes"=TRUE, "identifiable"=TRUE, "classLikelihood"=TRUE)
 DOMAIN_MAXITEMS = 10
 CLASS2DOMAIN_FUNS = list(
   "HOMO" = function(nclass) rep(0, nclass)
@@ -32,7 +32,6 @@ CLASS2DOMAIN_FUNS = list(
 CLASS2DOMAINS = names(CLASS2DOMAIN_FUNS)
 
 #' Fits a bayesian dependent LCM model
-#' @param nitr integer. Number of iterations to run the bayes MCMC
 #' @inheritParams getStart_hparams
 #' @inheritParams getStart_bayes_params
 #' @inheritParams doWarmup
@@ -42,8 +41,7 @@ CLASS2DOMAINS = names(CLASS2DOMAIN_FUNS)
 #' \itemize{
 #' \item{"class_pi"}{=A matrix describing the prior class probabilities of each class in each MCMC iteration. It contains one row per class one column per iteration, and each cell contains the prior probability of a subject being in that class.}
 #' \item{"classes"}{=A matrix describing what class each subject belongs to. It contains one row per subject, one column per MCMC iteration, and each cell identifies the class of that subject in that iteration.}
-#' \item{"next_itr"}{=Unimportant. Should equal maxitr+1.}
-#' \item{"maxitr"}{=Gives the total number of iterations processed including warmup iterations}
+#' \item{"nitr"}{=Gives the total number of iterations processed including warmup iterations}
 #' \item{"domains_accept"}{=Each MCMC iteration, we attempt to change the domain structure #domain_nproposals times with a metropolis step. This 3-dimensional array describes whether the proposed change was accepted or rejected. A value of -2 indicates the proposal was rejected due to identifiability or max item constraints. A value of -1 or 2 indicates the proposed change is (equivalent to) no change. A value of 0 indicates the proposal was rejected. A value of 1 indicates the proposal was accepted.. The dimensions of the array are as follows. The third dimension has one slice per iteration. The first dimension gives one slice per 'domain_nproposals'. The second dimension has between 1 and nclass slices. A homogeneous DLCM has 1 slice, a heterogeneous DLCM has nclass slices, and a partially heterogeneous DLCM may be in-between.}
 #' \item{"class_loglik"}{=A 3-dimensional array. The first dimension has one slice per class. The second dimension has one slice per subject/observation. The third dimension has one slice per MCMC iteration. Each cell contains the log likelihood that we would observe the response pattern given by this subject, if the subject was in this class, based on the parameters in this iteration.}
 #' \item{"troubleshooting"}{=Used for investigationg bugs. Should be empty.}
@@ -104,6 +102,7 @@ dependentLCM_fit <- function(
     # Misc
     , class_init_method = CLASS_INIT_METHODS[1]
     , warmup_settings = "default", warmup_dlcm=NULL
+    , collapse_classes_itrs = 0
 ) {
   
   #
@@ -128,9 +127,9 @@ dependentLCM_fit <- function(
   }
   
   hparams <- getStart_hparams(
-    df=mat
+    nitr=nitr, df=mat
     # Hyperparameters
-    ,nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, domain_proposal_empty=domain_proposal_empty, domain_nproposals=domain_nproposals, steps_active=steps_active
+    ,nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, domain_proposal_empty=domain_proposal_empty, domain_nproposals=domain_nproposals, steps_active=steps_active, collapse_classes_itrs=collapse_classes_itrs
   )
   
   warmup_dlcm <- doWarmup(
@@ -160,7 +159,7 @@ dependentLCM_fit <- function(
   #
   
   datetimes <- c(datetimes, "mcmc_start"=Sys.time())
-  dlcm = dependentLCM_fit_cpp(x=(all_params$mat),hparams_list=all_params$hparams, params_list=all_params$bayesparams, nitr=nitr)
+  dlcm = dependentLCM_fit_cpp(x=(all_params$mat),hparams_list=all_params$hparams, params_list=all_params$bayesparams)
   datetimes <- c(datetimes, "mcmc_end"=Sys.time())
   
   #
@@ -230,6 +229,7 @@ dependentLCM_fit <- function(
 
 #' Generate hyperparameters
 #' Generate a list of hyperparameters, adding default values when necessary
+#' @param nitr integer. Number of iterations to run the bayes MCMC
 #' @param df dataframe. Raw data you are fitting with all assumed to be factors. Assumes no missing data (no NAs).
 #' @param nitems integer. Number of columns of df.
 #' @param nclass integer. Number of subject latent classes
@@ -242,15 +242,13 @@ dependentLCM_fit <- function(
 #' @param domain_proposal_empty numeric. Sets how often the domain metropolis proposal function pairs a nonempty domain with an empty domain.
 #' @param domain_nproposals Sets how many times the domain metropolis propsal function is called each iteration
 #' @param steps_active Named boolean vector of what actions to take during mcmc. If mcmc is skipped then initial values are kept as fixed.
-#' thetas=TRUE to do gibbs on response probabilities, domains=TRUE to do metropolis on domains, class_pi=TRUE to do gibbs on class prior, classes=TRUE to do gibbs on class membership, identifiable=TRUE to check generic identifiability conditions of domains
-#' "constant" for theta~Dirichlet(theta_alpha * rep(1, npatterns)). Produces domains of 1-4 items but typically not larger.
-#' "log" for theta~Dirichlet(theta_alpha * ln(sum(npattens_i))/ln(npatterns) rep(1, npatterns))
-#' "average" [depreciated] for theta~Dirichlet(theta_alpha * sum(npattens_i)/npatterns rep(1, npatterns)). Unstable for large domains
+#' thetas=TRUE to do gibbs on response probabilities, domains=TRUE to do metropolis on domains, class_pi=TRUE to do gibbs on class prior, classes=TRUE to do gibbs on class membership, identifiable=TRUE to check generic identifiability conditions of domains, classLikelihood=TRUE to get the likelihood that each observation is in each class.
+#' @param collapse_classes_itrs integer. Which iterations should used collasped Gibbs when sampling class membership? This allows collapsing on class prior and response probability when evaluating class. The first collapse_classes_itrs (integer) iterations are collapsed.
 #' @keywords internal
 getStart_hparams <- function(
-    df=NULL, nitems=NULL
+    nitr, df=NULL, nitems=NULL
     # Hyperparameters
-    ,nclass=NCLASS, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_nproposals=NULL, steps_active=STEPS_ACTIVE
+    ,nclass=NCLASS, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_nproposals=NULL, steps_active=STEPS_ACTIVE, collapse_classes_itrs=0
 ) {
   # Purpose: Add default hyperparameters
   
@@ -287,14 +285,13 @@ getStart_hparams <- function(
     domain_nproposals <- nitems
   }
   
-  
   # steps_active (fill in missing values)
   steps_active_fn = STEPS_ACTIVE
   steps_active_fn[names(steps_active)] = steps_active
   
   return(list(
-    nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, nitems = nitems, item_nlevels = item_nlevels, nclass2domain = nclass2domain, domain_proposal_empty=domain_proposal_empty, domain_nproposals=domain_nproposals, steps_active = steps_active_fn
-    , theta_alpha_funname = "constant"
+    nitr=nitr, nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, nitems = nitems, item_nlevels = item_nlevels, nclass2domain = nclass2domain, domain_proposal_empty=domain_proposal_empty, domain_nproposals=domain_nproposals, steps_active = steps_active_fn
+    , theta_alpha_funname = "constant", collapse_classes_itrs = collapse_classes_itrs
   ))
 }
 
@@ -607,7 +604,7 @@ check_params <- function(all_params) {
 #' @param iter which iteration to pull values from (by default last itration)
 #' @keywords internal
 dlcm2paramargs <- function(dlcm, iter=NULL) {
-  iter <- dlcm$mcmc$maxitr
+  iter <- dlcm$hparams$nitr
   nitems <- dlcm$hparams$nitems
   
   domains_mat <- dlcm$mcmc$domains %>% dplyr::filter(itr == iter)
@@ -815,7 +812,7 @@ sample.integers <- function(x, size, ...) {
 dlcm.summary <- function(dlcm, nwarmup=NULL) {
   
   if (is.null(nwarmup)) {
-    nwarmup = floor(min(c(1000, dlcm$mcmc$maxitr/2)))
+    nwarmup = floor(min(c(1000, dlcm$hparams$nitr/2)))
   }
   
   { # Summarize most common domain structures
@@ -905,7 +902,7 @@ dlcm.summary <- function(dlcm, nwarmup=NULL) {
   
   domain_accept <- table(dlcm$mcmc$domains_accept[, , -seq_len(nwarmup)])
   
-  waic <- dlcm.get_waic(dlcm, itrs=nwarmup:dlcm$mcmc$maxitr)
+  waic <- dlcm.get_waic(dlcm, itrs=nwarmup:dlcm$hparams$nitr)
   names(waic) <- paste0("waic_", names(waic))
   
   class_pi = rowMeans(dlcm$mcmc$class_pi[,-seq_len(nwarmup), drop=FALSE])
@@ -926,7 +923,7 @@ dlcm.get_waic <- function(this_sim, itrs=NULL) {
   
   if (is.null(itrs)) {
     # default in all iterations
-    itrs = seq_len(this_sim$mcmc$maxitr)
+    itrs = seq_len(this_sim$hparams$nitr)
   }
   
   #
@@ -998,7 +995,7 @@ dlcm.get_waic <- function(this_sim, itrs=NULL) {
 theta_item_probs <- function(items, this_sim, itrs=NULL, merge_itrs=TRUE, classes=NULL) {
   
   if (is.null(itrs)) {
-    itrs <- seq_len(this_sim$mcmc$maxitr)
+    itrs <- seq_len(this_sim$hparams$nitr)
   }
   
   class_filter <- TRUE
