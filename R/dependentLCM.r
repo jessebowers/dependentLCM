@@ -1093,6 +1093,65 @@ get_class_probs <- function(dlcm) {
   return(exp(obsLogLiks))
 }
 
+#' For each iteration, calculate the prior probabilities of each parameter and conditional probability of our responses
+#' @param dlcm Dependent latent class model outptut from dependentLCM_fit
+#' @export
+get_jointLikelihood <- function(dlcm) {
+  
+  # Calculate likelihood for each observation
+  obsLogLiks <- sweep(dlcm$mcmc$class_loglik[,,, drop=FALSE]
+                      , c(1,3) # Include pi. Repeat for each observation (2)
+                      , log(dlcm$mcmc$class_pi[,, drop=FALSE]), "+")
+  obsLogLiks <- apply(obsLogLiks, c(2,3), expSumLog)
+  obsLogLiks_agg <- apply(obsLogLiks, 2, sum)
+  
+  domain_prior <- (
+    dlcm$mcmc$domains
+    %>% filter(pattern_id==0, class==0)
+    %>% group_by(itr)
+    %>% summarize(
+      nitems_list=list(nitems)
+      , domain_lprior=ldomain_prior(x=nitems, ndomains=dlcm$hparams$ndomains, specific_items=TRUE, log=TRUE)
+      , .groups="drop"
+    ))
+  
+  pi_prior <- log(apply(dlcm$mcmc$class_pi, 2, gtools::ddirichlet, alpha=dlcm$hparams$classPi_alpha*rep(1, dlcm$hparams$nclass)))
+  
+  thetas_prior <- (
+    dlcm$mcmc$domains
+    %>% group_by(itr, domain)
+    %>% summarize(
+      theta_lprior=LaplacesDemon::ddirichlet(x=prob, alpha=dlcm$hparams$theta_alpha*rep(1, n()), log=TRUE)
+      , .groups="drop"
+    )
+  )
+  thetas_prior_agg <- (
+    thetas_prior
+    %>% group_by(itr)
+    %>% summarize(theta_lprior=sum(theta_lprior))
+  )
+  
+  joint_loglikelihood <- data.frame(
+    itr = domain_prior$itr
+    , domain_lprior=domain_prior$domain_lprior
+    , pi_lprior=pi_prior
+    , thetas_lprior = thetas_prior_agg$theta_lprior
+    , obs_lprob = obsLogLiks_agg
+  )
+  joint_loglikelihood$ltotal <- rowSums(joint_loglikelihood[,c("domain_lprior", "pi_lprior", "thetas_lprior", "obs_lprob")])
+  joint_loglikelihood$lpriors <- joint_loglikelihood$ltotal - joint_loglikelihood$obs_lprob
+  domain_strs <- (
+    dlcm$mcmc$domains_merged
+    %>% dplyr::group_by(itr) 
+    # %>% dplyr::arrange(class2domain) # should already be ordered 
+    %>% dplyr::summarize(domains_merged=paste0(domains_merged, collapse="+"))
+    %>% .[,"domains_merged"]
+  )
+  joint_loglikelihood$domain <- domain_strs$domains_merged
+  
+  return(joint_loglikelihood)
+}
+
 
 ##############
 ############## SIMULATION
