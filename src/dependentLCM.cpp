@@ -340,7 +340,7 @@ int powl(int x, int p) {
 //' @param item_nlevels Vector with levels of items
 //' @export
 // [[Rcpp::export]]
-bool is_identifiable(Rcpp::IntegerVector& item2superdomainid, int nclass, Rcpp::IntegerVector& item_nlevels) {
+bool is_identifiable(const Rcpp::IntegerVector& item2superdomainid, int nclass, const Rcpp::IntegerVector& item_nlevels) {
   TROUBLE_START(("is_identifiable"));
   
   int i;
@@ -541,29 +541,29 @@ public:
   Rcpp::IntegerVector counts; // number of times each pattern appears in the data
   
 public:
-  void set_initial(Rcpp::IntegerVector& items_in, Hyperparameter& hparams, const Rcpp::NumericVector& lthetas_in = Rcpp::NumericVector(0));
-  void set_initial(Rcpp::List list_domain, Hyperparameter& hparams);
-  static std::vector<std::map<int,  DomainCount> > list2domains(Rcpp::List list_list_domains, Hyperparameter& hparams);
-  void set_pattern2id_map(Hyperparameter& hparams);
+  void set_initial(Rcpp::IntegerVector& items_in, const Hyperparameter& hparams, const Rcpp::NumericVector& lthetas_in = Rcpp::NumericVector(0));
+  void set_initial(Rcpp::List list_domain, const Hyperparameter& hparams);
+  static std::vector<std::map<int,  DomainCount> > list2domains(Rcpp::List list_list_domains, const Hyperparameter& hparams);
+  void set_pattern2id_map(const Hyperparameter& hparams);
   
 public:
   template <typename vectype> int pattern2id(const vectype& xobs);
   Rcpp::IntegerVector id2pattern(int id);
-  int id2altid(int id, Hyperparameter& hparams);
+  int id2altid(int id, const Hyperparameter& hparams);
   int itemsid_calc();
   int ndomainitems_calc() {return items.size();}; // number of items in this domain
   int nitems_calc() {return pattern2id_map.size();}; // number of items in the data
   
 public:
   double get_ltheta(const Rcpp::IntegerMatrix::ConstRow& xobs); // maybe switch to template
-  float theta_alpha_fun(Hyperparameter& hparams);
-  float getloglik_marginal(Hyperparameter& hparams);
+  float theta_alpha_fun(const Hyperparameter& hparams);
+  float getloglik_marginal(const Hyperparameter& hparams);
   
 public:
   void countReset();
   void countAdd(const Rcpp::IntegerMatrix::ConstRow& xobs);
-  void reduce_items(Rcpp::IntegerVector items_new, Hyperparameter& hparams);
-  void drop_item(int item, Hyperparameter& hparams);
+  void reduce_items(Rcpp::IntegerVector items_new, const Hyperparameter& hparams);
+  void drop_item(int item, const Hyperparameter& hparams);
   
 public:
   DomainCount copy();
@@ -577,7 +577,7 @@ public:
 //' @param hyparams Hyperparmeters
 //' @param lthetas_in Log probablities of each response pattern of these items (optional)
 //' @keywords internal
-void DomainCount::set_initial(Rcpp::IntegerVector& items_in, Hyperparameter& hparams, const Rcpp::NumericVector& lthetas_in) {
+void DomainCount::set_initial(Rcpp::IntegerVector& items_in, const Hyperparameter& hparams, const Rcpp::NumericVector& lthetas_in) {
   TROUBLE_START(("DomainCount::set_initial #V1"));
   items = items_in;
   
@@ -600,7 +600,7 @@ void DomainCount::set_initial(Rcpp::IntegerVector& items_in, Hyperparameter& hpa
 //' See id2pattern(.) for more details
 //' Side effect. Sets npatterns
 //' @keywords internal
-void DomainCount::set_pattern2id_map(Hyperparameter& hparams) {
+void DomainCount::set_pattern2id_map(const Hyperparameter& hparams) {
   TROUBLE_START(("DomainCount::set_pattern2id_map"));
   
   pattern2id_map = Rcpp::IntegerVector(hparams.nitem, 0);
@@ -629,7 +629,7 @@ void DomainCount::set_pattern2id_map(Hyperparameter& hparams) {
 //' @param list_domain List of all arguments for set_initial()
 //' @param hparams hyperparmeters
 //' @keywords internal
-void DomainCount::set_initial(Rcpp::List list_domain, Hyperparameter& hparams) {
+void DomainCount::set_initial(Rcpp::List list_domain, const Hyperparameter& hparams) {
   TROUBLE_START(("DomainCount::set_initial #V2"));
   Rcpp::NumericVector lthetas_in =  Rcpp::log(list_domain["thetas"]);
   Rcpp::IntegerVector items_in = list_domain["items"];
@@ -642,7 +642,7 @@ void DomainCount::set_initial(Rcpp::List list_domain, Hyperparameter& hparams) {
 //' @description Efficiently remove items from domain (without needing to re-calculate counts)
 //' @param items_new Resulting items in your domain. Assumed(!!) to be subset of current items.
 //' @keywords internal
-void DomainCount::reduce_items(Rcpp::IntegerVector items_new, Hyperparameter& hparams) {
+void DomainCount::reduce_items(Rcpp::IntegerVector items_new, const Hyperparameter& hparams) {
   TROUBLE_START(("DomainCount::reduce_items"));
   
   DomainCount domain_orig = copy();
@@ -658,7 +658,7 @@ void DomainCount::reduce_items(Rcpp::IntegerVector items_new, Hyperparameter& hp
 //' @description Efficiently remove item from domain (without needing to re-calculate counts)
 //' @param item item you wish to remove
 //' @keywords internal
-void DomainCount::drop_item(int item, Hyperparameter& hparams) {
+void DomainCount::drop_item(int item, const Hyperparameter& hparams) {
   TROUBLE_START(("DomainCount::drop_item"));
   
   Rcpp::IntegerVector items_new = items[items!=item];
@@ -757,7 +757,7 @@ void DomainCount::countAdd(const Rcpp::IntegerMatrix::ConstRow& xobs) {
 //' The lowest level is a list containing information about that individual domain
 //' @param hparams hyperparameters
 //' @keywords internal
-std::vector<std::map<int,  DomainCount> > DomainCount::list2domains(Rcpp::List list_list_domains, Hyperparameter& hparams) {
+std::vector<std::map<int,  DomainCount> > DomainCount::list2domains(Rcpp::List list_list_domains, const Hyperparameter& hparams) {
   TROUBLE_START(("DomainCount::list2domains"));
   std::vector<std::map<int,  DomainCount> > domains;
   domains.resize(list_list_domains.length());
@@ -808,7 +808,7 @@ int DomainCount::itemsid_calc() {
 //' @description Allows for theta prior to change as domains get merged
 //' @param hparams hyperparameters
 //' @keywords internal
-float DomainCount::theta_alpha_fun(Hyperparameter& hparams) {
+float DomainCount::theta_alpha_fun(const Hyperparameter& hparams) {
   TROUBLE_START(("DomainCount::theta_alpha"));
   float out;
   if (hparams.theta_alpha_funname == "constant") {
@@ -841,7 +841,7 @@ float DomainCount::theta_alpha_fun(Hyperparameter& hparams) {
 //' We calculate this probability conditioning on parameters, but marginalizing over theta (and convert to log scale)
 //' @param hparams hyperparameters
 //' @keywords internal
-float DomainCount::getloglik_marginal(Hyperparameter& hparams) {
+float DomainCount::getloglik_marginal(const Hyperparameter& hparams) {
   TROUBLE_START(("DomainCount::getloglik_marginal"));
   if (npatterns == 0) {
     TROUBLE_END; return 0; // log(1)
@@ -927,12 +927,12 @@ public:
     Rcpp::NumericMatrix class_loglik_collapsed; // Log likelihood of seeing this pattern on domains and previous class membership
     
 public:
-  void set_initial(Rcpp::NumericVector class_pi_in, Rcpp::IntegerVector classes_in, std::vector<std::map<int,  DomainCount> > domains_in, Hyperparameter& hparams);
-  void set_initial(Rcpp::List list_bparam, Hyperparameter& hparams);
+  void set_initial(Rcpp::NumericVector class_pi_in, Rcpp::IntegerVector classes_in, std::vector<std::map<int,  DomainCount> > domains_in, const Hyperparameter& hparams);
+  void set_initial(Rcpp::List list_bparam, const Hyperparameter& hparams);
   float class_lprob(const Rcpp::IntegerMatrix::ConstRow& xobs, int xclass);
   Rcpp::NumericVector class_lprob(const Rcpp::IntegerMatrix::ConstRow& xobs);
   void set_class_loglik(const Rcpp::IntegerMatrix& x, bool reset=false);
-  void set_class_loglik_collapsed(const Rcpp::IntegerMatrix& x, Hyperparameter &hparams);
+  void set_class_loglik_collapsed(const Rcpp::IntegerMatrix& x, const Hyperparameter &hparams);
   
 public:
   void domain_resetCounts();
@@ -947,24 +947,24 @@ public:
   int nitems_calc() {return domains[0].begin()->second.nitems_calc();};
   int nobs_calc() {return classes.size();};
   Rcpp::IntegerVector nobs_classes_calc();
-  Rcpp::IntegerMatrix item2domainid_calc(Hyperparameter& hparams);
-  int domain_id_new(int class2domain_id, Hyperparameter& hparams);
-  static Rcpp::IntegerVector get_superdomains(Rcpp::IntegerMatrix& item2domainid, Hyperparameter& hparams);
-  static bool is_identifiable(Rcpp::IntegerVector& item2superdomainid, Hyperparameter& hparams);
-  bool is_identifiable(domainProposalOut& proposal, Hyperparameter& hparams);
+  Rcpp::IntegerMatrix item2domainid_calc(const Hyperparameter& hparams);
+  int domain_id_new(int class2domain_id, const Hyperparameter& hparams);
+  static Rcpp::IntegerVector get_superdomains(Rcpp::IntegerMatrix& item2domainid, const Hyperparameter& hparams);
+  static bool is_identifiable(Rcpp::IntegerVector& item2superdomainid, const Hyperparameter& hparams);
+  bool is_identifiable(domainProposalOut& proposal, const Hyperparameter& hparams);
   
 public:
-  Rcpp::NumericVector class_pi_args(Hyperparameter& hparams);
-  void class_pi_next(Hyperparameter& hparams);
-  void classes_next(const Rcpp::IntegerMatrix& x, Hyperparameter& hparams, const bool is_collapsed);
-  void thetas_next(const Rcpp::IntegerMatrix& x, Hyperparameter& hparams);
+  Rcpp::NumericVector class_pi_args(const Hyperparameter& hparams);
+  void class_pi_next(const Hyperparameter& hparams);
+  void classes_next(const Rcpp::IntegerMatrix& x, const Hyperparameter& hparams, const bool is_collapsed);
+  void thetas_next(const Rcpp::IntegerMatrix& x, const Hyperparameter& hparams);
   
 public:
-  static float domain_prior(Rcpp::IntegerVector& item2domainid_vec, Hyperparameter& hparams);
-  domainProposalOut domain_proposal(int class2domain_id, Hyperparameter& hparams, int maxitr=5);
-  domainAcceptOut domain_accept(const Rcpp::IntegerMatrix& x, domainProposalOut& proposal, Hyperparameter& hparams);
-  int domain_next(int class2domain_id, const Rcpp::IntegerMatrix& x, Hyperparameter& hparams);
-  void domains_next(const Rcpp::IntegerMatrix& x, Hyperparameter& hparams);
+  static float domain_prior(Rcpp::IntegerVector& item2domainid_vec, const Hyperparameter& hparams);
+  domainProposalOut domain_proposal(int class2domain_id, const Hyperparameter& hparams, int maxitr=5);
+  domainAcceptOut domain_accept(const Rcpp::IntegerMatrix& x, domainProposalOut& proposal, const Hyperparameter& hparams);
+  int domain_next(int class2domain_id, const Rcpp::IntegerMatrix& x, const Hyperparameter& hparams);
+  void domains_next(const Rcpp::IntegerMatrix& x, const Hyperparameter& hparams);
 };
 
 //' @name BayesParameter::set_initial
@@ -972,7 +972,7 @@ public:
 //' @description Set all BayesParameter properties
 //' See getStart_bayes_params(.) in dependentLCM.r for more details
 //' @keywords internal
-void BayesParameter::set_initial(Rcpp::NumericVector class_pi_in, Rcpp::IntegerVector classes_in, std::vector<std::map<int,  DomainCount> > domains_in, Hyperparameter& hparams) {
+void BayesParameter::set_initial(Rcpp::NumericVector class_pi_in, Rcpp::IntegerVector classes_in, std::vector<std::map<int,  DomainCount> > domains_in, const Hyperparameter& hparams) {
   TROUBLE_START(("BayesParameter::set_initial #V1"));
   class_pi = class_pi_in;
   classes = classes_in;
@@ -981,6 +981,9 @@ void BayesParameter::set_initial(Rcpp::NumericVector class_pi_in, Rcpp::IntegerV
   domains_accept = Rcpp::IntegerMatrix(hparams.domain_nproposals, hparams.nclass2domain);
   domains_accept.fill(-1);
   class_loglik = Rcpp::NumericMatrix(hparams.nclass, hparams.nobs); // initialize with all zeroes
+  if (hparams.collapse_classes_itrs > 0) {
+    class_loglik_collapsed = Rcpp::NumericMatrix(hparams.nclass, hparams.nobs); // initialize with all zeroes
+  }
   TROUBLE_END;
 }
 
@@ -989,7 +992,7 @@ void BayesParameter::set_initial(Rcpp::NumericVector class_pi_in, Rcpp::IntegerV
 //' @description Set all BayesParameter properties
 //' As other set_initial(.) but supports lists for R compatability
 //' @keywords internal
-void BayesParameter::set_initial(Rcpp::List list_bparam, Hyperparameter& hparams) {
+void BayesParameter::set_initial(Rcpp::List list_bparam, const Hyperparameter& hparams) {
   TROUBLE_START(("BayesParameter::set_initial #V2"));
   Rcpp::NumericVector class_pi_in = list_bparam("class_pi");
   Rcpp::IntegerVector classes_in = list_bparam("classes");
@@ -1019,7 +1022,7 @@ Rcpp::IntegerVector BayesParameter::nobs_classes_calc() {
 //' @keywords internal
 float BayesParameter::class_lprob(const Rcpp::IntegerMatrix::ConstRow& xobs, int xclass) {
   TROUBLE_START(("BayesParameter::class_lprob #V1"));
-  float lprob = 1;
+  float lprob = 0;
   std::map<int,  DomainCount>::iterator domain_iter;
   std::map<int,  DomainCount>::const_iterator domain_end = domains[xclass].end();
   
@@ -1074,30 +1077,30 @@ void BayesParameter::set_class_loglik(const Rcpp::IntegerMatrix& x, bool reset) 
 
 //' @name BayesParameter::set_class_loglik_collapsed
 //' @title BayesParameter::set_class_loglik_collapsed
-//' @description For each observation what is the collapsed (log) probability of seeing its response pattern under EACH class?
+//' @description For each observation what is the collapsed (log) probability of this observation belonging to this class? Collapsed on theta and pi.
 //' Updates corresponding property in BayesParameter instance. Only correct up to proportionality.
 //' Assumes all parameters are fixed/known.
 //' @param x Matrix of responses
-//' @param reset Whether to initialize the matrix dimensions before running
+//' @param hparams Hyperparameter values
 //' @keywords internal
-void BayesParameter::set_class_loglik_collapsed(const Rcpp::IntegerMatrix& x, Hyperparameter& hparams) {
+void BayesParameter::set_class_loglik_collapsed(const Rcpp::IntegerMatrix& x, const Hyperparameter& hparams) {
   TROUBLE_START(("BayesParameter::set_class_loglik"));
-  // One column per observation and row per class. Get likelihood
-  
-  class_loglik_collapsed = Rcpp::NumericMatrix (hparams.nclass, hparams.nobs); // initialize to zero
-  
+  // One column per observation and row per class
   // influence via pi
   Rcpp::NumericVector nobs_classes = Rcpp::as<Rcpp::NumericVector>(nobs_classes_calc());
   Rcpp::NumericMatrix log_pi_collapsed = Rcpp::NumericMatrix(hparams.nclass, hparams.nclass);
   for (int iclass=0; iclass<hparams.nclass; iclass++) {
+    
+    // get dirichlet parameters
     log_pi_collapsed.column(iclass) = nobs_classes + hparams.classPi_alpha;
     log_pi_collapsed(iclass, iclass) -= 1; // do not include iobs'th observation itself
+    
+    // get expected value
     log_pi_collapsed.column(iclass) = (
       Rcpp::log(log_pi_collapsed.column(iclass))
-      / std::log(Rcpp::sum(log_pi_collapsed.column(iclass)))
+      - std::log(Rcpp::sum(log_pi_collapsed.column(iclass)))
     );
   }
-  
   for (int iobs = 0; iobs < hparams.nobs; iobs++) {
     class_loglik_collapsed.column(iobs) = log_pi_collapsed.column(classes[iobs]);
   }
@@ -1108,24 +1111,34 @@ void BayesParameter::set_class_loglik_collapsed(const Rcpp::IntegerMatrix& x, Hy
   std::map<int,  DomainCount>::const_iterator domain_end;
   Rcpp::NumericVector icounts;
   Rcpp::NumericVector ilog_theta_collapsed;
+  Rcpp::NumericVector ilog_theta_collapsed1;
   for (int iclass = 0; iclass < hparams.nclass; iclass++) {
     
     domain_end = domains[iclass].end();
     for (domain_iter = domains[iclass].begin(); domain_iter!=domain_end; ++domain_iter) {
+      
+      // get dirichlet parameters
       icounts = (
         Rcpp::as<Rcpp::NumericVector>(domain_iter->second.counts)
         + domain_iter->second.theta_alpha_fun(hparams)
        );
       
+      // get expected values
       ilog_theta_collapsed = (
-        Rcpp::log(icounts-1) 
+        Rcpp::log(icounts) 
+        - std::log(Rcpp::sum(icounts))
+      );
+      ilog_theta_collapsed1 = (
+        Rcpp::log(icounts-1)
         - std::log(Rcpp::sum(icounts) - 1)
       );  // subtract one to not count iobs'th observation itself
-      
       for (int iobs = 0; iobs < hparams.nobs; iobs++) {
-        class_loglik_collapsed(iclass, iobs) += ilog_theta_collapsed[domain_iter->second.pattern2id(x.row(iobs))];
+        if (iclass == classes[iobs]) {
+          class_loglik_collapsed(iclass, iobs) += ilog_theta_collapsed1[domain_iter->second.pattern2id(x.row(iobs))];
+        } else {
+          class_loglik_collapsed(iclass, iobs) += ilog_theta_collapsed[domain_iter->second.pattern2id(x.row(iobs))];
+        }
       }
-      
     }
   }
   
@@ -1229,7 +1242,7 @@ void BayesParameter::domain_addCounts(const Rcpp::IntegerMatrix& x, bool reset_c
 //' @description For each item find the id for the domain it belongs to.
 //' If there are multiple class2domain, then multiple columns are provided (one for each)
 //' @keywords internal
-Rcpp::IntegerMatrix BayesParameter::item2domainid_calc(Hyperparameter& hparams) {
+Rcpp::IntegerMatrix BayesParameter::item2domainid_calc(const Hyperparameter& hparams) {
   TROUBLE_START(("BayesParameter::item2domainid_calc"));
   
   Rcpp::IntegerMatrix out = Rcpp::IntegerMatrix(hparams.nitem, hparams.nclass2domain);
@@ -1259,7 +1272,7 @@ Rcpp::IntegerMatrix BayesParameter::item2domainid_calc(Hyperparameter& hparams) 
 //' @description Before observing data/other-parameters, how likely are we to put items into these particular domains?
 //' Some choices of domains may be more likely than other based on prior.
 //' @keywords internal
-float BayesParameter::domain_prior(Rcpp::IntegerVector& item2domainid_vec, Hyperparameter& hparams) {
+float BayesParameter::domain_prior(Rcpp::IntegerVector& item2domainid_vec, const Hyperparameter& hparams) {
   TROUBLE_START(("BayesParameter::domain_prior"));
   
   int ndomains_nonempty = count_unique(item2domainid_vec);
@@ -1279,7 +1292,7 @@ float BayesParameter::domain_prior(Rcpp::IntegerVector& item2domainid_vec, Hyper
 //' @param item2domainid Each colum describes what items must be grouped together for this item2domainid
 //' @param hparams hyperparameters
 //' @keywords internal
-Rcpp::IntegerVector BayesParameter::get_superdomains(Rcpp::IntegerMatrix& item2domainid, Hyperparameter& hparams) {
+Rcpp::IntegerVector BayesParameter::get_superdomains(Rcpp::IntegerMatrix& item2domainid, const Hyperparameter& hparams) {
   TROUBLE_START(("BayesParameter::get_superdomains"));
   int nitems = item2domainid.nrow();
   int nclass2domain = item2domainid.ncol();
@@ -1311,7 +1324,7 @@ Rcpp::IntegerVector BayesParameter::get_superdomains(Rcpp::IntegerMatrix& item2d
 //' @param item2superdomainid Vector describing which items must be grouped together
 //' @param hparams hyperparameters
 //' @keywords internal
-bool BayesParameter::is_identifiable(Rcpp::IntegerVector& item2superdomainid, Hyperparameter& hparams) {
+bool BayesParameter::is_identifiable(Rcpp::IntegerVector& item2superdomainid, const Hyperparameter& hparams) {
   TROUBLE_START(("BayesParameter::is_identifiable #V1"));
   
   bool identifiable = ::is_identifiable(item2superdomainid, hparams.nclass, hparams.item_nlevels)
@@ -1325,7 +1338,7 @@ bool BayesParameter::is_identifiable(Rcpp::IntegerVector& item2superdomainid, Hy
 //' @param proposal The candidate changes to domains we are evaluating
 //' @param hparams hyperparameters
 //' @keywords internal
-bool BayesParameter::is_identifiable(domainProposalOut& proposal, Hyperparameter& hparams) {
+bool BayesParameter::is_identifiable(domainProposalOut& proposal, const Hyperparameter& hparams) {
   TROUBLE_START(("BayesParameter::is_identifiable #V2"));
   
   // Check identifiability of proposal
@@ -1339,7 +1352,7 @@ bool BayesParameter::is_identifiable(domainProposalOut& proposal, Hyperparameter
 //' @title BayesParameter::domain_id_new
 //' @description Find an empty domain. Return that domain's ID
 //' @keywords internal
-int BayesParameter::domain_id_new(int class2domain_id, Hyperparameter& hparams) {
+int BayesParameter::domain_id_new(int class2domain_id, const Hyperparameter& hparams) {
   TROUBLE_START(("BayesParameter::domain_id_new"));
   
   int domain_id = -1;
@@ -1369,7 +1382,7 @@ int BayesParameter::domain_id_new(int class2domain_id, Hyperparameter& hparams) 
 //' @title BayesParameter::class_pi_args
 //' @description Calculate the dirichlet parameters for the posterior of pi (pi used for classes)
 //' @keywords internal
-Rcpp::NumericVector BayesParameter::class_pi_args(Hyperparameter& hparams) {
+Rcpp::NumericVector BayesParameter::class_pi_args(const Hyperparameter& hparams) {
   TROUBLE_START(("BayesParameter::class_pi_args"));
   
   Rcpp::NumericVector args = Rcpp::clone(hparams.classPi_alpha);  // Prevent overwrites. Maybe instead remove & from input
@@ -1389,7 +1402,7 @@ Rcpp::NumericVector BayesParameter::class_pi_args(Hyperparameter& hparams) {
 //' @title BayesParameter::class_pi_next
 //' @description Do gibbs sampling to generate pi (pi used for classes)
 //' @keywords internal
-void BayesParameter::class_pi_next(Hyperparameter& hparams) {
+void BayesParameter::class_pi_next(const Hyperparameter& hparams) {
   TROUBLE_START(("BayesParameter::class_pi_next"));
   
   Rcpp::NumericVector args = class_pi_args(hparams);
@@ -1401,7 +1414,7 @@ void BayesParameter::class_pi_next(Hyperparameter& hparams) {
 //' @title BayesParameter::classes_next
 //' @description Do gibbs sampling to calculate the class of each observation
 //' @keywords internal
-void BayesParameter::classes_next(const Rcpp::IntegerMatrix& x, Hyperparameter& hparams, const bool is_collapsed) {
+void BayesParameter::classes_next(const Rcpp::IntegerMatrix& x, const Hyperparameter& hparams, const bool is_collapsed) {
   TROUBLE_START(("BayesParameter::classes_next"));
   
   Rcpp::NumericMatrix *iclass_loglik;
@@ -1433,7 +1446,7 @@ void BayesParameter::classes_next(const Rcpp::IntegerMatrix& x, Hyperparameter& 
 //' @title BayesParameter::thetas_next
 //' @description Do gibbs sampling to calculate thetas for each domain
 //' @keywords internal
-void BayesParameter::thetas_next(const Rcpp::IntegerMatrix& x, Hyperparameter& hparams) {
+void BayesParameter::thetas_next(const Rcpp::IntegerMatrix& x, const Hyperparameter& hparams) {
   TROUBLE_START(("BayesParameter::thetas_next"));
   
   std::map<int,  DomainCount>::iterator domain_iter;
@@ -1458,7 +1471,7 @@ void BayesParameter::thetas_next(const Rcpp::IntegerMatrix& x, Hyperparameter& h
 //' We take a nonempty domain. 1) With some probability we move one of its items to an empty domain. Otherwise we choose a second nonempty domain. 2) With some probability we swap a pair of items between the two nonempty domains. 3) Otherwise we move one item from the first domain into the second.
 //' There are some restrictions including 1) We do not swap items if both domains are singletons (this would cause no change up to relabeling), and enforce maximum number of items per domain given in hparams.
 //' @keywords internal
-domainProposalOut BayesParameter::domain_proposal(int class2domain_id, Hyperparameter& hparams, int maxitr) {
+domainProposalOut BayesParameter::domain_proposal(int class2domain_id, const Hyperparameter& hparams, int maxitr) {
   TROUBLE_START(("BayesParameter::domain_proposal"));
   
   std::map<int, int> domainitem_counts = count_integers(item2domainid.column(class2domain_id));
@@ -1704,7 +1717,7 @@ domainProposalOut BayesParameter::domain_proposal(int class2domain_id, Hyperpara
 //' We examine the proposal and decide whether to accept it.
 //' ASSUMPTIONS domain_addCounts has been run on proposal.domains_new
 //' @keywords internal
-domainAcceptOut BayesParameter::domain_accept(const Rcpp::IntegerMatrix& x, domainProposalOut& proposal, Hyperparameter& hparams) {
+domainAcceptOut BayesParameter::domain_accept(const Rcpp::IntegerMatrix& x, domainProposalOut& proposal, const Hyperparameter& hparams) {
   TROUBLE_START(("BayesParameter::domain_accept"));
   
   domainAcceptOut out;
@@ -1750,7 +1763,7 @@ domainAcceptOut BayesParameter::domain_accept(const Rcpp::IntegerMatrix& x, doma
 //' @description We use a metropolis algorithm to try to update domains
 //' In essence we choose one item at random and either move it to another domain or swap it with an item from another domain
 //' @keywords internal
-int BayesParameter::domain_next(int class2domain_id, const Rcpp::IntegerMatrix& x, Hyperparameter& hparams) {
+int BayesParameter::domain_next(int class2domain_id, const Rcpp::IntegerMatrix& x, const Hyperparameter& hparams) {
   TROUBLE_START(("BayesParameter::domain_next"));
   
   /***
@@ -1826,7 +1839,7 @@ int BayesParameter::domain_next(int class2domain_id, const Rcpp::IntegerMatrix& 
 //' @title BayesParameter::domains_next
 //' @description Use metropolis algorithm to update domains. Repeat # of times set by hparams.
 //' @keywords internal
-void BayesParameter::domains_next(const Rcpp::IntegerMatrix& x, Hyperparameter& hparams) {
+void BayesParameter::domains_next(const Rcpp::IntegerMatrix& x, const Hyperparameter& hparams) {
   TROUBLE_START(("BayesParameter::domains_next"));
   
   for (int i=0; i < hparams.domain_nproposals; i++) {
@@ -1853,6 +1866,7 @@ public:
   std::vector<Rcpp::NumericVector> domains_lprobs;
   std::vector<Rcpp::IntegerMatrix> domains_accept;
   std::vector<Rcpp::NumericMatrix> class_loglik;
+  std::vector<Rcpp::NumericMatrix> class_loglik_collapsed;
   int next_itr;
   int nitr;
   
@@ -1885,6 +1899,8 @@ void Archive::set_initial(int nclass, int nobs, int nitems, int nitr_in, int dom
   class_loglik.resize(nitr_in);
   std::fill(class_loglik.begin(), class_loglik.end()
               , Rcpp::NumericMatrix(nclass, nobs));
+  
+  class_loglik_collapsed.resize(nitr_in);
   
   TROUBLE_END;
 }
@@ -1972,6 +1988,7 @@ void Archive::add(BayesParameter& aparams) {
                          , domains_id[next_itr], domains_lprobs[next_itr]);
   domains_accept[next_itr] = Rcpp::clone(aparams.domains_accept);
   class_loglik[next_itr] = Rcpp::clone(aparams.class_loglik);
+  class_loglik_collapsed[next_itr] = Rcpp::clone(aparams.class_loglik_collapsed);
   next_itr += 1;
   TROUBLE_END;
 }
@@ -2004,7 +2021,7 @@ void BayesContainer::set_initial(const Rcpp::IntegerMatrix& x_in, Rcpp::List hpa
   hparams.set_hparams(hparams_list);
   hparams.set_dataInfo(x_in);
   params.set_initial(params_list, hparams);
-  archive.set_initial(hparams.nclass, hparams.nobs, hparams.nitem, hparams.nitr+1, hparams.domain_nproposals, hparams.nclass2domain);
+  archive.set_initial(hparams.nclass, hparams.nobs, hparams.nitem, hparams.nitr+2, hparams.domain_nproposals, hparams.nclass2domain);
   TROUBLE_END;
 }
 
@@ -2015,24 +2032,20 @@ void BayesContainer::set_initial(const Rcpp::IntegerMatrix& x_in, Rcpp::List hpa
 void BayesContainer::run() {
   TROUBLE_START(("BayesContainer::run"));
   
-  archive.add(params); // save initial value
+  archive.add(params); // save initial value (iteration 0)
   
   bool collapse_classes = (
     (hparams.steps_active["classes"]==true)
     & (hparams.collapse_classes_itrs > 0)
   );
-  bool countDomains = (
+  const bool countDomains = (
     (hparams.steps_active["thetas"]==true)
     | (hparams.steps_active["domains"]==true)
   );
-  bool getLikelhood = (
-    hparams.steps_active["classLikelihood"]
-  | ( (hparams.steps_active["classes"]==true) 
-        & (hparams.collapse_classes_itrs < hparams.nitr) )
-  );
+  bool getLikelhood;
   
   if (0 < hparams.nitr) {
-    // In first iteration we update parameters but not classes
+    // In first iteration we update parameters but not classes (iteration 1)
     if (countDomains==true) {
       params.domain_addCounts(x, true);
     }
@@ -2047,17 +2060,26 @@ void BayesContainer::run() {
       params.class_pi_next(hparams);
     }
     
-    if (getLikelhood) {
+    if (hparams.steps_active["classLikelihood"]) {
       params.set_class_loglik(x);
     }
     
     archive.add(params);
   }
   
-  for (int i=1; i < hparams.nitr; i++) {
+  for (int i=0; i < hparams.nitr; i++) {
+    
+    
     collapse_classes = (
       collapse_classes
     & (i < hparams.collapse_classes_itrs)
+    );
+    getLikelhood = (
+      (hparams.steps_active["classLikelihood"]==true)
+      | (
+        (hparams.steps_active["classes"]==true)
+        & !collapse_classes
+      )
     );
     
     if (collapse_classes==true) {
@@ -2082,7 +2104,6 @@ void BayesContainer::run() {
     if (hparams.steps_active["class_pi"]==true) {
       params.class_pi_next(hparams);
     }
-    
     
     if (getLikelhood) {
       params.set_class_loglik(x); // always last because it recalculates likelihood for above choices
@@ -2130,6 +2151,7 @@ Rcpp::List dependentLCM_fit_cpp(Rcpp::IntegerMatrix& x_in, Rcpp::List hparams_li
     , Rcpp::Named("nitr") = bcontainer.archive.nitr
     , Rcpp::Named("domains_accept") = bcontainer.archive.domains_accept
     , Rcpp::Named("class_loglik") = bcontainer.archive.class_loglik
+    , Rcpp::Named("class_loglik_collapsed") = bcontainer.archive.class_loglik_collapsed
     , Rcpp::Named("troubleshooting") = TROUBLE_LIST
   );
 }
