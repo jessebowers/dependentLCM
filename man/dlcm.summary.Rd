@@ -20,8 +20,11 @@ List with:
 \item{"domain_items_all"}{= What are the most common domain structures? The column 'domains_merged' describes the domain structure as a string listing each item. Bars "|" separate domains, and commas "," separate items within a domain. For (partially) heterogeneous DLCMs, pluses "+" separate groups of classes (class2domain's) which may have different domain structures. Column 'n' gives the number of post-warmup iterations this domain structure appeared in.}
 \item{"mode_domains"}{= Describes the single most common domain structure. Each row indicates one domain.}
 \item{"domain_accept"}{= How often our metropolis step accepts its proposal. See dependentLCM_fit > domains_accept for details.}
-\item{"classes"}{=For each subject this vector gives the most common class that observation belongs to.}
+\item{"classes"}{= For each subject this vector gives the most common class that observation belongs to.}
+\item{"classes_cnts"}{= For each subject, in what number of iterations was this subject in each class?}
 \item{"classes_pi"}{=The average prior probability of each class.}
+\item{"waic_summary"}{=See function 'dlcm.get_waic()'.}
+\item{"waic_df"}{=See function 'dlcm.get_waic()'.}
 }
 }
 \description{

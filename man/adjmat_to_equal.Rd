@@ -6,7 +6,7 @@
 \arguments{
 \item{adjmat}{Matrix identifying which nodes are neighbors (are linked).}
 
-\item{maxiter}{Integer giving the maximum number of attempts to connect two nodes.}
+\item{maxitr}{Integer giving the maximum number of attempts to connect two nodes.}
 }
 \description{
 Take a (graph theory) adjacency matrix and build equivalence classes.

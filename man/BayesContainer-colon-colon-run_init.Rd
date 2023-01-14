@@ -4,6 +4,6 @@
 \alias{BayesContainer::run_init}
 \title{BayesContainer::run_init}
 \description{
-First initializes, and then does #nitr MCMC steps on all bayes parameters
+First initializes, and then does hparams.nitr MCMC steps on all bayes parameters
 }
 \keyword{internal}

@@ -11,6 +11,19 @@ dlcm.get_waic(this_sim, itrs = NULL)
 
 \item{itrs}{integer vector. Which iterations should be include in calculation?}
 }
+\value{
+List with a 'summary' and 'df' value. The 'summary' is a vector with the following summary statitics:
+\itemize{
+\item{"nparams_avg"}{= The average number of model parameters per iteration.}
+\item{"logLik_avg"}{= The average logLikelihood per iteration,}
+\item{"lppd"}{= The LPPD (Log PointWise Predictive Density)}
+\item{"waic_nparams1"}{= The effective number of parameters of the model according to WAIC method 1. Describes model complexity and tendency to overfit.}
+\item{"waic_nparams2"}{= The effective number of parameters of the model according to WAIC method 2. Describes model complexity and tendency to overfit.}
+\item{"waic1"}{= The WAIC (Watanabe-Akaike Information Criterion) using method 1. Approximates the overall (out of sample) goodness of fit of the model. Equals '-2 lppd + 2 waic_nparams.'}
+\item{"waic2"}{= The WAIC (Watanabe-Akaike Information Criterion) using method 2. Approximates the overall (out of sample) goodness of fit of the model. Equals '-2 lppd + 2 waic_nparams.}
+}
+For information on wAIC methods 1/2 see Gelman 2014 (DOI https://doi.org/10.1007/s11222-013-9416-2). The 'df' value has a row for each iteration and reports the logLikelihood and raw number of parameters.
+}
 \description{
 Calculate likelihood and WAIC
 }

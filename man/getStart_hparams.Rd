@@ -6,6 +6,7 @@
 Generate a list of hyperparameters, adding default values when necessary}
 \usage{
 getStart_hparams(
+  nitr,
   df = NULL,
   nitems = NULL,
   nclass = NCLASS,
@@ -16,11 +17,14 @@ getStart_hparams(
   theta_alpha = THETA_ALPHA,
   domain_proposal_empty = DOMAIN_PROPOSAL_EMPTY,
   domain_nproposals = NULL,
-  steps_active = STEPS_ACTIVE
+  steps_active = STEPS_ACTIVE,
+  collapse_classes_itrs = 0
 )
 }
 \arguments{
-\item{df}{dataframe. Raw data you are fitting with all assumed to be factors. Assumes no missing data (no NAs).}
+\item{nitr}{integer. Number of iterations to run the bayes MCMC}
+
+\item{df}{dataframe. The data you wish to analyze. Should describe nominal data. Factor columns work best, but we make an honest effort to interpret any values given. This will be converted into an integer matrix (see 'matrix' argument). This 'matrix' argument takes precedence over the 'df' argument; only one of these two arguments is needed. Assumes no missing data (NA rows will be dropped).}
 
 \item{nitems}{integer. Number of columns of df.}
 
@@ -42,10 +46,9 @@ If "HOMO" then defaults to c(0,0,...). If "HET" then defaults to c(0, 1, 2, ...)
 \item{domain_nproposals}{Sets how many times the domain metropolis propsal function is called each iteration}
 
 \item{steps_active}{Named boolean vector of what actions to take during mcmc. If mcmc is skipped then initial values are kept as fixed.
-thetas=TRUE to do gibbs on response probabilities, domains=TRUE to do metropolis on domains, class_pi=TRUE to do gibbs on class prior, classes=TRUE to do gibbs on class membership, identifiable=TRUE to check generic identifiability conditions of domains
-"constant" for theta~Dirichlet(theta_alpha * rep(1, npatterns)). Produces domains of 1-4 items but typically not larger.
-"log" for theta~Dirichlet(theta_alpha * ln(sum(npattens_i))/ln(npatterns) rep(1, npatterns))
-"average" [depreciated] for theta~Dirichlet(theta_alpha * sum(npattens_i)/npatterns rep(1, npatterns)). Unstable for large domains}
+thetas=TRUE to do gibbs on response probabilities, domains=TRUE to do metropolis on domains, class_pi=TRUE to do gibbs on class prior, classes=TRUE to do gibbs on class membership, identifiable=TRUE to check generic identifiability conditions of domains, classLikelihood=TRUE to get the likelihood that each observation is in each class.}
+
+\item{collapse_classes_itrs}{integer. Which iterations should used collasped Gibbs when sampling class membership? This allows collapsing on class prior and response probability when evaluating class. The first collapse_classes_itrs (integer) iterations are collapsed.}
 }
 \description{
 Generate hyperparameters

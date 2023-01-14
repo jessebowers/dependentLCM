@@ -4,16 +4,23 @@
 \alias{fix_class_label_switching}
 \title{Identifies and fixes label swapping among classes. 
 For each iteration, it relabels class to most align with the overall most common (mode) class of each observation.
-Warning01: Best for homogeneous DLCMs. Potentially fine for heterogenous DLCMs. Not appropriate for *partially* heterogeneous DLCMs.
-Warning02: May not be appropriate if a single class is too small and never showes up as the mode for any observation.
+Warning01: Best for homogeneous DLCMs. Potentially fine for heterogenous DLCMs (label swapping allowed, but not informed by domains here). Not appropriate for *partially* heterogeneous DLCMs.
+Warning02: May not be appropriate if a single class is too small and therefore never shows up as the mode for any observation.
 Warning03: Relabels warmup iterations which may be unnecessary.}
 \usage{
-fix_class_label_switching(dlcm, nwarmup, maxitr = 5)
+fix_class_label_switching(
+  dlcm,
+  nwarmup,
+  initial_target_classes = NULL,
+  maxitr = 5
+)
 }
 \arguments{
 \item{dlcm}{An dependent latent class model from dependentLCM_fit().}
 
 \item{nwarmup}{integer. Which iterations are warmup iterations?}
+
+\item{initial_target_classes}{integer vector with one value per observation. What set of class labels should we try to mirror, initially? If blank defaults to the most common class for each observation.}
 
 \item{maxitr}{integer. How many attempts should we make to correct label swapping?}
 }
@@ -32,7 +39,7 @@ Information on what labels were swapped is given in output$label_swapping.
 \description{
 Identifies and fixes label swapping among classes. 
 For each iteration, it relabels class to most align with the overall most common (mode) class of each observation.
-Warning01: Best for homogeneous DLCMs. Potentially fine for heterogenous DLCMs. Not appropriate for *partially* heterogeneous DLCMs.
-Warning02: May not be appropriate if a single class is too small and never showes up as the mode for any observation.
+Warning01: Best for homogeneous DLCMs. Potentially fine for heterogenous DLCMs (label swapping allowed, but not informed by domains here). Not appropriate for *partially* heterogeneous DLCMs.
+Warning02: May not be appropriate if a single class is too small and therefore never shows up as the mode for any observation.
 Warning03: Relabels warmup iterations which may be unnecessary.
 }

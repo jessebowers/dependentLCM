@@ -4,6 +4,6 @@
 \alias{BayesContainer::run}
 \title{BayesContainer::run}
 \description{
-Does #nitr MCMC steps on all bayes parameters
+Does hparams.nitr MCMC steps on all bayes parameters
 }
 \keyword{internal}

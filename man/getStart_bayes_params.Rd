@@ -15,7 +15,7 @@ getStart_bayes_params(
 )
 }
 \arguments{
-\item{mat}{matrix. The data you wish to analyze}
+\item{mat}{matrix. The data you wish to analyze. Should be an integer matrix describing nominal data. Each column should take values 0, 1, 2, ..., max-for-this-column. Assumptions: i) In each column the maximum value is achieved for atleast one observation. ii) There are no NAs.}
 
 \item{hparams}{list. List of hyperparameters from getStart_hparams.}
 

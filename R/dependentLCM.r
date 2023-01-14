@@ -232,7 +232,7 @@ dependentLCM_fit <- function(
 #' Generate hyperparameters
 #' Generate a list of hyperparameters, adding default values when necessary
 #' @param nitr integer. Number of iterations to run the bayes MCMC
-#' @param df dataframe. Raw data you are fitting with all assumed to be factors. Assumes no missing data (no NAs).
+#' @param df dataframe. The data you wish to analyze. Should describe nominal data. Factor columns work best, but we make an honest effort to interpret any values given. This will be converted into an integer matrix (see 'matrix' argument). This 'matrix' argument takes precedence over the 'df' argument; only one of these two arguments is needed. Assumes no missing data (NA rows will be dropped).
 #' @param nitems integer. Number of columns of df.
 #' @param nclass integer. Number of subject latent classes
 #' @param ndomains integer. Number of item domains
@@ -314,7 +314,7 @@ getStart_matrix <- function(df) {
 }
 
 #' Generates initial values for bayes parameters
-#' @param mat matrix. The data you wish to analyze
+#' @param mat matrix. The data you wish to analyze. Should be an integer matrix describing nominal data. Each column should take values 0, 1, 2, ..., max-for-this-column. Assumptions: i) In each column the maximum value is achieved for atleast one observation. ii) There are no NAs.
 #' @param hparams list. List of hyperparameters from getStart_hparams.
 #' @param class_pi numeric vector size nclass. Initial condition for bayes parameter pi.
 #' @param classes integer vector size nrow(df). Initial condition for subject classes.
@@ -809,6 +809,8 @@ sample.integers <- function(x, size, ...) {
 #' \item{"classes"}{= For each subject this vector gives the most common class that observation belongs to.}
 #' \item{"classes_cnts"}{= For each subject, in what number of iterations was this subject in each class?}
 #' \item{"classes_pi"}{=The average prior probability of each class.}
+#' \item{"waic_summary"}{=See function 'dlcm.get_waic()'.}
+#' \item{"waic_df"}{=See function 'dlcm.get_waic()'.}
 #' }
 #' @export
 dlcm.summary <- function(dlcm, nwarmup=NULL) {
@@ -883,7 +885,8 @@ dlcm.summary <- function(dlcm, nwarmup=NULL) {
     )
   }
   
-  { # Summarize Classes
+  if (dlcm$hparams$nclass>1) {
+    # Summarize Classes
     
     classes_cnts <- apply(
       dlcm$mcmc$classes[,-seq_len(nwarmup)], 1
@@ -898,6 +901,9 @@ dlcm.summary <- function(dlcm, nwarmup=NULL) {
     rownames(classes_cnts) <- paste0("class", rownames(classes_cnts))
     
     classes <- apply(classes_cnts, 2, which.max) - 1 # unname(apply(dlcm$mcmc$classes[,-seq_len(nwarmup)], 1, getMode))
+  } else {
+    classes_cnts <- NA
+    classes <- NA
   }
   
   # domain_nitems <- table((dlcm$mcmc$domains %>% dplyr::filter(pattern_id==0, itr > nwarmup))$nitems)
@@ -918,6 +924,17 @@ dlcm.summary <- function(dlcm, nwarmup=NULL) {
 #' Calculate likelihood and WAIC
 #' @param this_sim Dependent Latent class model
 #' @param itrs integer vector. Which iterations should be include in calculation?
+#' @return List with a 'summary' and 'df' value. The 'summary' is a vector with the following summary statitics:
+#' \itemize{
+#' \item{"nparams_avg"}{= The average number of model parameters per iteration.}
+#' \item{"logLik_avg"}{= The average logLikelihood per iteration,}
+#' \item{"lppd"}{= The LPPD (Log PointWise Predictive Density)}
+#' \item{"waic_nparams1"}{= The effective number of parameters of the model according to WAIC method 1. Describes model complexity and tendency to overfit.}
+#' \item{"waic_nparams2"}{= The effective number of parameters of the model according to WAIC method 2. Describes model complexity and tendency to overfit.}
+#' \item{"waic1"}{= The WAIC (Watanabe-Akaike Information Criterion) using method 1. Approximates the overall (out of sample) goodness of fit of the model. Equals '-2 lppd + 2 waic_nparams.'}
+#' \item{"waic2"}{= The WAIC (Watanabe-Akaike Information Criterion) using method 2. Approximates the overall (out of sample) goodness of fit of the model. Equals '-2 lppd + 2 waic_nparams.}
+#' }
+#' For information on wAIC methods 1/2 see Gelman 2014 (DOI https://doi.org/10.1007/s11222-013-9416-2). The 'df' value has a row for each iteration and reports the logLikelihood and raw number of parameters.
 #' @export
 dlcm.get_waic <- function(this_sim, itrs=NULL) {
   

@@ -22,15 +22,16 @@ dependentLCM_fit(
   domains = NULL,
   class_init_method = CLASS_INIT_METHODS[1],
   warmup_settings = "default",
-  warmup_dlcm = NULL
+  warmup_dlcm = NULL,
+  collapse_classes_itrs = 0
 )
 }
 \arguments{
 \item{nitr}{integer. Number of iterations to run the bayes MCMC}
 
-\item{df}{dataframe. Raw data you are fitting with all assumed to be factors. Assumes no missing data (no NAs).}
+\item{df}{dataframe. The data you wish to analyze. Should describe nominal data. Factor columns work best, but we make an honest effort to interpret any values given. This will be converted into an integer matrix (see 'matrix' argument). This 'matrix' argument takes precedence over the 'df' argument; only one of these two arguments is needed. Assumes no missing data (NA rows will be dropped).}
 
-\item{mat}{matrix. The data you wish to analyze}
+\item{mat}{matrix. The data you wish to analyze. Should be an integer matrix describing nominal data. Each column should take values 0, 1, 2, ..., max-for-this-column. Assumptions: i) In each column the maximum value is achieved for atleast one observation. ii) There are no NAs.}
 
 \item{nclass}{integer. Number of subject latent classes}
 
@@ -50,10 +51,7 @@ If "HOMO" then defaults to c(0,0,...). If "HET" then defaults to c(0, 1, 2, ...)
 \item{domain_nproposals}{Sets how many times the domain metropolis propsal function is called each iteration}
 
 \item{steps_active}{Named boolean vector of what actions to take during mcmc. If mcmc is skipped then initial values are kept as fixed.
-thetas=TRUE to do gibbs on response probabilities, domains=TRUE to do metropolis on domains, class_pi=TRUE to do gibbs on class prior, classes=TRUE to do gibbs on class membership, identifiable=TRUE to check generic identifiability conditions of domains
-"constant" for theta~Dirichlet(theta_alpha * rep(1, npatterns)). Produces domains of 1-4 items but typically not larger.
-"log" for theta~Dirichlet(theta_alpha * ln(sum(npattens_i))/ln(npatterns) rep(1, npatterns))
-"average" [depreciated] for theta~Dirichlet(theta_alpha * sum(npattens_i)/npatterns rep(1, npatterns)). Unstable for large domains}
+thetas=TRUE to do gibbs on response probabilities, domains=TRUE to do metropolis on domains, class_pi=TRUE to do gibbs on class prior, classes=TRUE to do gibbs on class membership, identifiable=TRUE to check generic identifiability conditions of domains, classLikelihood=TRUE to get the likelihood that each observation is in each class.}
 
 \item{class_pi}{numeric vector size nclass. Initial condition for bayes parameter pi.}
 
@@ -82,6 +80,8 @@ class1 = list(
 \item{warmup_settings}{list. Optionally allows for an extra warmup cycle using different parameters vs the arguments given for the main process. Any parameters in the given list will overwrite the arguments of the same name in the warmup cycle.}
 
 \item{warmup_dlcm}{list. A past DLCM fit (from dependentLCM_fit). The last iteration of the DLCM is used as the Bayes parameters.}
+
+\item{collapse_classes_itrs}{integer. Which iterations should used collasped Gibbs when sampling class membership? This allows collapsing on class prior and response probability when evaluating class. The first collapse_classes_itrs (integer) iterations are collapsed.}
 }
 \value{
 Returns a list with three items. hparams describes the hyperparmeters chosen by the model. These match the arguments input into the function plus any default values. mcmc describes the simulated (fitted) bayes parameter values. warmup describes extra/special warmup iterations using the 'warmup_settings' argument.
@@ -90,8 +90,7 @@ The mcmc item includes the following values. mcmc does NOT discard any warmup it
 \itemize{
 \item{"class_pi"}{=A matrix describing the prior class probabilities of each class in each MCMC iteration. It contains one row per class one column per iteration, and each cell contains the prior probability of a subject being in that class.}
 \item{"classes"}{=A matrix describing what class each subject belongs to. It contains one row per subject, one column per MCMC iteration, and each cell identifies the class of that subject in that iteration.}
-\item{"next_itr"}{=Unimportant. Should equal maxitr+1.}
-\item{"maxitr"}{=Gives the total number of iterations processed including warmup iterations}
+\item{"nitr"}{=Gives the total number of iterations processed including warmup iterations}
 \item{"domains_accept"}{=Each MCMC iteration, we attempt to change the domain structure #domain_nproposals times with a metropolis step. This 3-dimensional array describes whether the proposed change was accepted or rejected. A value of -2 indicates the proposal was rejected due to identifiability or max item constraints. A value of -1 or 2 indicates the proposed change is (equivalent to) no change. A value of 0 indicates the proposal was rejected. A value of 1 indicates the proposal was accepted.. The dimensions of the array are as follows. The third dimension has one slice per iteration. The first dimension gives one slice per 'domain_nproposals'. The second dimension has between 1 and nclass slices. A homogeneous DLCM has 1 slice, a heterogeneous DLCM has nclass slices, and a partially heterogeneous DLCM may be in-between.}
 \item{"class_loglik"}{=A 3-dimensional array. The first dimension has one slice per class. The second dimension has one slice per subject/observation. The third dimension has one slice per MCMC iteration. Each cell contains the log likelihood that we would observe the response pattern given by this subject, if the subject was in this class, based on the parameters in this iteration.}
 \item{"troubleshooting"}{=Used for investigationg bugs. Should be empty.}
