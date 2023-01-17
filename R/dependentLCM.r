@@ -173,6 +173,17 @@ dependentLCM_fit <- function(
   dlcm$domains_lprobs <- unlist(dlcm$domains_lprobs)
   dlcm$domains_accept <- do.call(function(...) abind::abind(..., along=3), dlcm$domains_accept)
   dlcm$class_loglik <- do.call(function(...) abind::abind(..., along=3), dlcm$class_loglik)
+  if ((0 < hparams$collapse_classes_itrs) & (hparams$collapse_classes_itrs < hparams$nitr)) {
+    # Make all 'dlcm$class_loglik_collapsed' the same size
+    inds <- which(sapply(dlcm$class_loglik_collapsed, function(x) length(x)==0))
+    dlcm$class_loglik_collapsed[inds] <- rep(
+      list(matrix(
+        data=NA
+        , nrow=hparams$nclass, ncol=nrow(mat)
+      ))
+      , length(inds)
+    )
+  }
   dlcm$class_loglik_collapsed <- do.call(function(...) abind::abind(..., along=3), dlcm$class_loglik_collapsed)
   
   # name
@@ -1211,7 +1222,7 @@ simulate_lcm <- function(n, pis, thetas) {
   classes <- apply(rmultinom(n, 1, pis), 2, function(x) which(x==1))
   
   
-  if (class(thetas) == "matrix") {
+  if ("matrix" %in% class(thetas)) {
     responses <- sapply(
       classes
       , function(iclass) {runif(nrow(thetas)) > thetas[, iclass]}
