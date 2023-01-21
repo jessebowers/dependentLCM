@@ -1791,9 +1791,11 @@ int BayesParameter::domain_next(int class2domain_id, const Rcpp::IntegerMatrix& 
         | (proposal.items1_new.size() > hparams.domain_maxitems)) {
     // Over the max items per domain, reject
     accept = -2;
-  } else if (is_identifiable(proposal, hparams)==false) {
-    // Identifiability restrictions violated
-    accept = -2;
+  } else if (hparams.steps_active["identifiable"]==true) {
+    if (is_identifiable(proposal, hparams)==false) {
+      // Identifiability restrictions violated
+      accept = -2;
+    }
   }
   if (accept != 0) {
     TROUBLE_END; return accept;
