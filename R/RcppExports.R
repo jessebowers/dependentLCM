@@ -7,6 +7,12 @@
 #' @keywords internal
 NULL
 
+#' @name sumLogs
+#' @title sumLogs
+#' @description Calculate log(sum(exp(x))) precisely
+#' @keywords internal
+NULL
+
 #' @name rDirichlet
 #' @title rDirichlet
 #' @description Generate random values from dirichlet distribution
@@ -482,6 +488,12 @@ NULL
 NULL
 
 #' @name Archive::add
+#' @title Archive::add
+#' @description Add latest bayes parameters to the archive
+#' @keywords internal
+NULL
+
+#' @name Archive::toList
 #' @title Archive::add
 #' @description Add latest bayes parameters to the archive
 #' @keywords internal

@@ -4,7 +4,7 @@
 \alias{dlcm.summary}
 \title{Get some summary statistics from fitted dependent LCM}
 \usage{
-dlcm.summary(dlcm, nwarmup = NULL)
+dlcm.summary(dlcm, nwarmup = NULL, waic_method = "agg")
 }
 \arguments{
 \item{dlcm}{list. Fitted dependent LCM}

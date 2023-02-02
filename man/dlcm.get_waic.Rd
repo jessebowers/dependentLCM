@@ -4,12 +4,14 @@
 \alias{dlcm.get_waic}
 \title{Calculate likelihood and WAIC}
 \usage{
-dlcm.get_waic(this_sim, itrs = NULL)
+dlcm.get_waic(dlcm, method = "agg", itrs = NULL)
 }
 \arguments{
-\item{this_sim}{Dependent Latent class model}
+\item{dlcm}{Dependent Latent class model}
 
-\item{itrs}{integer vector. Which iterations should be include in calculation?}
+\item{method}{string from c("agg", "raw").}
+
+\item{itrs}{integer vector. Which iterations should be include in calculation? Ignored if "agg" is chosen.}
 }
 \value{
 List with a 'summary' and 'df' value. The 'summary' is a vector with the following summary statitics:

@@ -16,14 +16,14 @@ dependentLCM_fit(
   theta_alpha = THETA_ALPHA,
   domain_proposal_empty = DOMAIN_PROPOSAL_EMPTY,
   domain_nproposals = NULL,
-  steps_active = STEPS_ACTIVE,
   class_pi = NULL,
   classes = NULL,
   domains = NULL,
+  steps_active = STEPS_ACTIVE,
+  save_itrs = SAVE_ITRS,
   class_init_method = CLASS_INIT_METHODS[1],
   warmup_settings = "default",
-  warmup_dlcm = NULL,
-  collapse_classes_itrs = 0
+  warmup_dlcm = NULL
 )
 }
 \arguments{
@@ -50,9 +50,6 @@ If "HOMO" then defaults to c(0,0,...). If "HET" then defaults to c(0, 1, 2, ...)
 
 \item{domain_nproposals}{Sets how many times the domain metropolis propsal function is called each iteration}
 
-\item{steps_active}{Named boolean vector of what actions to take during mcmc. If mcmc is skipped then initial values are kept as fixed.
-thetas=TRUE to do gibbs on response probabilities, domains=TRUE to do metropolis on domains, class_pi=TRUE to do gibbs on class prior, classes=TRUE to do gibbs on class membership, identifiable=TRUE to check generic identifiability conditions of domains, classLikelihood=TRUE to get the likelihood that each observation is in each class.}
-
 \item{class_pi}{numeric vector size nclass. Initial condition for bayes parameter pi.}
 
 \item{classes}{integer vector size nrow(df). Initial condition for subject classes.}
@@ -75,13 +72,30 @@ class1 = list(
 , ...
 )}
 
+\item{steps_active}{Named boolean vector of what actions to take during mcmc. If mcmc is skipped then initial values are kept as fixed.
+\itemize{
+\item{"thetas=TRUE"}{ to do gibbs on response probabilities}
+\item{"domains=TRUE"}{ to do metropolis on domains}
+\item{"class_pi=TRUE"}{ to do gibbs on class prior}
+\item{"classes=TRUE"}{ to do gibbs on class membership}
+\item{"identifiable=TRUE"}{ to check generic identifiability conditions of domains}
+\item{"likelihood=TRUE"}{ to get the likelihood that each observation is in each class}
+\item{"class_collapse=TRUE"}{ to collapse on theta when sampling classes}
+}}
+
+\item{save_itrs}{Named numeric vector. Gives the maximum number of MCMC iterations which should be saved. Can set components to infinity to get data from every iteration.
+\itemize{
+\item{"domains_accept=#}{ for saving domain metropolis accept/reject choices.}
+\item{"class_loglik=#}{ saves the probability that a response is observed conditional on each class}
+\item{"class_loglik_collapsed=#}{ as class_loglik but after collapsing on response probabilities}
+\item{"agg_loglik=#}{ saves aggregate likelihood of each iteration}
+}}
+
 \item{class_init_method}{string. Decides how 'classes' is defaulted if NULL. One of "kmodes" or "random" or "random_centers", "random_centers_polar"}
 
 \item{warmup_settings}{list. Optionally allows for an extra warmup cycle using different parameters vs the arguments given for the main process. Any parameters in the given list will overwrite the arguments of the same name in the warmup cycle.}
 
 \item{warmup_dlcm}{list. A past DLCM fit (from dependentLCM_fit). The last iteration of the DLCM is used as the Bayes parameters.}
-
-\item{collapse_classes_itrs}{integer. Which iterations should used collasped Gibbs when sampling class membership? This allows collapsing on class prior and response probability when evaluating class. The first collapse_classes_itrs (integer) iterations are collapsed.}
 }
 \value{
 Returns a list with three items. hparams describes the hyperparmeters chosen by the model. These match the arguments input into the function plus any default values. mcmc describes the simulated (fitted) bayes parameter values. warmup describes extra/special warmup iterations using the 'warmup_settings' argument.
