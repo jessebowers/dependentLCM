@@ -23,7 +23,8 @@ CLASSPI_ALPHA = 1
 THETA_ALPHA = 1
 CLASS_INIT_METHODS = c("random_centers_polar", "random_centers", "random", "kmodes")
 DOMAIN_PROPOSAL_EMPTY = 0.3
-STEPS_ACTIVE = c("thetas"=TRUE, "domains"=TRUE, "class_pi"=TRUE, "classes"=TRUE, "identifiable"=TRUE, "classLikelihood"=TRUE)
+STEPS_ACTIVE = c("thetas"=TRUE, "domains"=TRUE, "class_pi"=TRUE, "classes"=TRUE, "identifiable"=TRUE, "likelihood"=TRUE, "class_collapse"=FALSE)
+SAVE_ITRS <- c(domains_accept=0, class_loglik=0, class_loglik_collapsed=0, agg_loglik=Inf)
 DOMAIN_MAXITEMS = 10
 CLASS2DOMAIN_FUNS = list(
   "HOMO" = function(nclass) rep(0, nclass)
@@ -96,13 +97,13 @@ dependentLCM_fit <- function(
     # Data
     , df=NULL, mat=NULL
     # Hyperparameters
-    ,nclass=NCLASS, ndomains=NULL, class2domain=CLASS2DOMAINS[1], classPi_alpha=CLASSPI_ALPHA, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_nproposals=NULL, steps_active = STEPS_ACTIVE
+    ,nclass=NCLASS, ndomains=NULL, class2domain=CLASS2DOMAINS[1], classPi_alpha=CLASSPI_ALPHA, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_nproposals=NULL
     # Bayes parameters
     , class_pi = NULL, classes = NULL, domains = NULL
     # Misc
+    , steps_active = STEPS_ACTIVE, save_itrs=SAVE_ITRS
     , class_init_method = CLASS_INIT_METHODS[1]
     , warmup_settings = "default", warmup_dlcm=NULL
-    , collapse_classes_itrs = 0
 ) {
   
   #
@@ -129,7 +130,7 @@ dependentLCM_fit <- function(
   hparams <- getStart_hparams(
     nitr=nitr, df=mat
     # Hyperparameters
-    ,nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, domain_proposal_empty=domain_proposal_empty, domain_nproposals=domain_nproposals, steps_active=steps_active, collapse_classes_itrs=collapse_classes_itrs
+    ,nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, domain_proposal_empty=domain_proposal_empty, domain_nproposals=domain_nproposals, steps_active=steps_active, save_itrs=save_itrs
   )
   
   warmup_dlcm <- doWarmup(
@@ -159,66 +160,59 @@ dependentLCM_fit <- function(
   #
   
   datetimes <- c(datetimes, "mcmc_start"=Sys.time())
-  dlcm = dependentLCM_fit_cpp(x=(all_params$mat),hparams_list=all_params$hparams, params_list=all_params$bayesparams)
+  mcmc = dependentLCM_fit_cpp(x=(all_params$mat),hparams_list=all_params$hparams, params_list=all_params$bayesparams)
   datetimes <- c(datetimes, "mcmc_end"=Sys.time())
   
   #
   # Post Processing
   #
   
-  # Clean up output
-  dlcm$domains_id <- do.call(cbind, dlcm$domains_id)
-  rownames(dlcm$domains_id) <- c("itr", "class", "domain", "pattern_id", "items_id")
-  mode(dlcm$domains_id) <- "integer"
-  dlcm$domains_lprobs <- unlist(dlcm$domains_lprobs)
-  dlcm$domains_accept <- do.call(function(...) abind::abind(..., along=3), dlcm$domains_accept)
-  dlcm$class_loglik <- do.call(function(...) abind::abind(..., along=3), dlcm$class_loglik)
-  if ((0 < hparams$collapse_classes_itrs) & (hparams$collapse_classes_itrs < hparams$nitr)) {
-    # Make all 'dlcm$class_loglik_collapsed' the same size
-    inds <- which(sapply(dlcm$class_loglik_collapsed, function(x) length(x)==0))
-    dlcm$class_loglik_collapsed[inds] <- rep(
-      list(matrix(
-        data=NA
-        , nrow=hparams$nclass, ncol=nrow(mat)
-      ))
-      , length(inds)
-    )
-  }
-  dlcm$class_loglik_collapsed <- do.call(function(...) abind::abind(..., along=3), dlcm$class_loglik_collapsed)
+  #
+  # Assemble mcmc$domains
+  #
   
-  # name
-  dlcm$class_pi <- set_dimnames(dlcm$class_pi, c("class", "itr"))
-  dlcm$classes <- set_dimnames(dlcm$classes, c("obs", "itr"))
-  dlcm$domains_accept <- set_dimnames(dlcm$domains_accept, c(NULL, NULL, "itr"))
-  dlcm$class_loglik <- set_dimnames(dlcm$class_loglik, c("class", "obs", "itr"))
-  # dlcm$class_loglik_collapsed <- set_dimnames(dlcm$class_loglik_collapsed, c("class", "obs", "itr"))
+  # Clean up output
+  mcmc$domains_id <- do.call(cbind, mcmc$domains_id)
+  rownames(mcmc$domains_id) <- c("itr", "class", "domain", "pattern_id", "items_id")
+  mode(mcmc$domains_id) <- "integer"
+  mcmc$domains_lprobs <- unlist(mcmc$domains_lprobs)
   
   # domains_patterns 
-  dlcm$domains_patterns <- itemid2patterns(dlcm$domains_id["pattern_id",], dlcm$domains_id["items_id",], hparams[["item_nlevels"]])
-  rownames(dlcm$domains_patterns) <- paste0("item_", seq_len(nrow(dlcm$domains_patterns)))
-  mode(dlcm$domains_patterns) <- "integer"
+  mcmc$domains_patterns <- itemid2patterns(mcmc$domains_id["pattern_id",], mcmc$domains_id["items_id",], hparams[["item_nlevels"]])
+  rownames(mcmc$domains_patterns) <- paste0("item_", seq_len(nrow(mcmc$domains_patterns)))
+  mode(mcmc$domains_patterns) <- "integer"
   
   # Supplemental
-  domains_items <- get_which_strs(dlcm$domains_patterns > -1)
-  domains_nitems <- as.integer(colSums(dlcm$domains_patterns > -1))
-  domains_class2domain <- all_params$hparams$class2domain[dlcm$domains_id["class",,drop=TRUE]+1]
-  dlcm$domains_id["itr",] <- dlcm$domains_id["itr",] + 1L # start at 1
-  dlcm$.Random.seed <- .Random.seed_start
+  domains_items <- get_which_strs(mcmc$domains_patterns > -1)
+  domains_nitems <- as.integer(colSums(mcmc$domains_patterns > -1))
+  domains_class2domain <- all_params$hparams$class2domain[mcmc$domains_id["class",,drop=TRUE]+1]
+  mcmc$domains_id["itr",] <- mcmc$domains_id["itr",] + 1L # start at 1
+  mcmc$.Random.seed <- .Random.seed_start
   
   # Merge domains attributes
-  dlcm$domains <- data.frame(
-    t(dlcm$domains_id)
+  mcmc$domains <- data.frame(
+    t(mcmc$domains_id)
     , class2domain = domains_class2domain
-    , prob=exp(dlcm$domains_lprobs)
+    , prob=exp(mcmc$domains_lprobs)
     , nitems = domains_nitems
     , items = domains_items
-    , t(dlcm$domains_patterns)
+    , t(mcmc$domains_patterns)
     , stringsAsFactors = FALSE
   )
-  all_params$hparams$domain_item_cols <- grep("^item_[0-9]+", colnames(dlcm$domains))
+  all_params$hparams$domain_item_cols <- grep("^item_[0-9]+", colnames(mcmc$domains))
   
-  dlcm$domains_merged <- as.data.frame(
-    dlcm$domains 
+  # Delete redundant info
+  mcmc$domains_id <- NULL
+  mcmc$domains_patterns <- NULL
+  mcmc$domains_lprobs <- NULL
+  mcmc$nclass2domain <- NULL
+  
+  #
+  # Assemble other
+  #
+  
+  mcmc$domains_merged <- as.data.frame(
+    mcmc$domains 
     %>% dplyr::filter(pattern_id==0) 
     %>% dplyr::group_by(itr, class2domain)
     %>% dplyr::filter(class == min(class))
@@ -226,17 +220,38 @@ dependentLCM_fit <- function(
     %>% dplyr::summarize(domains_merged=paste(items, collapse="|"), .groups="keep")
   )
   
-  # Delete redundant info
-  dlcm$domains_id <- NULL
-  dlcm$domains_patterns <- NULL
-  dlcm$domains_lprobs <- NULL
-  dlcm$nclass2domain <- NULL
+  if (mcmc$nitrLik > 0) {
+    names(mcmc$itrLogLik) <- paste0("itr", seq(to=hparams$nitr, length.out=mcmc$nitrLik))
+    names(mcmc$obsLik) <- paste0("obs", seq_along(mcmc$obsLik))
+    names(mcmc$obsLogLik) <- paste0("obs", seq_along(mcmc$obsLogLik))
+    names(mcmc$obsLogLik2) <- paste0("obs", seq_along(mcmc$obsLogLik2))
+  }
+  if (length(mcmc$domains_accept)>0) {
+    mcmc$domains_accept <- do.call(function(...) abind::abind(..., along=3), mcmc$domains_accept)
+    mcmc$domains_accept <- set_dimnames(mcmc$domains_accept, c("proposal", "class2domain", NA))
+    dimnames(mcmc$domains_accept)[[3]] <- paste0("itr", seq(to=hparams$nitr, length.out=dim(mcmc$domains_accept)[3]))
+  }
+  if (length(mcmc$class_loglik)>0) {
+    mcmc$class_loglik <- do.call(function(...) abind::abind(..., along=3), mcmc$class_loglik)
+    mcmc$class_loglik <- set_dimnames(mcmc$class_loglik, c("class", "obs", NA))
+    dimnames(mcmc$class_loglik)[[3]] <- paste0("itr", seq(to=hparams$nitr, length.out=dim(mcmc$class_loglik)[3]))
+  }
+  if (length(mcmc$class_loglik_collapsed)>0) {
+    mcmc$class_loglik_collapsed <- do.call(function(...) abind::abind(..., along=3), mcmc$class_loglik_collapsed)
+    mcmc$class_loglik_collapsed <- set_dimnames(mcmc$class_loglik_collapsed, c("class", "obs", NA))
+    dimnames(mcmc$class_loglik_collapsed)[[3]] <- paste0("itr", seq(to=hparams$nitr, length.out=dim(mcmc$class_loglik_collapsed)[3]))
+  }
+  
+  # name
+  mcmc$class_pi <- set_dimnames(mcmc$class_pi, c("class", "itr"))
+  mcmc$classes <- set_dimnames(mcmc$classes, c("obs", "itr"))
+  
   
   datetimes <- c(datetimes, "fun_end"=Sys.time())
-  dlcm$runtimes <- as.numeric(c(diff(datetimes), total=tail(datetimes,1)-datetimes[1]))
-  names(dlcm$runtimes) <- c("pre", "mcmc", "post", "total")
+  mcmc$runtimes <- as.numeric(c(diff(datetimes), total=tail(datetimes,1)-datetimes[1]))
+  names(mcmc$runtimes) <- c("pre", "mcmc", "post", "total")
   
-  return(list(hparams=all_params$hparams, mcmc=dlcm, warmup=warmup_dlcm))
+  return(list(hparams=all_params$hparams, mcmc=mcmc, warmup=warmup_dlcm))
 }
 
 
@@ -255,13 +270,27 @@ dependentLCM_fit <- function(
 #' @param domain_proposal_empty numeric. Sets how often the domain metropolis proposal function pairs a nonempty domain with an empty domain.
 #' @param domain_nproposals Sets how many times the domain metropolis propsal function is called each iteration
 #' @param steps_active Named boolean vector of what actions to take during mcmc. If mcmc is skipped then initial values are kept as fixed.
-#' thetas=TRUE to do gibbs on response probabilities, domains=TRUE to do metropolis on domains, class_pi=TRUE to do gibbs on class prior, classes=TRUE to do gibbs on class membership, identifiable=TRUE to check generic identifiability conditions of domains, classLikelihood=TRUE to get the likelihood that each observation is in each class.
-#' @param collapse_classes_itrs integer. Which iterations should used collasped Gibbs when sampling class membership? This allows collapsing on class prior and response probability when evaluating class. The first collapse_classes_itrs (integer) iterations are collapsed.
+#' \itemize{
+#' \item{"thetas=TRUE"}{ to do gibbs on response probabilities}
+#' \item{"domains=TRUE"}{ to do metropolis on domains}
+#' \item{"class_pi=TRUE"}{ to do gibbs on class prior}
+#' \item{"classes=TRUE"}{ to do gibbs on class membership}
+#' \item{"identifiable=TRUE"}{ to check generic identifiability conditions of domains}
+#' \item{"likelihood=TRUE"}{ to get the likelihood that each observation is in each class}
+#' \item{"class_collapse=TRUE"}{ to collapse on theta when sampling classes}
+#' }
+#' @param save_itrs Named numeric vector. Gives the maximum number of MCMC iterations which should be saved. Can set components to infinity to get data from every iteration.
+#' \itemize{
+#' \item{"domains_accept=#}{ for saving domain metropolis accept/reject choices.}
+#' \item{"class_loglik=#}{ saves the probability that a response is observed conditional on each class}
+#' \item{"class_loglik_collapsed=#}{ as class_loglik but after collapsing on response probabilities}
+#' \item{"agg_loglik=#}{ saves aggregate likelihood of each iteration}
+#' }
 #' @keywords internal
 getStart_hparams <- function(
     nitr, df=NULL, nitems=NULL
     # Hyperparameters
-    ,nclass=NCLASS, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_nproposals=NULL, steps_active=STEPS_ACTIVE, collapse_classes_itrs=0
+    ,nclass=NCLASS, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_nproposals=NULL, steps_active=STEPS_ACTIVE, save_itrs=SAVE_ITRS
 ) {
   # Purpose: Add default hyperparameters
   
@@ -301,10 +330,31 @@ getStart_hparams <- function(
   # steps_active (fill in missing values)
   steps_active_fn = STEPS_ACTIVE
   steps_active_fn[names(steps_active)] = steps_active
+  if (steps_active_fn["classes"]==FALSE) {
+    # if not doing classes, cannot collapse on classes
+    steps_active_fn["class_collapse"] <- FALSE
+  }
+  if (steps_active_fn["classes"] & !steps_active_fn["class_collapse"]) {
+    # if doing un-collapsed classes, classLikelihood will be calculated
+    steps_active_fn["likelihood"] <- TRUE
+  }
   
+  # steps_active (fill in missing values)
+  save_itrs_fn = SAVE_ITRS
+  save_itrs_fn[names(save_itrs)] = save_itrs
+  save_itrs_fn[save_itrs_fn>nitr] = nitr
+  if (steps_active_fn["class_collapse"]==FALSE) {
+    save_itrs_fn["class_loglik_collapsed"] <- 0
+  }
+  if (steps_active_fn["likelihood"]==FALSE) {
+    save_itrs_fn["class_loglik"] <- 0
+    save_itrs_fn["agg_loglik"] <- 0
+  }
+  
+
   return(list(
-    nitr=nitr, nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, nitems = nitems, item_nlevels = item_nlevels, nclass2domain = nclass2domain, domain_proposal_empty=domain_proposal_empty, domain_nproposals=domain_nproposals, steps_active = steps_active_fn
-    , theta_alpha_funname = "constant", collapse_classes_itrs = collapse_classes_itrs
+    nitr=nitr, nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, nitems = nitems, item_nlevels = item_nlevels, nclass2domain = nclass2domain, domain_proposal_empty=domain_proposal_empty, domain_nproposals=domain_nproposals, steps_active = steps_active_fn, save_itrs=save_itrs_fn
+    , theta_alpha_funname = "constant"
   ))
 }
 
@@ -602,6 +652,11 @@ check_params <- function(all_params) {
     is_problem = TRUE
   }
   
+  if (!setequal(names(all_params$hparams$save_itrs), names(SAVE_ITRS))) {
+    warning("save_itrs invalid")
+    is_problem = TRUE
+  }
+  
   if (max(all_params$bayesparams$classes) > all_params$hparams$nclass) {
     warning("classes > nclass")
     is_problem = TRUE
@@ -824,7 +879,7 @@ sample.integers <- function(x, size, ...) {
 #' \item{"waic_df"}{=See function 'dlcm.get_waic()'.}
 #' }
 #' @export
-dlcm.summary <- function(dlcm, nwarmup=NULL) {
+dlcm.summary <- function(dlcm, nwarmup=NULL, waic_method="agg") {
   
   if (is.null(nwarmup)) {
     nwarmup = floor(min(c(1000, dlcm$hparams$nitr/2)))
@@ -917,24 +972,21 @@ dlcm.summary <- function(dlcm, nwarmup=NULL) {
     classes <- NA
   }
   
-  # domain_nitems <- table((dlcm$mcmc$domains %>% dplyr::filter(pattern_id==0, itr > nwarmup))$nitems)
-  
-  domain_accept <- table(dlcm$mcmc$domains_accept[, , -seq_len(nwarmup)])
-  
-  waic <- dlcm.get_waic(dlcm, itrs=nwarmup:dlcm$hparams$nitr)
+  waic <- dlcm.get_waic(dlcm, itrs=(nwarmup+1):dlcm$hparams$nitr, method=waic_method)
   names(waic) <- paste0("waic_", names(waic))
   
   class_pi = rowMeans(dlcm$mcmc$class_pi[,-seq_len(nwarmup), drop=FALSE])
   
   return(c(
-    list("thetas_avg"=thetas_avg, "domain_items"=domain_items, "domain_items_all"=domain_items_all, "domain_accept"=domain_accept, "classes"=classes, "class_pi"=class_pi, "thetas_avg_mode"=thetas_avg_mode, "mode_domains"=mode_domains, "first_mode_domain_itr"=first_mode_domain_itr, "classes_cnts"=classes_cnts)
+    list("thetas_avg"=thetas_avg, "domain_items"=domain_items, "domain_items_all"=domain_items_all, "classes"=classes, "class_pi"=class_pi, "thetas_avg_mode"=thetas_avg_mode, "mode_domains"=mode_domains, "first_mode_domain_itr"=first_mode_domain_itr, "classes_cnts"=classes_cnts)
     , waic
   ))
 }
 
 #' Calculate likelihood and WAIC
-#' @param this_sim Dependent Latent class model
-#' @param itrs integer vector. Which iterations should be include in calculation?
+#' @param dlcm Dependent Latent class model
+#' @param method string from c("agg", "raw"). 
+#' @param itrs integer vector. Which iterations should be include in calculation? Ignored if "agg" is chosen.
 #' @return List with a 'summary' and 'df' value. The 'summary' is a vector with the following summary statitics:
 #' \itemize{
 #' \item{"nparams_avg"}{= The average number of model parameters per iteration.}
@@ -947,14 +999,67 @@ dlcm.summary <- function(dlcm, nwarmup=NULL) {
 #' }
 #' For information on wAIC methods 1/2 see Gelman 2014 (DOI https://doi.org/10.1007/s11222-013-9416-2). The 'df' value has a row for each iteration and reports the logLikelihood and raw number of parameters.
 #' @export
-dlcm.get_waic <- function(this_sim, itrs=NULL) {
+dlcm.get_waic <- function(dlcm, method="agg", itrs=NULL) {
+  if (method=="agg") {
+    return(dlcm.get_waic_fromagg(dlcm=dlcm))
+  } else if (method=="raw") {
+    return(dlcm.get_waic_fromraw(dlcm=dlcm, itrs=itrs))
+  }
+}
+
+#' Calculate likelihood and WAIC from aggregated information. See dlcm.get_waic() for details.
+#' @keywords internal
+dlcm.get_waic_fromagg <- function(dlcm) {
+  
+  itrs <- as.numeric(substring(names(dlcm$mcmc$itrLogLik), 4))
+  likelihoods <- data.frame(
+    itr = itrs
+    , logLik = dlcm$mcmc$itrLogLik
+    , nparameters = 0
+  )
+  
+  theta_parameters <- (
+    dlcm$mcmc$domains 
+    %>% dplyr::filter(itr %in% itrs) 
+    %>% dplyr::group_by(itr) 
+    %>% dplyr::summarize(nparams = dplyr::n() - length(unique(domain)), .groups="keep"))
+  likelihoods$nparameters <- (
+    unlist(theta_parameters[match(likelihoods$itr, theta_parameters$itr), "nparams"])
+    + dlcm$hparams$nclass-1 # class pis
+    + length(unique(dlcm$hparams$class2domain)) * (dlcm$hparams$nitems-1) # domains
+  )
+  
+  summary <- c(
+    nparams_avg = mean(likelihoods$nparameters)
+    , logLik_avg = mean(dlcm$mcmc$itrLogLik)
+    , lppd = sum(log(dlcm$mcmc$obsLik / dlcm$mcmc$nitrLik))
+    , waic_nparams1 = 2*sum(log(dlcm$mcmc$obsLik / dlcm$mcmc$nitrLik) - dlcm$mcmc$obsLogLik / dlcm$mcmc$nitrLik)
+    , waic_nparams2 = sum(dlcm$mcmc$obsLogLik2 / (dlcm$mcmc$nitrLik-1) - dlcm$mcmc$nitrLik/(dlcm$mcmc$nitrLik-1)*(dlcm$mcmc$obsLogLik / dlcm$mcmc$nitrLik)^2)
+  )
+  summary["waic1"] <- -2 * (summary["lppd"] - summary["waic_nparams1"])
+  summary["waic2"] <- -2 * (summary["lppd"] - summary["waic_nparams2"])
+  summary["aic"] <- -2*summary["logLik_avg"] + 2*summary["nparams_avg"]
+  
+  return(list(
+    summary=summary
+    , df=likelihoods
+  ))
+}
+
+#' Calculate likelihood and WAIC from raw class_loglik. See dlcm.get_waic() for details.
+#' @keywords internal
+dlcm.get_waic_fromraw <- function(dlcm, itrs=NULL) {
   
   alpha <- 0 # No robust MCD variance estimate in WAIC
   
   if (is.null(itrs)) {
     # default in all iterations
-    itrs = seq_len(this_sim$hparams$nitr)
+    itrs_str <- seq_len(dlcm$hparams$nitr)
+    itrs <- as.numeric(substring(names(dlcm$mcmc$itrLogLik), 4))
+  } else {
+    itrs_str <- paste0("itr", itrs)
   }
+  
   
   #
   # Initialize
@@ -974,14 +1079,14 @@ dlcm.get_waic <- function(this_sim, itrs=NULL) {
   #
   
   theta_parameters <- (
-    this_sim$mcmc$domains 
+    dlcm$mcmc$domains 
     %>% dplyr::filter(itr %in% itrs) 
     %>% dplyr::group_by(itr) 
     %>% dplyr::summarize(nparams = dplyr::n() - length(unique(domain)), .groups="keep"))
   likelihoods$nparameters <- (
     unlist(theta_parameters[match(likelihoods$itr, theta_parameters$itr), "nparams"])
-    + this_sim$hparams$nclass-1 # class pis
-    + length(unique(this_sim$hparams$class2domain)) * (this_sim$hparams$nitems-1) # domains
+    + dlcm$hparams$nclass-1 # class pis
+    + length(unique(dlcm$hparams$class2domain)) * (dlcm$hparams$nitems-1) # domains
   )
   summary["nparams_avg"] <- mean(likelihoods$nparameters)
   
@@ -990,9 +1095,9 @@ dlcm.get_waic <- function(this_sim, itrs=NULL) {
   #
   
   # Calculate likelihood for each observation in each iteration
-  obsLogLiks <- sweep(this_sim$mcmc$class_loglik[,,itrs, drop=FALSE]
+  obsLogLiks <- sweep(dlcm$mcmc$class_loglik[,,itrs_str, drop=FALSE]
                       , c(1,3) # Include pi. Repeat for each observation (2)
-                      , log(this_sim$mcmc$class_pi[,itrs, drop=FALSE]), "+")
+                      , log(dlcm$mcmc$class_pi[,itrs_str, drop=FALSE]), "+")
   obsLogLiks <- apply(obsLogLiks, c(2,3), expSumLog)
   
   likelihoods$logLik <- colSums(obsLogLiks, 1) # sum across observations

@@ -9,8 +9,9 @@ OPEN ITEMS:
  * None
 
 FUTURE ENHANCEMENTS:
-* Make additional version of fix_class_label_switching() which does not require DLCM data structure.
+ * Make additional version of fix_class_label_switching() which does not require DLCM data structure.
  * Allow warmup without archiving, in R allow multiple chains
+ * add to SAVE_ITRS: class_pi=Inf, classes=Inf, domains=Inf (difficult due to downstream changes needed)
  * Incorporate optional checks/consistency checks eg domain size, nclasses, etc
  * post-hoc handle label switching
  * Aggregate X so that we can get counts of duplicates all at once rather than one-at-a-time

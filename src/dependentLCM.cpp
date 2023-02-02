@@ -25,6 +25,16 @@ Rcpp::IntegerVector colMax(const Rcpp::IntegerMatrix& x) {
   TROUBLE_END; return max;
 }
 
+//' @name sumLogs
+//' @title sumLogs
+//' @description Calculate log(sum(exp(x))) precisely
+//' @keywords internal
+template <typename T>
+double sumLogs(const T& x) {
+  double xmax = max(x);
+  return xmax + log(sum(exp(x-xmax)));
+}
+
 //' @name rDirichlet
 //' @title rDirichlet
 //' @description Generate random values from dirichlet distribution
@@ -441,12 +451,12 @@ public:
   int nitem;
   int nclass2domain;
   int nitr;
-  int collapse_classes_itrs;
+  Rcpp::IntegerVector save_itrs;
   
 public:
   int nclass2domain_calc() {return count_unique(class2domain);};
   int nitem_calc() {return item_nlevels.size();};
-  void set_hparams(int ndomains_in, int nclass_in, const Rcpp::IntegerVector& class2domain_in, const Rcpp::NumericVector& classPi_alpha_in, int domain_maxitems_in, float theta_alpha_in, float domain_proposal_empty_in, int domain_nproposals_in, Rcpp::LogicalVector steps_active_in, std::string theta_alpha_funname_in, int nitr_in, int collapse_classes_itrs_in);
+  void set_hparams(int ndomains_in, int nclass_in, const Rcpp::IntegerVector& class2domain_in, const Rcpp::NumericVector& classPi_alpha_in, int domain_maxitems_in, float theta_alpha_in, float domain_proposal_empty_in, int domain_nproposals_in, Rcpp::LogicalVector steps_active_in, std::string theta_alpha_funname_in, int nitr_in, Rcpp::IntegerVector& save_itrs_in);
   void set_hparams(Rcpp::List hparams_in);
   void set_dataInfo(const Rcpp::IntegerMatrix& x);
 };
@@ -468,7 +478,7 @@ void Hyperparameter::set_hparams(
   , Rcpp::LogicalVector steps_active_in
   , std::string theta_alpha_funname_in
   , int nitr_in
-  , int collapse_classes_itrs_in) {
+  , Rcpp::IntegerVector& save_itrs_in) {
   TROUBLE_START(("Hyperparameter::set_hparams #V1"));
   ndomains = ndomains_in;
   nclass = nclass_in;
@@ -481,7 +491,7 @@ void Hyperparameter::set_hparams(
   steps_active =  steps_active_in;
   theta_alpha_funname = theta_alpha_funname_in;
   nitr = nitr_in;
-  collapse_classes_itrs = collapse_classes_itrs_in;
+  save_itrs = save_itrs_in;
   
   // Inferred
   nclass2domain = nclass2domain_calc();
@@ -507,9 +517,9 @@ void Hyperparameter::set_hparams(Rcpp::List hparams_in) {
   Rcpp::LogicalVector steps_active = hparams_in("steps_active");
   std::string theta_alpha_funname = hparams_in("theta_alpha_funname");
   int nitr = hparams_in("nitr");
-  int collapse_classes_itrs = hparams_in("collapse_classes_itrs");
+  Rcpp::IntegerVector save_itrs = hparams_in("save_itrs");
   
-  set_hparams(ndomains, nclass, class2domain, classPi_alpha, domain_maxitems, theta_alpha, domain_proposal_empty, domain_nproposals, steps_active, theta_alpha_funname, nitr, collapse_classes_itrs);
+  set_hparams(ndomains, nclass, class2domain, classPi_alpha, domain_maxitems, theta_alpha, domain_proposal_empty, domain_nproposals, steps_active, theta_alpha_funname, nitr, save_itrs);
   TROUBLE_END;
 }
 
@@ -530,6 +540,7 @@ void Hyperparameter::set_dataInfo(const Rcpp::IntegerMatrix& x) {
 /*****************************************************
  ****** Domains
  *****************************************************/
+
 
 // Domains and corresponding (logged) probabilities
 class DomainCount {
@@ -980,8 +991,10 @@ void BayesParameter::set_initial(Rcpp::NumericVector class_pi_in, Rcpp::IntegerV
   item2domainid = item2domainid_calc(hparams);
   domains_accept = Rcpp::IntegerMatrix(hparams.domain_nproposals, hparams.nclass2domain);
   domains_accept.fill(-1);
-  class_loglik = Rcpp::NumericMatrix(hparams.nclass, hparams.nobs); // initialize with all zeroes
-  if (hparams.collapse_classes_itrs > 0) {
+  if (hparams.steps_active["likelihood"] == true) {
+    class_loglik = Rcpp::NumericMatrix(hparams.nclass, hparams.nobs); // initialize with all zeroes
+  }
+  if (hparams.steps_active["class_collapse"] == true) {
     class_loglik_collapsed = Rcpp::NumericMatrix(hparams.nclass, hparams.nobs); // initialize with all zeroes
   }
   TROUBLE_END;
@@ -1084,7 +1097,7 @@ void BayesParameter::set_class_loglik(const Rcpp::IntegerMatrix& x, bool reset) 
 //' @param hparams Hyperparameter values
 //' @keywords internal
 void BayesParameter::set_class_loglik_collapsed(const Rcpp::IntegerMatrix& x, const Hyperparameter& hparams) {
-  TROUBLE_START(("BayesParameter::set_class_loglik"));
+  TROUBLE_START(("BayesParameter::set_class_loglik_collapsed"));
   // One column per observation and row per class
   // influence via pi
   Rcpp::NumericVector nobs_classes = Rcpp::as<Rcpp::NumericVector>(nobs_classes_calc());
@@ -1870,39 +1883,56 @@ public:
   std::vector<Rcpp::NumericMatrix> class_loglik;
   std::vector<Rcpp::NumericMatrix> class_loglik_collapsed;
   int next_itr;
-  int nitr;
+public:
+  Rcpp::NumericVector obsLik;
+  Rcpp::NumericVector obsLogLik;
+  Rcpp::NumericVector obsLogLik2;
+  Rcpp::NumericVector itrLogLik;
+  int nitrLik;
   
 public:
-  void set_initial(int nclass, int nobs, int nitems, int nitr_in, int domain_nproposals, int nclass2domain);
-  void add(BayesParameter& aparams);
+  void set_initial(const Hyperparameter& hparams);
+  void add(BayesParameter& aparams, const Hyperparameter& hparams);
   void domains2mat(BayesParameter& params, int itr, Rcpp::IntegerMatrix& out_domains_id, Rcpp::NumericVector& out_domains_lprobs);
+  Rcpp::List toList();
 };
 
 //' @name Archive::set_initial
 //' @title Archive::set_initial
 //' @description Initializes the archive (namely reserving memory)
 //' @keywords internal
-void Archive::set_initial(int nclass, int nobs, int nitems, int nitr_in, int domain_nproposals, int nclass2domain) {
+void Archive::set_initial(const Hyperparameter& hparams) {
   TROUBLE_START(("Archive::set_initial"));
   next_itr = 0;
-  nitr = nitr_in;
   
-  class_pi = Rcpp::NumericMatrix(nclass, nitr_in);
-  classes = Rcpp::IntegerMatrix(nobs, nitr_in);
+  class_pi = Rcpp::NumericMatrix(hparams.nclass, hparams.nitr);
+  classes = Rcpp::IntegerMatrix(hparams.nobs, hparams.nitr);
   
-  domains_id.resize(nitr_in);
-  domains_lprobs.resize(nitr_in);
+  domains_id.resize(hparams.nitr);
+  domains_lprobs.resize(hparams.nitr);
   
-  domains_accept.resize(nitr_in);
+  domains_accept.resize(hparams.save_itrs["domains_accept"]);
   std::fill(domains_accept.begin(), domains_accept.end()
-              , Rcpp::IntegerMatrix(domain_nproposals, nclass2domain)
+              , Rcpp::IntegerMatrix(hparams.domain_nproposals, hparams.nclass2domain)
   ); // does initializing actually speed things up later? I considered removing the std::vector and then implicitly working with a 3d matrix by way of a super-long 1d rcpp:vector (and attr("dim")). But this was unstable
   
-  class_loglik.resize(nitr_in);
+  class_loglik.resize(hparams.save_itrs["class_loglik"]);
   std::fill(class_loglik.begin(), class_loglik.end()
-              , Rcpp::NumericMatrix(nclass, nobs));
+              , Rcpp::NumericMatrix(hparams.nclass, hparams.nobs));
   
-  class_loglik_collapsed.resize(nitr_in);
+  class_loglik_collapsed.resize(hparams.save_itrs["class_loglik_collapsed"]);
+  std::fill(class_loglik_collapsed.begin(), class_loglik_collapsed.end()
+              , Rcpp::NumericMatrix(hparams.nclass, hparams.nobs));
+  
+  
+  int save_itrs_agg_loglik = hparams.save_itrs["agg_loglik"]; // direct call causing issues downstream
+  if (save_itrs_agg_loglik>0) {
+    obsLik = Rcpp::NumericVector(hparams.nobs);
+    obsLogLik = Rcpp::NumericVector(hparams.nobs);
+    itrLogLik = Rcpp::NumericVector(save_itrs_agg_loglik);
+    obsLogLik2 = Rcpp::NumericVector(hparams.nobs);
+  }
+  nitrLik = 0;
   
   TROUBLE_END;
 }
@@ -1973,28 +2003,74 @@ void Archive::domains2mat(BayesParameter& params, int itr, Rcpp::IntegerMatrix& 
 //' @title Archive::add
 //' @description Add latest bayes parameters to the archive
 //' @keywords internal
-void Archive::add(BayesParameter& aparams) {
+void Archive::add(BayesParameter& aparams, const Hyperparameter& hparams) {
   TROUBLE_START(("Archive::add"));
   
   // Iterations are added by column for speed
   // Currently assumes fixed number of iterations. For flexible iterations std::list allows for easier extension.
   
-  if (next_itr >= nitr) {
-    Rcpp::warning("Archive::add:: Max storage reached");
-    TROUBLE_END; return; // Exit Early. Maybe in future resize or error, but not necessary now
-  }
+  int inext_itr;
   
   class_pi.column(next_itr) = aparams.class_pi;
   classes.column(next_itr) = aparams.classes;
   Archive::domains2mat(aparams, next_itr
                          , domains_id[next_itr], domains_lprobs[next_itr]);
-  domains_accept[next_itr] = Rcpp::clone(aparams.domains_accept);
-  class_loglik[next_itr] = Rcpp::clone(aparams.class_loglik);
-  class_loglik_collapsed[next_itr] = Rcpp::clone(aparams.class_loglik_collapsed);
+  
+  inext_itr = next_itr - ( hparams.nitr - hparams.save_itrs["domains_accept"] );
+  if (inext_itr >= 0) {
+    domains_accept[inext_itr] = Rcpp::clone(aparams.domains_accept);
+  }
+  
+  inext_itr = next_itr - ( hparams.nitr - hparams.save_itrs["class_loglik"] );
+  if (inext_itr >= 0) {
+    class_loglik[inext_itr] = Rcpp::clone(aparams.class_loglik);
+  }
+  
+  inext_itr = next_itr - ( hparams.nitr - hparams.save_itrs["class_loglik_collapsed"] );
+  if (inext_itr >= 0) {
+    class_loglik_collapsed[inext_itr] = Rcpp::clone(aparams.class_loglik_collapsed);
+  }
+  
+  inext_itr = next_itr - ( hparams.nitr - hparams.save_itrs["agg_loglik"] );
+  if (inext_itr >= 0) {
+    Rcpp::NumericVector iobsLogLik (hparams.nobs);
+    for (int iobs=0; iobs<hparams.nobs; iobs++) {
+      iobsLogLik[iobs] = sumLogs(aparams.class_loglik.column(iobs) + log(aparams.class_pi));
+    }
+    
+    obsLogLik += iobsLogLik;
+    obsLogLik2 += iobsLogLik*iobsLogLik;
+    obsLik += exp(iobsLogLik);
+    itrLogLik[inext_itr] = sum(iobsLogLik);
+    nitrLik += 1;
+  }
+  
   next_itr += 1;
   TROUBLE_END;
 }
 
+//' @name Archive::toList
+//' @title Archive::add
+//' @description Add latest bayes parameters to the archive
+//' @keywords internal
+Rcpp::List Archive::toList() {
+  TROUBLE_START(("Archive::toList"));
+  TROUBLE_END; return Rcpp::List::create(
+      Rcpp::Named("class_pi") = class_pi
+    , Rcpp::Named("classes") = classes
+    , Rcpp::Named("domains_id") = wrap(domains_id)
+    , Rcpp::Named("domains_lprobs") = wrap(domains_lprobs)
+    , Rcpp::Named("domains_accept") = domains_accept
+    , Rcpp::Named("class_loglik") = class_loglik
+    , Rcpp::Named("class_loglik_collapsed") = class_loglik_collapsed
+    , Rcpp::Named("obsLik") = obsLik
+    , Rcpp::Named("obsLogLik") = obsLogLik
+    , Rcpp::Named("obsLogLik2") = obsLogLik2
+    , Rcpp::Named("itrLogLik") = itrLogLik
+    , Rcpp::Named("nitrLik") = nitrLik
+    , Rcpp::Named("troubleshooting") = TROUBLE_LIST
+  );
+}
 
 /*****************************************************
  ****** BayesContainer
@@ -2023,7 +2099,7 @@ void BayesContainer::set_initial(const Rcpp::IntegerMatrix& x_in, Rcpp::List hpa
   hparams.set_hparams(hparams_list);
   hparams.set_dataInfo(x_in);
   params.set_initial(params_list, hparams);
-  archive.set_initial(hparams.nclass, hparams.nobs, hparams.nitem, hparams.nitr+2, hparams.domain_nproposals, hparams.nclass2domain);
+  archive.set_initial(hparams);
   TROUBLE_END;
 }
 
@@ -2034,17 +2110,12 @@ void BayesContainer::set_initial(const Rcpp::IntegerMatrix& x_in, Rcpp::List hpa
 void BayesContainer::run() {
   TROUBLE_START(("BayesContainer::run"));
   
-  archive.add(params); // save initial value (iteration 0)
+  archive.add(params, hparams); // save initial value (iteration 0)
   
-  bool collapse_classes = (
-    (hparams.steps_active["classes"]==true)
-    & (hparams.collapse_classes_itrs > 0)
-  );
   const bool countDomains = (
     (hparams.steps_active["thetas"]==true)
     | (hparams.steps_active["domains"]==true)
   );
-  bool getLikelhood;
   
   if (0 < hparams.nitr) {
     // In first iteration we update parameters but not classes (iteration 1)
@@ -2062,36 +2133,21 @@ void BayesContainer::run() {
       params.class_pi_next(hparams);
     }
     
-    if (hparams.steps_active["classLikelihood"]) {
+    if (hparams.steps_active["likelihood"]) {
       params.set_class_loglik(x);
     }
     
-    archive.add(params);
+    archive.add(params, hparams);
   }
   
-  for (int i=0; i < hparams.nitr; i++) {
+  for (int i=2; i < hparams.nitr; i++) {
     
-    
-    collapse_classes = (
-      collapse_classes
-    & (i < hparams.collapse_classes_itrs)
-    );
-    getLikelhood = (
-      (hparams.steps_active["classLikelihood"]==true)
-      | (
-        (hparams.steps_active["classes"]==true)
-        & !collapse_classes
-      )
-    );
-    
-    if (collapse_classes==true) {
+    if (hparams.steps_active["class_collapse"]==true) {
       params.set_class_loglik_collapsed(x, hparams);
-    } else if (i==hparams.collapse_classes_itrs) {
-      params.class_loglik_collapsed = Rcpp::NumericMatrix(); // clear out
     }
     
     if ((hparams.steps_active["classes"]==true)) {
-      params.classes_next(x, hparams, collapse_classes);
+      params.classes_next(x, hparams, hparams.steps_active["class_collapse"]);
     }
     
     if (countDomains==true) {
@@ -2107,10 +2163,10 @@ void BayesContainer::run() {
       params.class_pi_next(hparams);
     }
     
-    if (getLikelhood) {
+    if (hparams.steps_active["likelihood"]) {
       params.set_class_loglik(x); // always last because it recalculates likelihood for above choices
     }
-    archive.add(params);
+    archive.add(params, hparams);
   }
   TROUBLE_END;
 }
@@ -2145,17 +2201,7 @@ Rcpp::List dependentLCM_fit_cpp(Rcpp::IntegerMatrix& x_in, Rcpp::List hparams_li
   TROUBLE_START(("dependentLCM_fit_cpp"));
   BayesContainer bcontainer;
   bcontainer.run_init(x_in, hparams_list, params_list);
-  TROUBLE_END; return Rcpp::List::create(
-      Rcpp::Named("class_pi") = bcontainer.archive.class_pi
-    , Rcpp::Named("classes") = bcontainer.archive.classes
-    , Rcpp::Named("domains_id") = wrap(bcontainer.archive.domains_id)
-    , Rcpp::Named("domains_lprobs") = wrap(bcontainer.archive.domains_lprobs)
-    , Rcpp::Named("nitr") = bcontainer.archive.nitr
-    , Rcpp::Named("domains_accept") = bcontainer.archive.domains_accept
-    , Rcpp::Named("class_loglik") = bcontainer.archive.class_loglik
-    , Rcpp::Named("class_loglik_collapsed") = bcontainer.archive.class_loglik_collapsed
-    , Rcpp::Named("troubleshooting") = TROUBLE_LIST
-  );
+  TROUBLE_END; return bcontainer.archive.toList();
 }
 
 //' @name id2pattern
