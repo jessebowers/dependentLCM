@@ -25,7 +25,7 @@ fix_class_label_switching(
 \item{maxitr}{integer. How many attempts should we make to correct label swapping?}
 }
 \value{
-Returns an updated DLCM with corrected classes. Summary information (e.g. dlcm.summary()) is not modified. 
+Returns an updated DLCM with corrected classes. Only modifies dlcm$mcmc[c('domains', 'classes', 'class_pi')]. Other information is not modified, including summary information (e.g. dlcm.summary()).
 Information on what labels were swapped is given in output$label_swapping.
 \itemize{
 \item{"classes"}{= Integer vector. The most common (mode) class of each observation after relabeling. This serves as the target for relabeling (done iteratively).}

@@ -75,7 +75,7 @@ CLASS2DOMAINS = names(CLASS2DOMAIN_FUNS)
 #' # Run Model
 #' set.seed(4)
 #' dlcm <- dependentLCM_fit(
-#'   nitr = 6000
+#'   nitr = 6000, save_itrs=c(agg_loglik=6000-1000)
 #'   , df=xdf
 #'   , nclass=3
 #' )
@@ -1035,6 +1035,7 @@ dlcm.get_waic_fromagg <- function(dlcm) {
     , lppd = sum(log(dlcm$mcmc$obsLik / dlcm$mcmc$nitrLik))
     , waic_nparams1 = 2*sum(log(dlcm$mcmc$obsLik / dlcm$mcmc$nitrLik) - dlcm$mcmc$obsLogLik / dlcm$mcmc$nitrLik)
     , waic_nparams2 = sum(dlcm$mcmc$obsLogLik2 / (dlcm$mcmc$nitrLik-1) - dlcm$mcmc$nitrLik/(dlcm$mcmc$nitrLik-1)*(dlcm$mcmc$obsLogLik / dlcm$mcmc$nitrLik)^2)
+    , nitrs_used = dlcm$mcmc$nitrLik
   )
   summary["waic1"] <- -2 * (summary["lppd"] - summary["waic_nparams1"])
   summary["waic2"] <- -2 * (summary["lppd"] - summary["waic_nparams2"])
@@ -1111,6 +1112,7 @@ dlcm.get_waic_fromraw <- function(dlcm, itrs=NULL) {
   summary["waic1"] <- -2 * (summary["lppd"] - summary["waic_nparams1"])
   summary["waic2"] <- -2 * (summary["lppd"] - summary["waic_nparams2"])
   summary["aic"] <- -2*summary["logLik_avg"] + 2*summary["nparams_avg"]
+  summary["nitrs_used"] <- nrow(likelihoods)
   
   return(list(
     summary=summary
@@ -1499,7 +1501,7 @@ apply_swaps_helper <- function(
 #' @param nwarmup integer. Which iterations are warmup iterations?
 #' @param initial_target_classes integer vector with one value per observation. What set of class labels should we try to mirror, initially? If blank defaults to the most common class for each observation.
 #' @param maxitr integer. How many attempts should we make to correct label swapping?
-#' @return Returns an updated DLCM with corrected classes. Summary information (e.g. dlcm.summary()) is not modified. 
+#' @return Returns an updated DLCM with corrected classes. Only modifies dlcm$mcmc[c('domains', 'classes', 'class_pi')]. Other information is not modified, including summary information (e.g. dlcm.summary()).
 #' Information on what labels were swapped is given in output$label_swapping.
 #' \itemize{
 #' \item{"classes"}{= Integer vector. The most common (mode) class of each observation after relabeling. This serves as the target for relabeling (done iteratively).}
@@ -1555,8 +1557,10 @@ fix_class_label_switching <- function(dlcm, nwarmup, initial_target_classes=NULL
   dlcm_copy$label_swapping$nitrs_attempted <- jitr
   dlcm_copy$label_swapping$nitrs_with_changes <- nitrs_with_changes
   dlcm_copy$label_swapping$valueIsNewClassName_positionIsOldClassIndex <- valueIsNewClassName_positionIsOldClassIndex_df
-  dlcm_copy$mcmc$domains$class_original <- dlcm$mcmc$domains$class
-  dlcm_copy$mcmc$classes_original <- dlcm$mcmc$classes
+  if (dlcm_copy$label_swapping$any_swaps==TRUE) {
+    dlcm_copy$mcmc$domains$class_original <- dlcm$mcmc$domains$class
+    dlcm_copy$mcmc$classes_original <- dlcm$mcmc$classes
+  }
   return(dlcm_copy)
 }
 

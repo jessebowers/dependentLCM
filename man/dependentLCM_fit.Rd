@@ -141,7 +141,7 @@ xdf <- na.omit(probability[,c("b101", "b102", "b103", "b104", "b105", "b106", "b
 # Run Model
 set.seed(4)
 dlcm <- dependentLCM_fit(
-  nitr = 6000
+  nitr = 6000, save_itrs=c(agg_loglik=6000-1000)
   , df=xdf
   , nclass=3
 )
