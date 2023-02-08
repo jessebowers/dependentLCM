@@ -1035,11 +1035,11 @@ dlcm.get_waic_fromagg <- function(dlcm) {
     , lppd = sum(log(dlcm$mcmc$obsLik / dlcm$mcmc$nitrLik))
     , waic_nparams1 = 2*sum(log(dlcm$mcmc$obsLik / dlcm$mcmc$nitrLik) - dlcm$mcmc$obsLogLik / dlcm$mcmc$nitrLik)
     , waic_nparams2 = sum(dlcm$mcmc$obsLogLik2 / (dlcm$mcmc$nitrLik-1) - dlcm$mcmc$nitrLik/(dlcm$mcmc$nitrLik-1)*(dlcm$mcmc$obsLogLik / dlcm$mcmc$nitrLik)^2)
-    , nitrs_used = dlcm$mcmc$nitrLik
   )
   summary["waic1"] <- -2 * (summary["lppd"] - summary["waic_nparams1"])
   summary["waic2"] <- -2 * (summary["lppd"] - summary["waic_nparams2"])
   summary["aic"] <- -2*summary["logLik_avg"] + 2*summary["nparams_avg"]
+  summary["nitrs_used"] <- dlcm$mcmc$nitrLik
   
   return(list(
     summary=summary

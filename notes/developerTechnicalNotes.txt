@@ -9,6 +9,7 @@ OPEN ITEMS:
  * None
 
 FUTURE ENHANCEMENTS:
+ * For save_itrs argument, allow negative values. Negatives save all but the first negative-value iterations.
  * Make additional version of fix_class_label_switching() which does not require DLCM data structure.
  * Allow warmup without archiving, in R allow multiple chains
  * add to SAVE_ITRS: class_pi=Inf, classes=Inf, domains=Inf (difficult due to downstream changes needed)
