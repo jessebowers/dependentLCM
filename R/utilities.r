@@ -14,17 +14,6 @@ getMode <- function(x) {
   return(xmode)
 }
 
-
-#' Same as log(sum(exp(x))), but adjusted to improve precision.
-#' Assumes x are logged values. Calculates sum(e^x) and then converts back to log scale
-#' @param x numeric vector in log scale
-#' @keywords internal
-expSumLog <- function(x) {
-  # Handle precision: log(e^a+e^b+e^c) = log(a * (1+e^(b-a)+e^(c-1))) = log(a) + log(1+e^(b-a)+e^(c-1)))
-  xmax <- max(x)
-  return(xmax + log(sum(exp(x-xmax))))
-}
-
 #' @name set_dimnames
 #' @title set_dimnames
 #' @description Names each axis of your array by naming each row/column axisName#

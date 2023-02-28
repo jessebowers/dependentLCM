@@ -2306,3 +2306,16 @@ Rcpp::StringVector get_which_strs(Rcpp::LogicalMatrix x) {
   }
   return(out);
 }
+
+//' @name expSumLog
+//' @title expSumLog
+//' Same as log(sum(exp(x))), but adjusted to improve precision.
+//' Assumes x are logged values. Calculates sum(e^x) and then converts back to log scale
+//' Handle precision: log(e^a+e^b+e^c) = log(a * (1+e^(b-a)+e^(c-1))) = log(a) + log(1+e^(b-a)+e^(c-1)))
+//' @param x numeric vector in log scale
+//' @keywords internal
+//' @export
+// [[Rcpp::export]]
+double expSumLog(const Rcpp::NumericVector& x) {
+  return sumLogs(x);
+}
