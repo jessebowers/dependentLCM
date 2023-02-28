@@ -591,6 +591,18 @@ get_which_strs <- function(x) {
     .Call(`_dependentLCM_get_which_strs`, x)
 }
 
+#' @name expSumLog
+#' @title expSumLog
+#' Same as log(sum(exp(x))), but adjusted to improve precision.
+#' Assumes x are logged values. Calculates sum(e^x) and then converts back to log scale
+#' Handle precision: log(e^a+e^b+e^c) = log(a * (1+e^(b-a)+e^(c-1))) = log(a) + log(1+e^(b-a)+e^(c-1)))
+#' @param x numeric vector in log scale
+#' @keywords internal
+#' @export
+expSumLog <- function(x) {
+    .Call(`_dependentLCM_expSumLog`, x)
+}
+
 #' @name trouble_start
 #' @title trouble_start
 #' @description When troubleshooting, run this at start of all functions. Tracks progress.

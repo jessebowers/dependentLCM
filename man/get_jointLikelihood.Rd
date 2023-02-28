@@ -2,15 +2,15 @@
 % Please edit documentation in R/describeDLCM.r
 \name{get_jointLikelihood}
 \alias{get_jointLikelihood}
-\title{For each iteration, calculate the prior probabilities of each parameter and conditional probability of our responses
-Warning: Only works if class_loglik is saved, as in: dependentLCM_fit(..., save_itrs=c(class_loglik=Inf, ...))}
+\title{For each iteration, calculate the prior probabilities of each parameter and conditional probability of our responses (marginalized over class)}
 \usage{
-get_jointLikelihood(dlcm)
+get_jointLikelihood(dlcm, method = "itrLogLik")
 }
 \arguments{
 \item{dlcm}{Dependent latent class model outptut from dependentLCM_fit}
+
+\item{method}{Defines what variable from dlcm$mcmc is used to calculate resposne probabilities. One of c("itrLogLik", "class_loglik", "").}
 }
 \description{
-For each iteration, calculate the prior probabilities of each parameter and conditional probability of our responses
-Warning: Only works if class_loglik is saved, as in: dependentLCM_fit(..., save_itrs=c(class_loglik=Inf, ...))
+For each iteration, calculate the prior probabilities of each parameter and conditional probability of our responses (marginalized over class)
 }
