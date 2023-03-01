@@ -674,7 +674,7 @@ check_params <- function(all_params) {
     all_params$bayesparams$domains
     , function(iclass_domains) sort(unname(unlist(lapply(iclass_domains, function(jdomain) jdomain$items))))
   )
-  if (all(sapply(domain_items, function(items) identical(items, seq_len(all_params$hparams$nitems)-1)))) {
+  if (!all(sapply(domain_items, function(items) identical(items, seq_len(all_params$hparams$nitems)-1)))) {
     warning("items in domains do not match items in data")
     is_problem = TRUE
   }
