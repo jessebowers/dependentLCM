@@ -2,11 +2,15 @@
 % Please edit documentation in R/dependentLCM_fit.r
 \name{getStart_matrix}
 \alias{getStart_matrix}
-\title{Convert dataframe of factors to matrix of integers (indexed starting at 0)}
+\title{Converts a dataframe of factors to matrix of integers (indexed starting at 0).
+If dependentLCM_fit() is executed with the df argument, the mat argument is generated using this function.}
 \usage{
 getStart_matrix(df)
 }
-\description{
-Convert dataframe of factors to matrix of integers (indexed starting at 0)
+\arguments{
+\item{df}{dataframe. The data you wish to analyze. Should describe nominal data. Factor columns work best, but we make an honest effort to interpret any values given.}
 }
-\keyword{internal}
+\description{
+Converts a dataframe of factors to matrix of integers (indexed starting at 0).
+If dependentLCM_fit() is executed with the df argument, the mat argument is generated using this function.
+}

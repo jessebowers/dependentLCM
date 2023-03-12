@@ -24,7 +24,7 @@ getStart_hparams(
 \arguments{
 \item{nitr}{integer. Number of iterations to run the bayes MCMC}
 
-\item{df}{dataframe. The data you wish to analyze. Should describe nominal data. Factor columns work best, but we make an honest effort to interpret any values given. This will be converted into an integer matrix (see 'matrix' argument). This 'matrix' argument takes precedence over the 'df' argument; only one of these two arguments is needed. Assumes no missing data (NA rows will be dropped).}
+\item{df}{dataframe. The data you wish to analyze. Should describe nominal data. Factor columns work best, but we make an honest effort to interpret any values given (see getStart_matrix()). This will be converted into an integer matrix (see 'matrix' argument). This 'matrix' argument takes precedence over the 'df' argument; only one of these two arguments is needed. Assumes no missing data (NA rows will be dropped).}
 
 \item{nitems}{integer. Number of columns of df.}
 

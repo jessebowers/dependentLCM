@@ -261,7 +261,7 @@ dependentLCM_fit <- function(
 #' Generate hyperparameters
 #' Generate a list of hyperparameters, adding default values when necessary
 #' @param nitr integer. Number of iterations to run the bayes MCMC
-#' @param df dataframe. The data you wish to analyze. Should describe nominal data. Factor columns work best, but we make an honest effort to interpret any values given. This will be converted into an integer matrix (see 'matrix' argument). This 'matrix' argument takes precedence over the 'df' argument; only one of these two arguments is needed. Assumes no missing data (NA rows will be dropped).
+#' @param df dataframe. The data you wish to analyze. Should describe nominal data. Factor columns work best, but we make an honest effort to interpret any values given (see getStart_matrix()). This will be converted into an integer matrix (see 'matrix' argument). This 'matrix' argument takes precedence over the 'df' argument; only one of these two arguments is needed. Assumes no missing data (NA rows will be dropped).
 #' @param nitems integer. Number of columns of df.
 #' @param nclass integer. Number of subject latent classes
 #' @param ndomains integer. Number of item domains
@@ -361,8 +361,10 @@ getStart_hparams <- function(
   ))
 }
 
-#' Convert dataframe of factors to matrix of integers (indexed starting at 0)
-#' @keywords internal
+#' Converts a dataframe of factors to matrix of integers (indexed starting at 0).
+#' If dependentLCM_fit() is executed with the df argument, the mat argument is generated using this function.
+#' @param df dataframe. The data you wish to analyze. Should describe nominal data. Factor columns work best, but we make an honest effort to interpret any values given.
+#' @export
 getStart_matrix <- function(df) {
   # Purpose: Convert to factor in integer form (0:k-1) and remove NA rows
   
