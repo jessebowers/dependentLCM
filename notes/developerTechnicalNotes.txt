@@ -6,18 +6,19 @@
 
 
 OPEN ITEMS:
- * None
+ * change counts incrementally and remove likelihood_collapsed matrix
 
 FUTURE ENHANCEMENTS:
+ * allow multiple chains
+ * allow with/without parallel for single chain 
  * For save_itrs argument, allow negative values. Negatives save all but the first negative-value iterations.
- * Make additional version of fix_class_label_switching() which does not require DLCM data structure.
- * Allow warmup without archiving, in R allow multiple chains
+ * Make additional version of fix_class_label_switching() which does not require homogeneous data structure.
+ * Allow warmup without archiving
  * add to SAVE_ITRS: class_pi=Inf, classes=Inf, domains=Inf (difficult due to downstream changes needed)
  * Incorporate optional checks/consistency checks eg domain size, nclasses, etc
- * post-hoc handle label switching
- * Aggregate X so that we can get counts of duplicates all at once rather than one-at-a-time
- * Maybe remove lchoose from cpp. Not currently in use
- * Use dropItem for faster counting. Tried this in dropItemSpeedup branch but was not faster in practice. There should be an implementation which is faster. One idea is to change domains from a map of domains to a map of pointers to domains. Then in Bayes.domainCounts have an option just to count the empty domains. You would need to create a new map of just the empty domains then proceed as usual (where updating the new map updates the old).
+ * Aggregate X (ie include counts) so that we can get counts of duplicates all at once rather than one-at-a-time
+ * Maybe remove unnecessary functions in cpp (e.g. lchoose)
+ * For domain split action, use reduce_items function twice. Use dropItem for faster counting. Tried this in dropItemSpeedup branch but was not faster in practice. There should be an implementation which is faster. One idea is to change domains from a map of domains to a map of pointers to domains. Then in Bayes.domainCounts have an option just to count the empty domains. You would need to create a new map of just the empty domains then proceed as usual (where updating the new map updates the old).
  * Change how warmup is done. Allow us to input an old DLCM into this DLCM (also allow to just work as is)
  * Fix devtools::check() identified issues
    > importFrom("stats", "aggregate", "formula", "median", "na.omit", "quantile", "rmultinom", "runif", "var")
@@ -26,6 +27,7 @@ FUTURE ENHANCEMENTS:
    > CPP: Fix is free text not code as expected at: @examples Suppose we
  * Maybe make 'get pooled domains' an exportable function? Do we care?
  * allow pre-specified structual zeroes. allow prespecified domains (latter is possible already but requires preprocessing)
+ * allow restricted latent class model
 
 
 ###################
