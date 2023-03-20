@@ -18,7 +18,8 @@ getStart_hparams(
   domain_proposal_empty = DOMAIN_PROPOSAL_EMPTY,
   domain_nproposals = NULL,
   steps_active = STEPS_ACTIVE,
-  save_itrs = SAVE_ITRS
+  save_itrs = SAVE_ITRS,
+  domain_theta_prior_type = DOMAIN_THETA_PRIOR_TYPE[1]
 )
 }
 \arguments{
@@ -62,6 +63,13 @@ If "HOMO" then defaults to c(0,0,...). If "HET" then defaults to c(0, 1, 2, ...)
 \item{"class_loglik=#}{ saves the probability that a response is observed conditional on each class}
 \item{"class_loglik_collapsed=#}{ as class_loglik but after collapsing on response probabilities}
 \item{"agg_loglik=#}{ saves aggregate likelihood of each iteration}
+}}
+
+\item{domain_theta_prior_type}{string. Defines what sort of prior is used for domains and theta. One of the following.
+\itemize{
+\item{"permissive=}{ recommended/default. has moderate regularization on domains. Domain uses "balls in buckets" prior, and theta uses dirichlet prior.}
+\item{"restrictive=}{ has strong regularization on domains. As permissive, but domain prior is adjusted further to cancel out any theta prior.}
+\item{"naive=}{ no regularization on domains. Bad outcomes result. For demonstration purposes only. Assumes all domains are equally likely.}
 }}
 }
 \description{

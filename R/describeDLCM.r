@@ -278,7 +278,7 @@ dlcm.get_waic_fromraw <- function(dlcm, itrs=NULL) {
 
 
 #' What is the prior probability of this choice of domains?
-#' Ignores identifiability restrictions
+#' Ignores identifiability restrictions. Assumes domain_theta_prior_type="permissive"
 #' @param x IntegerVector. The number of items in each domain. Ok to omit 0's
 #' @param ndomains Integer. The total number of domains (including empty domains)
 #' @param specific_items Boolean. 
@@ -418,6 +418,7 @@ get_class_probs <- function(dlcm) {
 }
 
 #' For each iteration, calculate the prior probabilities of each parameter and conditional probability of our responses (marginalized over class)
+#' Assumes domain prior of "permissive".
 #' @inheritParams get_jointLikelihood_obs
 #' @export
 get_jointLikelihood <- function(dlcm, method="itrLogLik") {

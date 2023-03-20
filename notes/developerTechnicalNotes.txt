@@ -9,6 +9,7 @@ OPEN ITEMS:
  * change counts incrementally and remove likelihood_collapsed matrix
 
 FUTURE ENHANCEMENTS:
+ * Find more transparent way of doing domain prior. Right now (for "restrictive") the domain prior is split across two functions. Maybe put BayesParameter::domain_prior() into DomainCount::getloglik_marginal(). But be careful since DomainCount::getloglik_marginal() is executed once per class even for homogeneous.
  * allow multiple chains
  * allow with/without parallel for single chain 
  * For save_itrs argument, allow negative values. Negatives save all but the first negative-value iterations.
@@ -44,7 +45,7 @@ devtools::install_github(repo="jessebowers/dependentLCM", ref="main"
 
 # Indirectly from GitHub
 # Download files: git clone git@github.com:jessebowers/dependentLCM.git
-devtools::install("dependentLCM")
+devtools::install("~/dependentLCM")
 
 
 # Use package without installing

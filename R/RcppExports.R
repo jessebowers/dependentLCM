@@ -226,6 +226,13 @@ NULL
 #' @keywords internal
 NULL
 
+#' @name DomainCount::countSubtract
+#' @title DomainCount::countSubtract
+#' @description Removes one observation to this domain's counts.
+#' @param xobs One FULL response pattern (not just the items in this domain)
+#' @keywords internal
+NULL
+
 #' @name DomainCount::list2domains
 #' @title DomainCount::list2domains
 #' @description Convert of list of list of r::domains to vector of map of cpp:domains
@@ -250,17 +257,11 @@ NULL
 #' @keywords internal
 NULL
 
-#' @name DomainCount::theta_alpha_fun
-#' @title DomainCount::theta_alpha_fun
-#' @description Allows for theta prior to change as domains get merged
-#' @param hparams hyperparameters
-#' @keywords internal
-NULL
-
 #' @name DomainCount::getloglik_marginal
 #' @title DomainCount::getloglik_marginal
 #' @description For a given domain, we want to know the probability of observing a series of responses.
 #' We calculate this probability conditioning on parameters, but marginalizing over theta (and convert to log scale)
+#' For domain_theta_prior_type="restrictive", we also include partial prior for domain
 #' @param hparams hyperparameters
 #' @keywords internal
 NULL
@@ -383,6 +384,7 @@ NULL
 #' @name BayesParameter::domain_prior
 #' @title BayesParameter::domain_prior
 #' @description Before observing data/other-parameters, how likely are we to put items into these particular domains?
+#' Note that for domain_theta_prior_type="restrictive" some of the prior is also given in DomainCount::getloglik_marginal()
 #' Some choices of domains may be more likely than other based on prior.
 #' @keywords internal
 NULL

@@ -443,7 +443,7 @@ public:
   int domain_maxitems;
   float theta_alpha;
   Rcpp::LogicalVector steps_active;
-  std::string theta_alpha_funname;
+  std::string domain_theta_prior_type;
   // Data Info
   Rcpp::IntegerVector item_nlevels;
   int nobs;
@@ -456,7 +456,7 @@ public:
 public:
   int nclass2domain_calc() {return count_unique(class2domain);};
   int nitem_calc() {return item_nlevels.size();};
-  void set_hparams(int ndomains_in, int nclass_in, const Rcpp::IntegerVector& class2domain_in, const Rcpp::NumericVector& classPi_alpha_in, int domain_maxitems_in, float theta_alpha_in, float domain_proposal_empty_in, int domain_nproposals_in, Rcpp::LogicalVector steps_active_in, std::string theta_alpha_funname_in, int nitr_in, Rcpp::IntegerVector& save_itrs_in);
+  void set_hparams(int ndomains_in, int nclass_in, const Rcpp::IntegerVector& class2domain_in, const Rcpp::NumericVector& classPi_alpha_in, int domain_maxitems_in, float theta_alpha_in, float domain_proposal_empty_in, int domain_nproposals_in, Rcpp::LogicalVector steps_active_in, std::string domain_theta_prior_type_in, int nitr_in, Rcpp::IntegerVector& save_itrs_in);
   void set_hparams(Rcpp::List hparams_in);
   void set_dataInfo(const Rcpp::IntegerMatrix& x);
 };
@@ -476,7 +476,7 @@ void Hyperparameter::set_hparams(
   , float domain_proposal_empty_in
   , int domain_nproposals_in
   , Rcpp::LogicalVector steps_active_in
-  , std::string theta_alpha_funname_in
+  , std::string domain_theta_prior_type_in
   , int nitr_in
   , Rcpp::IntegerVector& save_itrs_in) {
   TROUBLE_START(("Hyperparameter::set_hparams #V1"));
@@ -489,7 +489,7 @@ void Hyperparameter::set_hparams(
   domain_proposal_empty = domain_proposal_empty_in;
   domain_nproposals = domain_nproposals_in;
   steps_active =  steps_active_in;
-  theta_alpha_funname = theta_alpha_funname_in;
+  domain_theta_prior_type = domain_theta_prior_type_in;
   nitr = nitr_in;
   save_itrs = save_itrs_in;
   
@@ -515,11 +515,11 @@ void Hyperparameter::set_hparams(Rcpp::List hparams_in) {
   float domain_proposal_empty = hparams_in("domain_proposal_empty");
   float domain_nproposals = hparams_in("domain_nproposals");
   Rcpp::LogicalVector steps_active = hparams_in("steps_active");
-  std::string theta_alpha_funname = hparams_in("theta_alpha_funname");
+  std::string domain_theta_prior_type = hparams_in("domain_theta_prior_type");
   int nitr = hparams_in("nitr");
   Rcpp::IntegerVector save_itrs = hparams_in("save_itrs");
   
-  set_hparams(ndomains, nclass, class2domain, classPi_alpha, domain_maxitems, theta_alpha, domain_proposal_empty, domain_nproposals, steps_active, theta_alpha_funname, nitr, save_itrs);
+  set_hparams(ndomains, nclass, class2domain, classPi_alpha, domain_maxitems, theta_alpha, domain_proposal_empty, domain_nproposals, steps_active, domain_theta_prior_type, nitr, save_itrs);
   TROUBLE_END;
 }
 
@@ -567,12 +567,12 @@ public:
   
 public:
   double get_ltheta(const Rcpp::IntegerMatrix::ConstRow& xobs); // maybe switch to template
-  float theta_alpha_fun(const Hyperparameter& hparams);
   float getloglik_marginal(const Hyperparameter& hparams);
   
 public:
   void countReset();
   void countAdd(const Rcpp::IntegerMatrix::ConstRow& xobs);
+  void countSubtract(const Rcpp::IntegerMatrix::ConstRow& xobs);
   void reduce_items(Rcpp::IntegerVector items_new, const Hyperparameter& hparams);
   void drop_item(int item, const Hyperparameter& hparams);
   
@@ -758,6 +758,17 @@ void DomainCount::countAdd(const Rcpp::IntegerMatrix::ConstRow& xobs) {
   TROUBLE_END;
 }
 
+//' @name DomainCount::countSubtract
+//' @title DomainCount::countSubtract
+//' @description Removes one observation to this domain's counts.
+//' @param xobs One FULL response pattern (not just the items in this domain)
+//' @keywords internal
+void DomainCount::countSubtract(const Rcpp::IntegerMatrix::ConstRow& xobs) {
+  TROUBLE_START(("DomainCount::countSubtract"));
+  counts[pattern2id(xobs)] -= 1;
+  TROUBLE_END;
+}
+
 //' @name DomainCount::list2domains
 //' @title DomainCount::list2domains
 //' @description Convert of list of list of r::domains to vector of map of cpp:domains
@@ -814,42 +825,11 @@ int DomainCount::itemsid_calc() {
   TROUBLE_END; return sum;
 }
 
-//' @name DomainCount::theta_alpha_fun
-//' @title DomainCount::theta_alpha_fun
-//' @description Allows for theta prior to change as domains get merged
-//' @param hparams hyperparameters
-//' @keywords internal
-float DomainCount::theta_alpha_fun(const Hyperparameter& hparams) {
-  TROUBLE_START(("DomainCount::theta_alpha"));
-  float out;
-  if (hparams.theta_alpha_funname == "constant") {
-    out = 1;
-  }
-  // else if (hparams.theta_alpha_funname == "average") { // depreciated
-  //   Rcpp::IntegerVector item_nlevels = hparams.item_nlevels[items];
-  //   out = (
-  //     float(Rcpp::sum(item_nlevels))
-  //     / float(npatterns)
-  //   );
-  // } else if (hparams.theta_alpha_funname == "log") { // depreciated
-  //   Rcpp::IntegerVector item_nlevels = hparams.item_nlevels[items];
-  //   out = (
-  //     std::log(float(Rcpp::sum(item_nlevels)))
-  //     / std::log(float(npatterns))
-  //   );
-  // } 
-  else {
-    Rcpp::warning("DomainCount::theta_alpha: Invalid hparams.theta_alpha_funname");
-    out = 1;
-  }
-  out *= hparams.theta_alpha;
-  TROUBLE_END; return out;
-}
-
 //' @name DomainCount::getloglik_marginal
 //' @title DomainCount::getloglik_marginal
 //' @description For a given domain, we want to know the probability of observing a series of responses.
 //' We calculate this probability conditioning on parameters, but marginalizing over theta (and convert to log scale)
+//' For domain_theta_prior_type="restrictive", we also include partial prior for domain
 //' @param hparams hyperparameters
 //' @keywords internal
 float DomainCount::getloglik_marginal(const Hyperparameter& hparams) {
@@ -857,10 +837,15 @@ float DomainCount::getloglik_marginal(const Hyperparameter& hparams) {
   if (npatterns == 0) {
     TROUBLE_END; return 0; // log(1)
   }
-  Rcpp::NumericVector theta_alpha = theta_alpha_fun(hparams) + Rcpp::NumericVector(npatterns);
+  
+  Rcpp::NumericVector theta_alpha = hparams.theta_alpha + Rcpp::NumericVector(npatterns);
+  float ldenominator=0;
+  if (hparams.domain_theta_prior_type != "restrictive") {
+    ldenominator=lbeta(theta_alpha);
+  } // if hparams.domain_theta_prior_type=="restrictive", applies partial prior for domain by setting ldenominator=0
   float loglik = (
     lbeta(Rcpp::as<Rcpp::NumericVector> (counts) + theta_alpha)
-    - lbeta(theta_alpha)
+    - ldenominator
   );
   TROUBLE_END; return loglik;
 }
@@ -1133,7 +1118,7 @@ void BayesParameter::set_class_loglik_collapsed(const Rcpp::IntegerMatrix& x, co
       // get dirichlet parameters
       icounts = (
         Rcpp::as<Rcpp::NumericVector>(domain_iter->second.counts)
-        + domain_iter->second.theta_alpha_fun(hparams)
+        + hparams.theta_alpha
        );
       
       // get expected values
@@ -1283,10 +1268,15 @@ Rcpp::IntegerMatrix BayesParameter::item2domainid_calc(const Hyperparameter& hpa
 //' @name BayesParameter::domain_prior
 //' @title BayesParameter::domain_prior
 //' @description Before observing data/other-parameters, how likely are we to put items into these particular domains?
+//' Note that for domain_theta_prior_type="restrictive" some of the prior is also given in DomainCount::getloglik_marginal()
 //' Some choices of domains may be more likely than other based on prior.
 //' @keywords internal
 float BayesParameter::domain_prior(Rcpp::IntegerVector& item2domainid_vec, const Hyperparameter& hparams) {
   TROUBLE_START(("BayesParameter::domain_prior"));
+  
+  if (hparams.domain_theta_prior_type=="niave") {
+    TROUBLE_END; return 0; // log(1)
+  }
   
   int ndomains_nonempty = count_unique(item2domainid_vec);
   
@@ -1470,7 +1460,7 @@ void BayesParameter::thetas_next(const Rcpp::IntegerMatrix& x, const Hyperparame
     domain_end = domains[iclass].end();
     for (domain_iter = domains[iclass].begin(); domain_iter!=domain_end; ++domain_iter) {
       idomain = &(domain_iter->second);
-      iconcentration = idomain->counts + idomain->theta_alpha_fun(hparams);
+      iconcentration = idomain->counts + hparams.theta_alpha;
       idomain->lthetas = Rcpp::log(rDirichlet(iconcentration));
     }
   }

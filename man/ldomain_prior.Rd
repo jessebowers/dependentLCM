@@ -3,7 +3,7 @@
 \name{ldomain_prior}
 \alias{ldomain_prior}
 \title{What is the prior probability of this choice of domains?
-Ignores identifiability restrictions}
+Ignores identifiability restrictions. Assumes domain_theta_prior_type="permissive"}
 \usage{
 ldomain_prior(x, ndomains, specific_items = FALSE, log = TRUE)
 }
@@ -20,5 +20,5 @@ IF TRUE, we fix which items are in which domain, and calculate the probability o
 }
 \description{
 What is the prior probability of this choice of domains?
-Ignores identifiability restrictions
+Ignores identifiability restrictions. Assumes domain_theta_prior_type="permissive"
 }

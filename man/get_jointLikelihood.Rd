@@ -2,7 +2,8 @@
 % Please edit documentation in R/describeDLCM.r
 \name{get_jointLikelihood}
 \alias{get_jointLikelihood}
-\title{For each iteration, calculate the prior probabilities of each parameter and conditional probability of our responses (marginalized over class)}
+\title{For each iteration, calculate the prior probabilities of each parameter and conditional probability of our responses (marginalized over class)
+Assumes domain prior of "permissive".}
 \usage{
 get_jointLikelihood(dlcm, method = "itrLogLik")
 }
@@ -13,4 +14,5 @@ get_jointLikelihood(dlcm, method = "itrLogLik")
 }
 \description{
 For each iteration, calculate the prior probabilities of each parameter and conditional probability of our responses (marginalized over class)
+Assumes domain prior of "permissive".
 }

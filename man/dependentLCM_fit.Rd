@@ -16,6 +16,7 @@ dependentLCM_fit(
   theta_alpha = THETA_ALPHA,
   domain_proposal_empty = DOMAIN_PROPOSAL_EMPTY,
   domain_nproposals = NULL,
+  domain_theta_prior_type = DOMAIN_THETA_PRIOR_TYPE[1],
   class_pi = NULL,
   classes = NULL,
   domains = NULL,
@@ -49,6 +50,13 @@ If "HOMO" then defaults to c(0,0,...). If "HET" then defaults to c(0, 1, 2, ...)
 \item{domain_proposal_empty}{numeric. Sets how often the domain metropolis proposal function pairs a nonempty domain with an empty domain.}
 
 \item{domain_nproposals}{Sets how many times the domain metropolis propsal function is called each iteration}
+
+\item{domain_theta_prior_type}{string. Defines what sort of prior is used for domains and theta. One of the following.
+\itemize{
+\item{"permissive=}{ recommended/default. has moderate regularization on domains. Domain uses "balls in buckets" prior, and theta uses dirichlet prior.}
+\item{"restrictive=}{ has strong regularization on domains. As permissive, but domain prior is adjusted further to cancel out any theta prior.}
+\item{"naive=}{ no regularization on domains. Bad outcomes result. For demonstration purposes only. Assumes all domains are equally likely.}
+}}
 
 \item{class_pi}{numeric vector size nclass. Initial condition for bayes parameter pi.}
 

@@ -24,6 +24,7 @@ NULL
 NCLASS = 2
 CLASSPI_ALPHA = 1
 THETA_ALPHA = 1
+DOMAIN_THETA_PRIOR_TYPE = c("permissive", "restrictive", "niave")
 CLASS_INIT_METHODS = c("random_centers_polar", "random_centers", "random", "kmodes")
 DOMAIN_PROPOSAL_EMPTY = 0.3
 STEPS_ACTIVE = c("thetas"=TRUE, "domains"=TRUE, "class_pi"=TRUE, "classes"=TRUE, "identifiable"=TRUE, "likelihood"=TRUE, "class_collapse"=FALSE)
@@ -100,7 +101,7 @@ dependentLCM_fit <- function(
     # Data
     , df=NULL, mat=NULL
     # Hyperparameters
-    ,nclass=NCLASS, ndomains=NULL, class2domain=CLASS2DOMAINS[1], classPi_alpha=CLASSPI_ALPHA, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_nproposals=NULL
+    ,nclass=NCLASS, ndomains=NULL, class2domain=CLASS2DOMAINS[1], classPi_alpha=CLASSPI_ALPHA, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_nproposals=NULL, domain_theta_prior_type=DOMAIN_THETA_PRIOR_TYPE[1]
     # Bayes parameters
     , class_pi = NULL, classes = NULL, domains = NULL
     # Misc
@@ -133,7 +134,7 @@ dependentLCM_fit <- function(
   hparams <- getStart_hparams(
     nitr=nitr, df=mat
     # Hyperparameters
-    ,nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, domain_proposal_empty=domain_proposal_empty, domain_nproposals=domain_nproposals, steps_active=steps_active, save_itrs=save_itrs
+    ,nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, domain_proposal_empty=domain_proposal_empty, domain_nproposals=domain_nproposals, steps_active=steps_active, save_itrs=save_itrs, domain_theta_prior_type=domain_theta_prior_type
   )
   
   warmup_dlcm <- doWarmup(
@@ -289,11 +290,17 @@ dependentLCM_fit <- function(
 #' \item{"class_loglik_collapsed=#}{ as class_loglik but after collapsing on response probabilities}
 #' \item{"agg_loglik=#}{ saves aggregate likelihood of each iteration}
 #' }
+#' @param domain_theta_prior_type string. Defines what sort of prior is used for domains and theta. One of the following.
+#' \itemize{
+#' \item{"permissive=}{ recommended/default. has moderate regularization on domains. Domain uses "balls in buckets" prior, and theta uses dirichlet prior.}
+#' \item{"restrictive=}{ has strong regularization on domains. As permissive, but domain prior is adjusted further to cancel out any theta prior.}
+#' \item{"naive=}{ no regularization on domains. Bad outcomes result. For demonstration purposes only. Assumes all domains are equally likely.}
+#' }
 #' @keywords internal
 getStart_hparams <- function(
     nitr, df=NULL, nitems=NULL
     # Hyperparameters
-    ,nclass=NCLASS, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_nproposals=NULL, steps_active=STEPS_ACTIVE, save_itrs=SAVE_ITRS
+    ,nclass=NCLASS, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_nproposals=NULL, steps_active=STEPS_ACTIVE, save_itrs=SAVE_ITRS, domain_theta_prior_type=DOMAIN_THETA_PRIOR_TYPE[1]
 ) {
   # Purpose: Add default hyperparameters
   
@@ -357,7 +364,7 @@ getStart_hparams <- function(
 
   return(list(
     nitr=nitr, nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, nitems = nitems, item_nlevels = item_nlevels, nclass2domain = nclass2domain, domain_proposal_empty=domain_proposal_empty, domain_nproposals=domain_nproposals, steps_active = steps_active_fn, save_itrs=save_itrs_fn
-    , theta_alpha_funname = "constant"
+    , domain_theta_prior_type = domain_theta_prior_type
   ))
 }
 
@@ -678,6 +685,16 @@ check_params <- function(all_params) {
   )
   if (!all(sapply(domain_items, function(items) identical(items, seq_len(all_params$hparams$nitems)-1)))) {
     warning("items in domains do not match items in data")
+    is_problem = TRUE
+  }
+  
+  if (!(all_params$hparams$domain_theta_prior_type %in% DOMAIN_THETA_PRIOR_TYPE)) {
+    warning("domain_theta_prior_type not valid")
+    is_problem = TRUE
+  }
+  
+  if ((all_params$hparams$domain_theta_prior_type == "restrictive") & (all_params$hparams$theta_alpha!=1)) {
+    warning("domain_theta_prior_type=restrictive requires theta_alpha=1")
     is_problem = TRUE
   }
   

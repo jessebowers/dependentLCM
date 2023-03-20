@@ -5,6 +5,7 @@
 \title{BayesParameter::domain_prior}
 \description{
 Before observing data/other-parameters, how likely are we to put items into these particular domains?
+Note that for domain_theta_prior_type="restrictive" some of the prior is also given in DomainCount::getloglik_marginal()
 Some choices of domains may be more likely than other based on prior.
 }
 \keyword{internal}
