@@ -76,8 +76,8 @@ dlcm.summary <- function(dlcm, nwarmup=NULL, waic_method="agg") {
         , 1, function(x) x[x>-1]
         , simplify = FALSE
       )
-    response_patterns$item_value_str <- sapply(item_value, paste0, collapse=", ")
-    response_patterns$nitems <- sapply(item_value, length)
+    response_patterns$item_value_str <- sapply(response_patterns$item_value, paste0, collapse=", ")
+    response_patterns$nitems <- sapply(response_patterns$item_value, length)
     
     
     thetas_avg <- (
@@ -105,7 +105,7 @@ dlcm.summary <- function(dlcm, nwarmup=NULL, waic_method="agg") {
     dependence_intensity_dfs <- dependence_intensity(
       thetas_avg=thetas_avg
       , response_patterns=response_patterns
-      , items_ids %in% unique(mode_domains$items_id)
+      , items_ids = unique(mode_domains$items_id)
     )
 
 
@@ -415,9 +415,9 @@ dependence_intensity <- function(thetas_avg, response_patterns, items_ids=NULL) 
       y=response_patterns
       , by=c("items_id", "pattern_id")
     )
-    %>% filter(nitems>1, items_id %in% items_ids)
-    %>% group_by(class, items_id)
-    %>% summarize(pattern_id=list(pattern_id), patterns=list(do.call(rbind, item_value.y)), probs=list(prob), .groups="drop")
+    %>% dplyr::filter(nitems>1, items_id %in% items_ids)
+    %>% dplyr::group_by(class, items_id)
+    %>% dplyr::summarize(pattern_id=list(pattern_id), patterns=list(do.call(rbind, item_value.y)), probs=list(prob), .groups="drop")
   )
   thetas_marginal_ratio$ratios <- mapply(
     function(values, probs, ...) {
@@ -452,7 +452,7 @@ dependence_intensity_one <- function(values, probs) {
     seq_len(ncol(values))
     , function(iitem) {
       iprobs <- data.frame(value=values[,iitem], prob=probs)
-      iprob_marginal <- iprobs %>% group_by(value) %>% summarize(prob=sum(prob))
+      iprob_marginal <- iprobs %>% dplyr::group_by(value) %>% dplyr::summarize(prob=sum(prob))
       iprob_marginal <- setNames(iprob_marginal$prob, iprob_marginal$value)
       return(iprob_marginal)
     }

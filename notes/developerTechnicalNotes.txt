@@ -46,6 +46,7 @@ devtools::install_github(repo="jessebowers/dependentLCM", ref="main"
 # Indirectly from GitHub
 # Download files: git clone git@github.com:jessebowers/dependentLCM.git
 devtools::install("~/dependentLCM")
+devtools::install("./dependentLCM", upgrade="never")
 
 
 # Use package without installing
