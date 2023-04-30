@@ -20,7 +20,7 @@ NULL
 #' \item{"classes"}{= For each subject this vector gives the most common class that observation belongs to.}
 #' \item{"classes_cnts"}{= For each subject, in what number of iterations was this subject in each class?}
 #' \item{"classes_pi"}{=The average prior probability of each class.}
-#' \item{"dependence_intensity_dfs"}{=For each domain, how strong is the dependence? Compares response probabilities under local dependence vs local independence.'.}
+#' \item{"dependence_intensity_dfs"}{=For each domain, how strong is the dependence? Compares response probabilities under local dependence vs local independence. See dependence_intensity().}
 #' \item{"waic_summary"}{=See function 'dlcm.get_waic()'.}
 #' \item{"waic_df"}{=See function 'dlcm.get_waic()'.}
 #' }
@@ -69,15 +69,8 @@ dlcm.summary <- function(dlcm, nwarmup=NULL, waic_method="agg") {
   { # Response probabilities (thetas)
     
     # identify each domain and response pattern
-    unique_rows <- which(!duplicated(dlcm$mcmc$domains[,c("items_id", "pattern_id")], fromLast=TRUE))
-    response_patterns <- dlcm$mcmc$domains[unique_rows,c("items_id", "pattern_id", "items")]
-    response_patterns$item_value <- apply(
-        dlcm$mcmc$domains[unique_rows,dlcm$hparams$domain_item_cols]
-        , 1, function(x) x[x>-1]
-        , simplify = FALSE
-      )
-    response_patterns$item_value_str <- sapply(response_patterns$item_value, paste0, collapse=", ")
-    response_patterns$nitems <- sapply(response_patterns$item_value, length)
+    response_patterns <- dlcm$mcmc$response_patterns
+    response_patterns$pattern_str <- sapply(response_patterns$pattern, paste0, collapse=", ")
     
     
     thetas_avg <- (
@@ -90,21 +83,20 @@ dlcm.summary <- function(dlcm, nwarmup=NULL, waic_method="agg") {
         , prob=mean(prob)
         , .groups="drop")
       %>% dplyr::left_join(
-        y=response_patterns[,c("items_id", "pattern_id", "item_value_str")]
+        y=response_patterns[,c("items_id", "pattern_id", "pattern_str")]
         , by=c("items_id", "pattern_id")
       ) # lookup item_value
       %>% dplyr::left_join(
         y=mode_domains[,c("class", "items_id", "is_one")]
         , by=c("class", "items_id")
       ) # identify which domains are from the most common domain structure
-      %>% dplyr::rename(is_mode=is_one, item_value=item_value_str)
+      %>% dplyr::rename(is_mode=is_one, item_value=pattern_str)
       %>% .[, c("class", "items_id", "pattern_id", "items", "item_value", "is_mode", "n", "prob")]
     )
     
-    
     dependence_intensity_dfs <- dependence_intensity(
       thetas_avg=thetas_avg
-      , response_patterns=response_patterns
+      , dlcm=dlcm
       , items_ids = unique(mode_domains$items_id)
     )
 
@@ -391,9 +383,9 @@ theta_item_probs <- function(items, this_sim, itrs=NULL, merge_itrs=TRUE, classe
 }
 
 
-#' Takes a single domain. Compare the probabilites under the given probabilities versus under local independence.
-#' @param thetas_avg dataframe. As returned from dlcm.summary()
-#' @param response_patterns dataframe. As variable inside dlcm.summary(). For each domain/pattern, provides a description.
+#' For each domain domain, compare the probabilities under local dependence (DLCM) versus under local independence (traditional LCM). Describes the amount of dependence captured by our DLCM model.
+#' @param thetas_avg dataframe. Describes average response probabilities for different domains. As returned from dlcm.summary()
+#' @param dlcm list. Fitted dependent LCM
 #' @param items_ids integerVector Which domains do we want to process?
 #' @return DataFrames with:
 #' \itemize{
@@ -402,11 +394,14 @@ theta_item_probs <- function(items, this_sim, itrs=NULL, merge_itrs=TRUE, classe
 #' \item{"odds_ratio"}{= Compares prob_dependent and prob_marginal. Values far from '1' show strong dependence.}
 #' \item{"odds_ratio_str"}{= odds_ratio as a fraction}
 #' }
-#' @keywords internal
-dependence_intensity <- function(thetas_avg, response_patterns, items_ids=NULL) {
+#' @export
+dependence_intensity <- function(thetas_avg, dlcm, items_ids=NULL) {
+  
+  response_patterns <- dlcm$mcmc$response_patterns
+  response_patterns$nitems <- sapply(response_patterns$items, length) 
   
   if (identical(items_ids, NULL)) {
-    items_ids=unique(response_patterns$items_id)
+    items_ids=unique(thetas_avg$items_id)
   }
   
   thetas_marginal_ratio <- (
@@ -417,7 +412,10 @@ dependence_intensity <- function(thetas_avg, response_patterns, items_ids=NULL) 
     )
     %>% dplyr::filter(nitems>1, items_id %in% items_ids)
     %>% dplyr::group_by(class, items_id)
-    %>% dplyr::summarize(pattern_id=list(pattern_id), patterns=list(do.call(rbind, item_value.y)), probs=list(prob), .groups="drop")
+    %>% dplyr::summarize(
+      pattern_id=list(pattern_id)
+      , patterns=list(do.call(rbind, pattern))
+      , probs=list(prob), .groups="drop")
   )
   thetas_marginal_ratio$ratios <- mapply(
     function(values, probs, ...) {
@@ -435,7 +433,16 @@ dependence_intensity <- function(thetas_avg, response_patterns, items_ids=NULL) 
     , SIMPLIFY = FALSE
   )
   
-  return(thetas_marginal_ratio$ratios)
+  out <- split(
+    thetas_marginal_ratio
+    , f=thetas_marginal_ratio$items_id
+  )
+  out <- lapply(
+    out
+    , function(x) do.call(rbind.data.frame, x$ratios)
+  )
+  
+  return(out)
 }
 
 

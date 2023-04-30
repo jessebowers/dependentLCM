@@ -2,14 +2,14 @@
 % Please edit documentation in R/describeDLCM.r
 \name{dependence_intensity}
 \alias{dependence_intensity}
-\title{Takes a single domain. Compare the probabilites under the given probabilities versus under local independence.}
+\title{For each domain domain, compare the probabilities under local dependence (DLCM) versus under local independence (traditional LCM). Describes the amount of dependence captured by our DLCM model.}
 \usage{
-dependence_intensity(thetas_avg, response_patterns, items_ids = NULL)
+dependence_intensity(thetas_avg, dlcm, items_ids = NULL)
 }
 \arguments{
-\item{thetas_avg}{dataframe. As returned from dlcm.summary()}
+\item{thetas_avg}{dataframe. Describes average response probabilities for different domains. As returned from dlcm.summary()}
 
-\item{response_patterns}{dataframe. As variable inside dlcm.summary(). For each domain/pattern, provides a description.}
+\item{dlcm}{list. Fitted dependent LCM}
 
 \item{items_ids}{integerVector Which domains do we want to process?}
 }
@@ -23,6 +23,5 @@ DataFrames with:
 }
 }
 \description{
-Takes a single domain. Compare the probabilites under the given probabilities versus under local independence.
+For each domain domain, compare the probabilities under local dependence (DLCM) versus under local independence (traditional LCM). Describes the amount of dependence captured by our DLCM model.
 }
-\keyword{internal}

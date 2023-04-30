@@ -61,4 +61,14 @@ sample.integers <- function(x, size, ...) {
   return(x[sample.int(n=length(x), size=size, ...)])
 }
 
-`%>%` <- magrittr::`%>%`
+#' @name match_lookup
+#' @title match_lookup
+#' @description As base::match(), but with an additional lookup argument.
+#' Where 'x' values match 'table' keys, return the correspond values from 'lookup'.
+#' @keywords export
+match_lookup <- function(lookup, ...) {
+  indexes <- match(...)
+  return(lookup[indexes])
+}
+
+`%>%` <- dplyr::`%>%`

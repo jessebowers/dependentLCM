@@ -23,7 +23,7 @@ List with:
 \item{"classes"}{= For each subject this vector gives the most common class that observation belongs to.}
 \item{"classes_cnts"}{= For each subject, in what number of iterations was this subject in each class?}
 \item{"classes_pi"}{=The average prior probability of each class.}
-\item{"dependence_intensity_dfs"}{=For each domain, how strong is the dependence? Compares response probabilities under local dependence vs local independence.'.}
+\item{"dependence_intensity_dfs"}{=For each domain, how strong is the dependence? Compares response probabilities under local dependence vs local independence. See dependence_intensity().}
 \item{"waic_summary"}{=See function 'dlcm.get_waic()'.}
 \item{"waic_df"}{=See function 'dlcm.get_waic()'.}
 }

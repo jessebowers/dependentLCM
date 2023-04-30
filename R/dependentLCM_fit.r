@@ -186,8 +186,33 @@ dependentLCM_fit <- function(
   rownames(mcmc$domains_patterns) <- paste0("item_", seq_len(nrow(mcmc$domains_patterns)))
   mode(mcmc$domains_patterns) <- "integer"
   
+  # response_patterns
+  domains_id_unique_ids <- which(!duplicated(mcmc$domains_id[c("items_id", "pattern_id"), ], MARGIN=2, fromLast=TRUE))
+  response_patterns <- as.data.frame(t(mcmc$domains_id[c("items_id", "pattern_id"), domains_id_unique_ids]))
+  response_patterns$items <- apply(
+    mcmc$domains_patterns[,domains_id_unique_ids]
+    , 2
+    , function(x) which(x>-1)
+    , simplify = FALSE
+  )
+  response_patterns$pattern <- apply(
+    mcmc$domains_patterns[,domains_id_unique_ids]
+    , 2, function(x) x[x>-1]
+    , simplify = FALSE
+  )
+  response_patterns$items_id_first <- (response_patterns$pattern_id==0)
+  mcmc$response_patterns <- response_patterns
+  rm(response_patterns)
+  
   # Supplemental
-  domains_items <- get_which_strs(mcmc$domains_patterns > -1)
+  domains_items <- match_lookup(
+    x=mcmc$domains_id["items_id",]
+    , table=mcmc$response_patterns[mcmc$response_patterns$items_id_first,"items_id"]
+    , lookup=sapply(
+      mcmc$response_patterns[mcmc$response_patterns$items_id_first,"items"]
+      , paste0, collapse=","
+    )
+  )
   domains_nitems <- as.integer(colSums(mcmc$domains_patterns > -1))
   domains_class2domain <- all_params$hparams$class2domain[mcmc$domains_id["class",,drop=TRUE]+1]
   mcmc$domains_id["itr",] <- mcmc$domains_id["itr",] + 1L # start at 1
