@@ -294,7 +294,7 @@ dependentLCM_fit <- function(
 #' \itemize{
 #' \item{"permissive=}{ recommended/default. has moderate regularization on domains. Domain uses "balls in buckets" prior, and theta uses dirichlet prior.}
 #' \item{"restrictive=}{ has strong regularization on domains. As permissive, but domain prior is adjusted further to cancel out any theta prior.}
-#' \item{"naive=}{ no regularization on domains. Bad outcomes result. For demonstration purposes only. Assumes all domains are equally likely.}
+#' \item{"niave=}{ no regularization on domains. Bad outcomes result. For demonstration purposes only. Assumes all domains are equally likely.}
 #' }
 #' @keywords internal
 getStart_hparams <- function(

@@ -454,8 +454,8 @@ public:
   Rcpp::IntegerVector save_itrs;
   
 public:
-  int nclass2domain_calc() {return count_unique(class2domain);};
-  int nitem_calc() {return item_nlevels.size();};
+  int nclass2domain_calc() const {return count_unique(class2domain);};
+  int nitem_calc() const {return item_nlevels.size();};
   void set_hparams(int ndomains_in, int nclass_in, const Rcpp::IntegerVector& class2domain_in, const Rcpp::NumericVector& classPi_alpha_in, int domain_maxitems_in, float theta_alpha_in, float domain_proposal_empty_in, int domain_nproposals_in, Rcpp::LogicalVector steps_active_in, std::string domain_theta_prior_type_in, int nitr_in, Rcpp::IntegerVector& save_itrs_in);
   void set_hparams(Rcpp::List hparams_in);
   void set_dataInfo(const Rcpp::IntegerMatrix& x);

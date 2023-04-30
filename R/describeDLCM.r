@@ -20,6 +20,7 @@ NULL
 #' \item{"classes"}{= For each subject this vector gives the most common class that observation belongs to.}
 #' \item{"classes_cnts"}{= For each subject, in what number of iterations was this subject in each class?}
 #' \item{"classes_pi"}{=The average prior probability of each class.}
+#' \item{"dependence_intensity_dfs"}{=For each domain, how strong is the dependence? Compares response probabilities under local dependence vs local independence.'.}
 #' \item{"waic_summary"}{=See function 'dlcm.get_waic()'.}
 #' \item{"waic_df"}{=See function 'dlcm.get_waic()'.}
 #' }
@@ -60,35 +61,54 @@ dlcm.summary <- function(dlcm, nwarmup=NULL, waic_method="agg") {
     
     # single most common domain structure
     first_mode_domain_itr <- unlist(domain_items_all_raw[which(domain_items_all_raw$domains_merged == unclass(domain_items_all[1,"domains_merged"]))[1],"itr"])
-    mode_domains <- unique(dlcm$mcmc$domains %>% dplyr::filter(itr==first_mode_domain_itr, pattern_id==0) %>% .[,c("class2domain", "items_id", "items")]) %>% dplyr::mutate(is_one=1)
+    mode_domains <- unique(dlcm$mcmc$domains %>% dplyr::filter(itr==first_mode_domain_itr, pattern_id==0) %>% .[,c("class", "class2domain", "items_id", "items")]) %>% dplyr::mutate(is_one=1)
     
     rm(domain_items_all_raw)
   }
   
   { # Response probabilities (thetas)
-    dlcm$mcmc$domains$item_value <- apply(
-      dlcm$mcmc$domains[, dlcm$hparams$domain_item_cols]
-      , 1, function(x) paste0(x[x>-1], collapse=", ")
-    )
-    dlcm$mcmc$domains <- (
-      dlcm$mcmc$domains
-      %>% dplyr::left_join(mode_domains[,c("class2domain", "items_id", "is_one")], by=c("class2domain", "items_id"))
-      %>% dplyr::mutate(is_mode= !is.na(is_one), is_one=NULL) # convert is_one to is_mode
-    )
+    
+    # identify each domain and response pattern
+    unique_rows <- which(!duplicated(dlcm$mcmc$domains[,c("items_id", "pattern_id")], fromLast=TRUE))
+    response_patterns <- dlcm$mcmc$domains[unique_rows,c("items_id", "pattern_id", "items")]
+    response_patterns$item_value <- apply(
+        dlcm$mcmc$domains[unique_rows,dlcm$hparams$domain_item_cols]
+        , 1, function(x) x[x>-1]
+        , simplify = FALSE
+      )
+    response_patterns$item_value_str <- sapply(item_value, paste0, collapse=", ")
+    response_patterns$nitems <- sapply(item_value, length)
+    
     
     thetas_avg <- (
-      dlcm$mcmc$domains 
+      dlcm$mcmc$domains
       %>% dplyr::filter(itr > nwarmup) 
       %>% dplyr::group_by(class, items_id, pattern_id) 
       %>% dplyr::summarize(
         items = dplyr::first(items)
-        , item_value = dplyr::first(item_value)
-        , is_mode = dplyr::first(is_mode)
         , n=dplyr::n()
         , prob=mean(prob)
-        , .groups="keep")
+        , .groups="drop")
+      %>% dplyr::left_join(
+        y=response_patterns[,c("items_id", "pattern_id", "item_value_str")]
+        , by=c("items_id", "pattern_id")
+      ) # lookup item_value
+      %>% dplyr::left_join(
+        y=mode_domains[,c("class", "items_id", "is_one")]
+        , by=c("class", "items_id")
+      ) # identify which domains are from the most common domain structure
+      %>% dplyr::rename(is_mode=is_one, item_value=item_value_str)
+      %>% .[, c("class", "items_id", "pattern_id", "items", "item_value", "is_mode", "n", "prob")]
     )
     
+    
+    dependence_intensity_dfs <- dependence_intensity(
+      thetas_avg=thetas_avg
+      , response_patterns=response_patterns
+      , items_ids %in% unique(mode_domains$items_id)
+    )
+
+
     thetas_avg_mode <- reshape2::dcast(
       data=thetas_avg %>% dplyr::filter(is_mode==TRUE)
       , formula = items_id + pattern_id + items + item_value ~ class
@@ -103,6 +123,7 @@ dlcm.summary <- function(dlcm, nwarmup=NULL, waic_method="agg") {
       dlcm$mcmc$classes[,-seq_len(nwarmup)], 1
       , function(iclasses, class_vec_default) {
         table_cnts <- table(iclasses)
+        # put table in correct format, namely do not drop zero-count values
         out <- class_vec_default
         out[names(table_cnts)] <- table_cnts
         return(out)
@@ -123,7 +144,7 @@ dlcm.summary <- function(dlcm, nwarmup=NULL, waic_method="agg") {
   class_pi = rowMeans(dlcm$mcmc$class_pi[,-seq_len(nwarmup), drop=FALSE])
   
   return(c(
-    list("thetas_avg"=thetas_avg, "domain_items"=domain_items, "domain_items_all"=domain_items_all, "classes"=classes, "class_pi"=class_pi, "thetas_avg_mode"=thetas_avg_mode, "mode_domains"=mode_domains, "first_mode_domain_itr"=first_mode_domain_itr, "classes_cnts"=classes_cnts)
+    list("thetas_avg"=thetas_avg, "domain_items"=domain_items, "domain_items_all"=domain_items_all, "classes"=classes, "class_pi"=class_pi, "thetas_avg_mode"=thetas_avg_mode, "mode_domains"=mode_domains, "first_mode_domain_itr"=first_mode_domain_itr, "classes_cnts"=classes_cnts, "dependence_intensity_dfs"=dependence_intensity_dfs)
     , waic
   ))
 }
@@ -273,39 +294,8 @@ dlcm.get_waic_fromraw <- function(dlcm, itrs=NULL) {
 
 
 ##############
-############## MISC
+############## Response Probabilities
 ##############
-
-
-#' What is the prior probability of this choice of domains?
-#' Ignores identifiability restrictions. Assumes domain_theta_prior_type="permissive"
-#' @param x IntegerVector. The number of items in each domain. Ok to omit 0's
-#' @param ndomains Integer. The total number of domains (including empty domains)
-#' @param specific_items Boolean. 
-#' If FALSE, we look for any domain which produces domains of this size regardless of what specific items they contain.
-#' IF TRUE, we fix which items are in which domain, and calculate the probability of grouping these specific items together.
-#' @param log Boolean. If TRUE give probability in log scale.
-#' @export
-ldomain_prior <- function(x, ndomains, specific_items=FALSE, log=TRUE) {
-  
-  if (specific_items==FALSE) {
-    lprob <- (
-      lfactorial(sum(x)) - sum(sapply(x, lfactorial)) # unique groups
-      - sum(sapply(table(x[x>0]), lfactorial)) # non-unique groups
-      + lfactorial(ndomains) - lfactorial(ndomains-sum(x > 0)) # permuting groups
-      - sum(x) * log(ndomains) # denominator
-    )
-  } else { # specific_items==TRUE
-    lprob <- (
-      lfactorial(ndomains) - lfactorial(ndomains-sum(x > 0)) # permuting groups
-      - sum(x) * log(ndomains) # denominator
-    )
-  }
-  if (log==FALSE) {
-    return(exp(lprob))
-  }
-  return(lprob)
-}
 
 
 #' Calculate the probabilities of different patterns
@@ -399,6 +389,160 @@ theta_item_probs <- function(items, this_sim, itrs=NULL, merge_itrs=TRUE, classe
   
   return(out)
 }
+
+
+#' Takes a single domain. Compare the probabilites under the given probabilities versus under local independence.
+#' @param thetas_avg dataframe. As returned from dlcm.summary()
+#' @param response_patterns dataframe. As variable inside dlcm.summary(). For each domain/pattern, provides a description.
+#' @param items_ids integerVector Which domains do we want to process?
+#' @return DataFrames with:
+#' \itemize{
+#' \item{"prob_dependent"}{= Probability under local dependence. Same as input 'probs'.}
+#' \item{"prob_marginal"}{= Probability of this response pattern under local independence.}
+#' \item{"odds_ratio"}{= Compares prob_dependent and prob_marginal. Values far from '1' show strong dependence.}
+#' \item{"odds_ratio_str"}{= odds_ratio as a fraction}
+#' }
+#' @keywords internal
+dependence_intensity <- function(thetas_avg, response_patterns, items_ids=NULL) {
+  
+  if (identical(items_ids, NULL)) {
+    items_ids=unique(response_patterns$items_id)
+  }
+  
+  thetas_marginal_ratio <- (
+    thetas_avg
+    %>% dplyr::left_join(
+      y=response_patterns
+      , by=c("items_id", "pattern_id")
+    )
+    %>% filter(nitems>1, items_id %in% items_ids)
+    %>% group_by(class, items_id)
+    %>% summarize(pattern_id=list(pattern_id), patterns=list(do.call(rbind, item_value.y)), probs=list(prob), .groups="drop")
+  )
+  thetas_marginal_ratio$ratios <- mapply(
+    function(values, probs, ...) {
+      out <- dependence_intensity_one(values, probs)
+      ids <- do.call(cbind.data.frame, list(...))
+      out <- cbind.data.frame(ids, out)
+      return(out)
+    }
+    , values=thetas_marginal_ratio$patterns
+    , probs=thetas_marginal_ratio$probs
+    # identifiers:
+    , class=thetas_marginal_ratio$class
+    , items_id=thetas_marginal_ratio$items_id
+    , pattern_id=thetas_marginal_ratio$pattern_id
+    , SIMPLIFY = FALSE
+  )
+  
+  return(thetas_marginal_ratio$ratios)
+}
+
+
+#' Takes a single domain. Compare the probabilites under the given probabilities versus under local independence.
+#' @param values characterMatrix One row for each response pattern to this domain. One column per item. Cell contains the value of a given item under the given response pattern.
+#' @param probs numericVector. For a single class, probability of returning this response pattern.
+#' @inherit dependence_intensity return
+#' @keywords internal
+dependence_intensity_one <- function(values, probs) {
+  
+  class(values) <- "character"
+  
+  item_prob_marginal <- lapply(
+    seq_len(ncol(values))
+    , function(iitem) {
+      iprobs <- data.frame(value=values[,iitem], prob=probs)
+      iprob_marginal <- iprobs %>% group_by(value) %>% summarize(prob=sum(prob))
+      iprob_marginal <- setNames(iprob_marginal$prob, iprob_marginal$value)
+      return(iprob_marginal)
+    }
+  )
+  
+  prob_marginal <- mapply(
+    function(item_values, item_probs) {
+      item_probs[item_values]
+    }
+    , item_values = unclass(as.data.frame(values))
+    , item_probs = item_prob_marginal
+  )
+  prob_marginal <- apply(prob_marginal, 1, prod)
+  
+  odds_ratio <- (
+    ( probs / (1-probs) )
+    / (prob_marginal / (1-prob_marginal) )
+  )
+  
+  odds_ratio_str <- sapply(
+    odds_ratio
+    , function(x) {
+      if (x >= 1) {
+        out_str <- format(x, digits=1, nsmall=1)
+      } else {
+        out_str <- paste0("1/", format(1/x, digits=1, nsmall=1), collapse="")
+      }
+    }
+  )
+  
+  
+  df_out <- data.frame(
+    values
+    , prob_dependent=probs
+    , prob_marginal=prob_marginal
+    , odds_ratio=odds_ratio
+    , odds_ratio_str=odds_ratio_str
+  )
+  
+  return(df_out)
+}
+
+
+##############
+############## MISC
+##############
+
+
+#' What is the prior probability of this choice of domains?
+#' Only correct up to a normalizing constant. Ignores identifiability restrictions.
+#' @param x IntegerVector. The number of items in each domain. Ok to omit 0's
+#' @param ndomains Integer. The total number of domains (including empty domains)
+#' @param specific_items Boolean. 
+#' If FALSE, we look for any domain which produces domains of this size regardless of what specific items they contain.
+#' IF TRUE, we fix which items are in which domain, and calculate the probability of grouping these specific items together.
+#' @param log Boolean. If TRUE give probability in log scale.
+#' @param domain_theta_prior_type String. What domain prior are we using? One of c("permissive", "restrictive")
+#' @param x_npatterns IntegerVector. For domain_theta_prior_type="restrictive". For each domain x, how many possible response patterns are there to that domain?
+#' @export
+ldomain_prior <- function(x, ndomains, specific_items=FALSE, log=TRUE, domain_theta_prior_type="permissive", x_npatterns=NULL) {
+  
+  lpattern_adjustment = 0 # for "restrictive"
+  if (domain_theta_prior_type=="restrictive") {
+    if (length(x) != length(x_npatterns)) {
+      stop("ldomain_prior: For domain_theta_prior_type==restrictive we require x_npatterns to be set.")
+    }
+    lpattern_adjustment = sum(lfactorial(x_npatterns - 1))
+  }
+  
+  if (specific_items==FALSE) {
+    lprob <- (
+      lfactorial(sum(x)) - sum(sapply(x, lfactorial)) # unique groups
+      - sum(sapply(table(x[x>0]), lfactorial)) # non-unique groups
+      + lfactorial(ndomains) - lfactorial(ndomains-sum(x > 0)) # permuting groups
+      - sum(x) * log(ndomains) # denominator
+      - lpattern_adjustment
+    )
+  } else { # specific_items==TRUE
+    lprob <- (
+      lfactorial(ndomains) - lfactorial(ndomains-sum(x > 0)) # permuting groups
+      - sum(x) * log(ndomains) # denominator
+      - lpattern_adjustment
+    )
+  }
+  if (log==FALSE) {
+    return(exp(lprob))
+  }
+  return(lprob)
+}
+
 
 #' For each iteration calculate the probability that a given observation is in each class.
 #' Warning: Only works if class_loglik is saved, as in: dependentLCM_fit(..., save_itrs=c(class_loglik=Inf, ...))
