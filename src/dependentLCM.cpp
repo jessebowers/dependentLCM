@@ -10,13 +10,13 @@
 //' @title colMax
 //' @description Get the max of each column column of matrix
 //' @keywords internal
-Rcpp::IntegerVector colMax(const Rcpp::IntegerMatrix& x) {
+arma::uvec colMax(const arma::umat& x) {
   TROUBLE_START(("colMax"));
-  Rcpp::IntegerVector max = x(0, Rcpp::_);
+  arma::uvec max = x(0, Rcpp::_);
   
   for (int irow=1; irow < x.nrow(); irow++) {
     for (int jcol=0; jcol < x.ncol(); jcol++) {
-      if (x(irow, jcol) > max(jcol)) {
+      if (x(irow, jcol) > arma::max(jcol)) {
         max(jcol) = x(irow, jcol);
       }
     }
@@ -31,8 +31,8 @@ Rcpp::IntegerVector colMax(const Rcpp::IntegerMatrix& x) {
 //' @keywords internal
 template <typename T>
 double sumLogs(const T& x) {
-  double xmax = max(x);
-  return xmax + log(sum(exp(x-xmax)));
+  double xmax = arma::max(x);
+  return xmax + std::log(arma::accu(arma::exp(x-xmax)));
 }
 
 //' @name rDirichlet
@@ -40,15 +40,14 @@ double sumLogs(const T& x) {
 //' @description Generate random values from dirichlet distribution
 //' @param deltas vector of dirichlet concentration parameters
 //' @keywords internal
-Rcpp::NumericVector rDirichlet(const Rcpp::NumericVector& deltas) {
+arma::vec rDirichlet(const arma::vec& deltas) {
   TROUBLE_START(("rDirichlet"));
   int C = deltas.size();
-  Rcpp::NumericVector Xgamma(C);
+  arma::vec Xgamma(C);
   
   // generating gamma(deltac,1)
   for (int c = 0; c < C; c++) {
     Xgamma(c) = R::rgamma(deltas(c), 1.0);
-    //Xgamma(c) = Rcpp::rgamma(1, deltas(c), scale = 1.0);
   }
   TROUBLE_END; return (Xgamma / sum(Xgamma));
 }
@@ -58,7 +57,7 @@ Rcpp::NumericVector rDirichlet(const Rcpp::NumericVector& deltas) {
 //' @description Generate random values from a polytomous categorical distribution
 //' @param probs Vector of probabilities of each category from 0 to probs.size()-1. Should sum to 1.
 //' @keywords internal
-int rCategorical(const Rcpp::NumericVector& probs) {
+int rCategorical(const arma::vec& probs) {
   TROUBLE_START(("rCategorical"));
   int n = probs.size();
   float unif = R::runif(0, 1);
@@ -78,7 +77,7 @@ int rCategorical(const Rcpp::NumericVector& probs) {
 //' @title count_unique
 //' @description Count number of unique values in vector
 //' @keywords internal
-int count_unique(const Rcpp::IntegerVector& x) {
+int count_unique(const arma::uvec& x) {
   TROUBLE_START(("count_unique"));
   std::unordered_set<int> xset(x.begin(), x.end());
   TROUBLE_END; return xset.size();
@@ -89,38 +88,19 @@ int count_unique(const Rcpp::IntegerVector& x) {
 //' @description Calculate the beta function on log scale
 //' Log(Beta(alphas)) = Log([product Gamma(alpha_i)] / Gamma(sum(alphas)))
 //' @keywords internal
-float lbeta(const Rcpp::NumericVector& alpha) {
+float lbeta(const arma::vec& alpha) {
   TROUBLE_START(("lbeta"));
-  float log_gamma_total = std::lgamma(Rcpp::sum(alpha));
-  float log_gammas = Rcpp::sum(Rcpp::lgamma(alpha));
+  float log_gamma_total = std::lgamma(arma::accu(alpha));
+  float log_gammas = arma::accu(Rcpp::lgamma(alpha));
   
   TROUBLE_END; return (log_gammas - log_gamma_total);
 }
-
-//' @name which
-//' @title which
-//' @description Give the (integer) indices where vector is true
-//' @keywords internal
-Rcpp::IntegerVector which(const Rcpp::LogicalVector& x) {
-  TROUBLE_START(("which"));
-  int n = x.size();
-  std::list<int> out; // linked list for fast append
-  
-  for(int i = 0; i < n; i++) {
-    if (x[i]) { // If x is true
-      out.push_back(i);
-    }
-  }
-  
-  TROUBLE_END; return Rcpp::wrap(out);
-}
-
 
 //' @name count_integers
 //' @title count_integers
 //' @description For each unique value of x, count the number of times that value appears
 //' @keywords internal
-std::map<int,  int> count_integers(const Rcpp::IntegerVector& x) {
+std::map<int,  int> count_integers(const arma::uvec& x) {
   TROUBLE_START(("count_integers"));
   std::map<int,  int> counts_map;
   int i;
@@ -132,7 +112,7 @@ std::map<int,  int> count_integers(const Rcpp::IntegerVector& x) {
     counts_map[ix] += 1;
   }
   
-  // Rcpp::IntegerMatrix counts_mat = Rcpp::IntegerMatrix(counts_map.size(), 2);
+  // arma::umat counts_mat = arma::umat(counts_map.size(), 2);
   // std::map<int,  int>::iterator iter;
   // std::map<int,  int>::const_iterator iter_end = counts_map.end();
   // i = 0;
@@ -184,10 +164,10 @@ T minimum(const T x1, const T x2) {
 //' @description Convert pattern id to pattern vector
 //' See other instance of id2pattern(.) for details
 //' @keywords internal
-Rcpp::IntegerVector id2pattern(int xpattern, const Rcpp::IntegerVector& mapvec) {
+arma::uvec id2pattern(int xpattern, const arma::uvec& mapvec) {
   TROUBLE_START(("id2pattern"));
   int nmapvec = mapvec.size();
-  Rcpp::IntegerVector unmapped_vec = Rcpp::IntegerVector(nmapvec);
+  arma::uvec unmapped_vec = arma::uvec(nmapvec);
   
   int idivisor;
   // int iquotient;
@@ -211,7 +191,7 @@ Rcpp::IntegerVector id2pattern(int xpattern, const Rcpp::IntegerVector& mapvec) 
 //' @param x Sorted vector of numbers
 //' @param new_value new number we wish to insert into x
 //' @keywords internal
-void insertSorted(Rcpp::IntegerVector& x, int new_value) {
+void insertSorted(arma::uvec& x, int new_value) {
   TROUBLE_START(("insertSorted"));
   int n = x.size();
   int i;
@@ -224,17 +204,6 @@ void insertSorted(Rcpp::IntegerVector& x, int new_value) {
   TROUBLE_END; return;
 }
 
-//' @name mmult
-//' @title mmult
-//' @description Multiply two matrixes
-//' @keywords internal
-Rcpp::IntegerMatrix mmult(Rcpp::IntegerMatrix& m1, Rcpp::IntegerMatrix& m2) {
-  TROUBLE_START(("mmult"));
-  Rcpp::Environment base("package:base");
-  Rcpp::Function mat_Mult = base["%*%"]; // Steals from R::%*%.
-  TROUBLE_END; return mat_Mult(m1, m2);
-}
-
 //' @name equal_to_adjmat
 //' @title equal_to_adjmat
 //' @description Convert equivalence classes into a (graph theory style) adjacency matrix.
@@ -242,10 +211,10 @@ Rcpp::IntegerMatrix mmult(Rcpp::IntegerMatrix& m1, Rcpp::IntegerMatrix& m2) {
 //' @param eqclass_vec Vector describing the equivalence classes. 
 //' Each index represents a separate item and indexes with the same value are in the same equivalence class.
 //' @keywords internal
-Rcpp::IntegerMatrix equal_to_adjmat(Rcpp::IntegerVector eqclass_vec) {
+arma::umat equal_to_adjmat(arma::uvec eqclass_vec) {
   TROUBLE_START(("equal_to_adjmat"));
   int n = eqclass_vec.size();
-  Rcpp::IntegerMatrix adjmat = Rcpp::IntegerMatrix(n, n);
+  arma::umat adjmat = arma::umat(n, n);
   
   for (int i = 0; i < n; i++) {
     adjmat.row(i) = (eqclass_vec == eqclass_vec(i));
@@ -260,7 +229,7 @@ Rcpp::IntegerMatrix equal_to_adjmat(Rcpp::IntegerVector eqclass_vec) {
 //' @description Helper function. Returns true if (m1>0) == (m2>0) in all cells.
 //' In other words returns true if both adjacency matrixes have the same connections (ignoring # of possible routes)
 //' @keywords internal
-bool helper_compare_adjmat(Rcpp::IntegerMatrix& m1, Rcpp::IntegerMatrix& m2) {
+bool helper_compare_adjmat(arma::umat& m1, arma::umat& m2) {
   TROUBLE_START(("helper_compare_adjmat"));
   int nrow = m1.nrow(); // m2 assumed to be of same size
   int ncol = m1.ncol(); // m2 assumed to be of same size
@@ -287,15 +256,15 @@ bool helper_compare_adjmat(Rcpp::IntegerMatrix& m1, Rcpp::IntegerMatrix& m2) {
 //' @param adjmat Matrix identifying which nodes are neighbors (are linked).
 //' @param maxitr Integer giving the maximum number of attempts to connect two nodes.
 //' @keywords internal
-Rcpp::IntegerVector adjmat_to_equal(Rcpp::IntegerMatrix adjmat, int maxitr = 100) {
+arma::uvec adjmat_to_equal(arma::umat adjmat, int maxitr = 100) {
   TROUBLE_START(("adjmat_to_equal"));
   
   int nitems = adjmat.nrow();
   
   // Find all linked nodes
-  Rcpp::IntegerMatrix adjmat_new;
+  arma::umat adjmat_new;
   for (int i=0; i < maxitr; i++) { // max just to prevent infinite loops
-    adjmat_new = mmult(adjmat, adjmat);
+    adjmat_new = adjmat * adjmat;
     if (helper_compare_adjmat(adjmat, adjmat_new)==true) {
       // no changes
       break;
@@ -304,7 +273,7 @@ Rcpp::IntegerVector adjmat_to_equal(Rcpp::IntegerMatrix adjmat, int maxitr = 100
   }
   
   // Convert to equivalence class vector
-  Rcpp::IntegerVector equal_classes = Rcpp::IntegerVector(nitems);
+  arma::uvec equal_classes = arma::uvec(nitems);
   for (int iitem = 0; iitem < nitems; iitem++) {
     for (int jitem = 0; jitem < nitems; jitem++) {
       if (adjmat(iitem, jitem) > 0) {
@@ -315,20 +284,6 @@ Rcpp::IntegerVector adjmat_to_equal(Rcpp::IntegerMatrix adjmat, int maxitr = 100
   }
   
   TROUBLE_END; return equal_classes;
-}
-
-//' @name product
-//' @title product
-//' @description Multiply all elements of x together
-//' @keywords internal
-int product(Rcpp::IntegerVector x) {
-  TROUBLE_START(("product"));
-  int n = x.size();
-  int agg = 1;
-  for (int i=0; i<n; i++) {
-    agg *= x[i];
-  }
-  TROUBLE_END; return agg;
 }
 
 //' @name powl
@@ -350,7 +305,7 @@ int powl(int x, int p) {
 //' @param item_nlevels Vector with levels of items
 //' @export
 // [[Rcpp::export]]
-bool is_identifiable(const Rcpp::IntegerVector& item2superdomainid, int nclass, const Rcpp::IntegerVector& item_nlevels) {
+bool is_identifiable(const arma::uvec& item2superdomainid, int nclass, const arma::uvec& item_nlevels) {
   TROUBLE_START(("is_identifiable"));
   
   int i;
@@ -363,14 +318,14 @@ bool is_identifiable(const Rcpp::IntegerVector& item2superdomainid, int nclass, 
   for (i=0; i < nitems; i++) {
     domain_id = item2superdomainid(i);
     if (pattern_counts_map.count(domain_id)==0) {
-      pattern_counts_map[domain_id] = product(item_nlevels[item2superdomainid==domain_id]);
+      pattern_counts_map[domain_id] = arma::product(item_nlevels[item2superdomainid==domain_id]);
       pattern_counts_map[domain_id] = minimum(pattern_counts_map[domain_id], nclass); // Beyond nclass not relevent. Don't necessarily need to do this
     }
   }
   
   // convert map to vector
   int ndomains = pattern_counts_map.size();
-  Rcpp::IntegerVector pattern_counts = Rcpp::IntegerVector(ndomains);
+  arma::uvec pattern_counts = arma::uvec(ndomains);
   std::map<int,int>::iterator map_itr;
   std::map<int,int>::const_iterator map_end = pattern_counts_map.end();
   i = 0;
@@ -381,7 +336,7 @@ bool is_identifiable(const Rcpp::IntegerVector& item2superdomainid, int nclass, 
   pattern_counts.sort(true); // descending
   
   // greedy search
-  Rcpp::IntegerVector tripart = Rcpp::IntegerVector(3, 0);
+  arma::uvec tripart = arma::uvec(3, 0);
   int best_index;
   int best_value;
   int best_diff;
@@ -436,8 +391,8 @@ public:
   // Hyperparameters [FIXED]
   int ndomains;
   int nclass;
-  Rcpp::IntegerVector class2domain;
-  Rcpp::NumericVector classPi_alpha;
+  arma::uvec class2domain;
+  arma::vec classPi_alpha;
   float domain_proposal_empty;
   int domain_nproposals;
   int domain_maxitems;
@@ -445,20 +400,20 @@ public:
   Rcpp::LogicalVector steps_active;
   std::string domain_theta_prior_type;
   // Data Info
-  Rcpp::IntegerVector item_nlevels;
+  arma::uvec item_nlevels;
   int nobs;
   // Inferred. Saved for speed
   int nitem;
   int nclass2domain;
   int nitr;
-  Rcpp::IntegerVector save_itrs;
+  arma::uvec save_itrs;
   
 public:
   int nclass2domain_calc() const {return count_unique(class2domain);};
   int nitem_calc() const {return item_nlevels.size();};
-  void set_hparams(int ndomains_in, int nclass_in, const Rcpp::IntegerVector& class2domain_in, const Rcpp::NumericVector& classPi_alpha_in, int domain_maxitems_in, float theta_alpha_in, float domain_proposal_empty_in, int domain_nproposals_in, Rcpp::LogicalVector steps_active_in, std::string domain_theta_prior_type_in, int nitr_in, Rcpp::IntegerVector& save_itrs_in);
+  void set_hparams(int ndomains_in, int nclass_in, const arma::uvec& class2domain_in, const arma::vec& classPi_alpha_in, int domain_maxitems_in, float theta_alpha_in, float domain_proposal_empty_in, int domain_nproposals_in, Rcpp::LogicalVector steps_active_in, std::string domain_theta_prior_type_in, int nitr_in, arma::uvec& save_itrs_in);
   void set_hparams(Rcpp::List hparams_in);
-  void set_dataInfo(const Rcpp::IntegerMatrix& x);
+  void set_dataInfo(const arma::umat& x);
 };
 
 //' @name Hyperparameter::set_hparams
@@ -469,8 +424,8 @@ public:
 void Hyperparameter::set_hparams(
     int ndomains_in
   , int nclass_in
-  , const Rcpp::IntegerVector& class2domain_in
-  , const Rcpp::NumericVector& classPi_alpha_in
+  , const arma::uvec& class2domain_in
+  , const arma::vec& classPi_alpha_in
   , int domain_maxitems_in
   , float theta_alpha_in
   , float domain_proposal_empty_in
@@ -478,7 +433,7 @@ void Hyperparameter::set_hparams(
   , Rcpp::LogicalVector steps_active_in
   , std::string domain_theta_prior_type_in
   , int nitr_in
-  , Rcpp::IntegerVector& save_itrs_in) {
+  , arma::uvec& save_itrs_in) {
   TROUBLE_START(("Hyperparameter::set_hparams #V1"));
   ndomains = ndomains_in;
   nclass = nclass_in;
@@ -508,8 +463,8 @@ void Hyperparameter::set_hparams(Rcpp::List hparams_in) {
   TROUBLE_START(("Hyperparameter::set_hparams #V2"));
   int ndomains = hparams_in("ndomains");
   int nclass = hparams_in("nclass");
-  Rcpp::IntegerVector class2domain = hparams_in("class2domain");
-  Rcpp::NumericVector classPi_alpha = hparams_in("classPi_alpha");
+  arma::uvec class2domain = hparams_in("class2domain");
+  arma::vec classPi_alpha = hparams_in("classPi_alpha");
   int domain_maxitems = hparams_in("domain_maxitems");
   float theta_alpha = hparams_in("theta_alpha");
   float domain_proposal_empty = hparams_in("domain_proposal_empty");
@@ -517,7 +472,7 @@ void Hyperparameter::set_hparams(Rcpp::List hparams_in) {
   Rcpp::LogicalVector steps_active = hparams_in("steps_active");
   std::string domain_theta_prior_type = hparams_in("domain_theta_prior_type");
   int nitr = hparams_in("nitr");
-  Rcpp::IntegerVector save_itrs = hparams_in("save_itrs");
+  arma::uvec save_itrs = hparams_in("save_itrs");
   
   set_hparams(ndomains, nclass, class2domain, classPi_alpha, domain_maxitems, theta_alpha, domain_proposal_empty, domain_nproposals, steps_active, domain_theta_prior_type, nitr, save_itrs);
   TROUBLE_END;
@@ -528,7 +483,7 @@ void Hyperparameter::set_hparams(Rcpp::List hparams_in) {
 //' @description Use the raw data we are modeling to set certain hparams settings (e.g. set number of items)
 //' Assumptions: That there are no empty levels especially at end
 //' @keywords internal
-void Hyperparameter::set_dataInfo(const Rcpp::IntegerMatrix& x) {
+void Hyperparameter::set_dataInfo(const arma::umat& x) {
   TROUBLE_START(("Hyperparameter::set_dataInfo"));
   item_nlevels = colMax(x) + 1; // length(0:n) = n+1
   nobs = x.nrow();
@@ -545,35 +500,35 @@ void Hyperparameter::set_dataInfo(const Rcpp::IntegerMatrix& x) {
 // Domains and corresponding (logged) probabilities
 class DomainCount {
 public:
-  Rcpp::NumericVector lthetas; // probabilities of corresponding pattern on log scale
-  Rcpp::IntegerVector items; // items in this domain
-  Rcpp::IntegerVector pattern2id_map;
+  arma::vec lthetas; // probabilities of corresponding pattern on log scale
+  arma::uvec items; // items in this domain
+  arma::uvec pattern2id_map;
   int npatterns = 0;
-  Rcpp::IntegerVector counts; // number of times each pattern appears in the data
+  arma::uvec counts; // number of times each pattern appears in the data
   
 public:
-  void set_initial(Rcpp::IntegerVector& items_in, const Hyperparameter& hparams, const Rcpp::NumericVector& lthetas_in = Rcpp::NumericVector(0));
+  void set_initial(arma::uvec& items_in, const Hyperparameter& hparams, const arma::vec& lthetas_in = arma::vec(0));
   void set_initial(Rcpp::List list_domain, const Hyperparameter& hparams);
   static std::vector<std::map<int,  DomainCount> > list2domains(Rcpp::List list_list_domains, const Hyperparameter& hparams);
   void set_pattern2id_map(const Hyperparameter& hparams);
   
 public:
   template <typename vectype> int pattern2id(const vectype& xobs);
-  Rcpp::IntegerVector id2pattern(int id);
+  arma::uvec id2pattern(int id);
   int id2altid(int id, const Hyperparameter& hparams);
   int itemsid_calc();
   int ndomainitems_calc() {return items.size();}; // number of items in this domain
   int nitems_calc() {return pattern2id_map.size();}; // number of items in the data
   
 public:
-  double get_ltheta(const Rcpp::IntegerMatrix::ConstRow& xobs); // maybe switch to template
+  double get_ltheta(const arma::umat::ConstRow& xobs); // maybe switch to template
   float getloglik_marginal(const Hyperparameter& hparams);
   
 public:
   void countReset();
-  void countAdd(const Rcpp::IntegerMatrix::ConstRow& xobs);
-  void countSubtract(const Rcpp::IntegerMatrix::ConstRow& xobs);
-  void reduce_items(Rcpp::IntegerVector items_new, const Hyperparameter& hparams);
+  void countAdd(const arma::umat::ConstRow& xobs);
+  void countSubtract(const arma::umat::ConstRow& xobs);
+  void reduce_items(arma::uvec items_new, const Hyperparameter& hparams);
   void drop_item(int item, const Hyperparameter& hparams);
   
 public:
@@ -588,7 +543,7 @@ public:
 //' @param hyparams Hyperparmeters
 //' @param lthetas_in Log probablities of each response pattern of these items (optional)
 //' @keywords internal
-void DomainCount::set_initial(Rcpp::IntegerVector& items_in, const Hyperparameter& hparams, const Rcpp::NumericVector& lthetas_in) {
+void DomainCount::set_initial(arma::uvec& items_in, const Hyperparameter& hparams, const arma::vec& lthetas_in) {
   TROUBLE_START(("DomainCount::set_initial #V1"));
   items = items_in;
   
@@ -597,7 +552,7 @@ void DomainCount::set_initial(Rcpp::IntegerVector& items_in, const Hyperparamete
   if (lthetas_in.size() > 0) {
     lthetas = lthetas_in;
   } else {
-    lthetas = Rcpp::NumericVector(npatterns);
+    lthetas = arma::vec(npatterns);
   }
   
   countReset();
@@ -614,7 +569,7 @@ void DomainCount::set_initial(Rcpp::IntegerVector& items_in, const Hyperparamete
 void DomainCount::set_pattern2id_map(const Hyperparameter& hparams) {
   TROUBLE_START(("DomainCount::set_pattern2id_map"));
   
-  pattern2id_map = Rcpp::IntegerVector(hparams.nitem, 0);
+  pattern2id_map = arma::uvec(hparams.nitem, 0);
   int ndomainitems = ndomainitems_calc();
   
   if (ndomainitems==0) {
@@ -642,8 +597,8 @@ void DomainCount::set_pattern2id_map(const Hyperparameter& hparams) {
 //' @keywords internal
 void DomainCount::set_initial(Rcpp::List list_domain, const Hyperparameter& hparams) {
   TROUBLE_START(("DomainCount::set_initial #V2"));
-  Rcpp::NumericVector lthetas_in =  Rcpp::log(list_domain["thetas"]);
-  Rcpp::IntegerVector items_in = list_domain["items"];
+  arma::vec lthetas_in =  arma::log(list_domain["thetas"]);
+  arma::uvec items_in = list_domain["items"];
   set_initial(items_in, hparams, lthetas_in);
   TROUBLE_END;
 }
@@ -653,7 +608,7 @@ void DomainCount::set_initial(Rcpp::List list_domain, const Hyperparameter& hpar
 //' @description Efficiently remove items from domain (without needing to re-calculate counts)
 //' @param items_new Resulting items in your domain. Assumed(!!) to be subset of current items.
 //' @keywords internal
-void DomainCount::reduce_items(Rcpp::IntegerVector items_new, const Hyperparameter& hparams) {
+void DomainCount::reduce_items(arma::uvec items_new, const Hyperparameter& hparams) {
   TROUBLE_START(("DomainCount::reduce_items"));
   
   DomainCount domain_orig = copy();
@@ -672,7 +627,7 @@ void DomainCount::reduce_items(Rcpp::IntegerVector items_new, const Hyperparamet
 void DomainCount::drop_item(int item, const Hyperparameter& hparams) {
   TROUBLE_START(("DomainCount::drop_item"));
   
-  Rcpp::IntegerVector items_new = items[items!=item];
+  arma::uvec items_new = items[items!=item];
   reduce_items(items_new, hparams);
   
   TROUBLE_END;
@@ -686,7 +641,7 @@ void DomainCount::drop_item(int item, const Hyperparameter& hparams) {
 template <typename vectype>
 int DomainCount::pattern2id(const vectype& xobs) {
   TROUBLE_START(("DomainCount::pattern2id"));
-  TROUBLE_END; return Rcpp::sum(xobs * pattern2id_map);
+  TROUBLE_END; return arma::accu(xobs % pattern2id_map);
 }
 
 //' @name DomainCount::get_ltheta
@@ -694,7 +649,7 @@ int DomainCount::pattern2id(const vectype& xobs) {
 //' @description Look up the log-probability of seeing this response pattern in this domain
 //' @param xobs vector of the FULL response pattern (not just the items in this domain)
 //' @keywords internal
-double DomainCount::get_ltheta(const Rcpp::IntegerMatrix::ConstRow& xobs) {
+double DomainCount::get_ltheta(const arma::umat::ConstRow& xobs) {
   TROUBLE_START(("DomainCount::get_ltheta"));
   double out;
   if (npatterns > 0) {
@@ -712,9 +667,9 @@ double DomainCount::get_ltheta(const Rcpp::IntegerMatrix::ConstRow& xobs) {
 //' Differs from ::id2pattern(.) in that pattern2id_map is a cumulative compared to mapvec
 //' Assumes items are in same order as pattern2id_map;
 //' @keywords internal
-Rcpp::IntegerVector DomainCount::id2pattern(int id) {
+arma::uvec DomainCount::id2pattern(int id) {
   TROUBLE_START(("DomainCount::id2pattern #V1"));
-  Rcpp::IntegerVector pattern(nitems_calc(), -1);
+  arma::uvec pattern(nitems_calc(), -1);
   
   int i_item;
   int i_divisor;
@@ -742,7 +697,7 @@ Rcpp::IntegerVector DomainCount::id2pattern(int id) {
 //' @keywords internal
 void DomainCount::countReset() {
   TROUBLE_START(("DomainCount::id2pattern #V2"));
-  counts = Rcpp::IntegerVector(npatterns, 0);
+  counts = arma::uvec(npatterns, 0);
   TROUBLE_END;
 }
 
@@ -752,7 +707,7 @@ void DomainCount::countReset() {
 //' Counts measure the number of times each pattern appears in the data.
 //' @param xobs One FULL response pattern (not just the items in this domain)
 //' @keywords internal
-void DomainCount::countAdd(const Rcpp::IntegerMatrix::ConstRow& xobs) {
+void DomainCount::countAdd(const arma::umat::ConstRow& xobs) {
   TROUBLE_START(("DomainCount::countAdd"));
   counts[pattern2id(xobs)] += 1;
   TROUBLE_END;
@@ -763,7 +718,7 @@ void DomainCount::countAdd(const Rcpp::IntegerMatrix::ConstRow& xobs) {
 //' @description Removes one observation to this domain's counts.
 //' @param xobs One FULL response pattern (not just the items in this domain)
 //' @keywords internal
-void DomainCount::countSubtract(const Rcpp::IntegerMatrix::ConstRow& xobs) {
+void DomainCount::countSubtract(const arma::umat::ConstRow& xobs) {
   TROUBLE_START(("DomainCount::countSubtract"));
   counts[pattern2id(xobs)] -= 1;
   TROUBLE_END;
@@ -803,11 +758,11 @@ std::vector<std::map<int,  DomainCount> > DomainCount::list2domains(Rcpp::List l
 DomainCount DomainCount::copy() {
   TROUBLE_START(("DomainCount::copy"));
   DomainCount newDomain;
-  newDomain.lthetas = Rcpp::clone(lthetas);
-  newDomain.items = Rcpp::clone(items);
-  newDomain.pattern2id_map = Rcpp::clone(pattern2id_map);
+  newDomain.lthetas = (lthetas);
+  newDomain.items = (items);
+  newDomain.pattern2id_map = (pattern2id_map);
   newDomain.npatterns = npatterns;
-  newDomain.counts = Rcpp::clone(counts);
+  newDomain.counts = (counts);
   TROUBLE_END; return newDomain;
 }
 
@@ -838,13 +793,13 @@ float DomainCount::getloglik_marginal(const Hyperparameter& hparams) {
     TROUBLE_END; return 0; // log(1)
   }
   
-  Rcpp::NumericVector theta_alpha = hparams.theta_alpha + Rcpp::NumericVector(npatterns);
+  arma::vec theta_alpha = hparams.theta_alpha + arma::vec(npatterns);
   float ldenominator=0;
   if (hparams.domain_theta_prior_type != "restrictive") {
     ldenominator=lbeta(theta_alpha);
   } // if hparams.domain_theta_prior_type=="restrictive", applies partial prior for domain by setting ldenominator=0
   float loglik = (
-    lbeta(Rcpp::as<Rcpp::NumericVector> (counts) + theta_alpha)
+    lbeta(arma::conv_to<arma::vec>::from(counts) + theta_alpha)
     - ldenominator
   );
   TROUBLE_END; return loglik;
@@ -882,14 +837,14 @@ struct domainProposalOut {
   int swap_type;
   int domain0_id;
   int domain1_id;
-  Rcpp::IntegerVector items0_old;
-  Rcpp::IntegerVector items1_old;
-  Rcpp::IntegerVector items0_new;
-  Rcpp::IntegerVector items1_new;
-  Rcpp::IntegerMatrix item2domainid_new;
+  arma::uvec items0_old;
+  arma::uvec items1_old;
+  arma::uvec items0_new;
+  arma::uvec items1_new;
+  arma::umat item2domainid_new;
   float forwardProb;
   float backwardProb;
-  Rcpp::IntegerVector domain_classes;
+  arma::uvec domain_classes;
   std::vector<std::map<int,  DomainCount> > domains_new;
   int is_ok;
 };
@@ -912,55 +867,55 @@ struct domainAcceptOut {
 // Bayes parameters  (random variables)
 class BayesParameter {
 public:
-  Rcpp::NumericVector class_pi; // Prior for classes
-  Rcpp::IntegerVector classes; // Class for each observation
+  arma::vec class_pi; // Prior for classes
+  arma::uvec classes; // Class for each observation
   std::vector<std::map<int,  DomainCount> > domains; // Domains and thetas
   
   public: // Inferred namely from domains
-    Rcpp::IntegerMatrix item2domainid; // Function of domains
-    Rcpp::IntegerMatrix domains_accept; // Function of domains
-    Rcpp::NumericMatrix class_loglik; // Log likelihood of seeing this pattern conditional on class and all parameters
-    Rcpp::NumericMatrix class_loglik_collapsed; // Log likelihood of seeing this pattern on domains and previous class membership
+    arma::umat item2domainid; // Function of domains
+    arma::umat domains_accept; // Function of domains
+    arma::mat class_loglik; // Log likelihood of seeing this pattern conditional on class and all parameters
+    arma::mat class_loglik_collapsed; // Log likelihood of seeing this pattern on domains and previous class membership
     
 public:
-  void set_initial(Rcpp::NumericVector class_pi_in, Rcpp::IntegerVector classes_in, std::vector<std::map<int,  DomainCount> > domains_in, const Hyperparameter& hparams);
+  void set_initial(arma::vec class_pi_in, arma::uvec classes_in, std::vector<std::map<int,  DomainCount> > domains_in, const Hyperparameter& hparams);
   void set_initial(Rcpp::List list_bparam, const Hyperparameter& hparams);
-  float class_lprob(const Rcpp::IntegerMatrix::ConstRow& xobs, int xclass);
-  Rcpp::NumericVector class_lprob(const Rcpp::IntegerMatrix::ConstRow& xobs);
-  void set_class_loglik(const Rcpp::IntegerMatrix& x, bool reset=false);
-  void set_class_loglik_collapsed(const Rcpp::IntegerMatrix& x, const Hyperparameter &hparams);
+  float class_lprob(const arma::umat::ConstRow& xobs, int xclass);
+  arma::vec class_lprob(const arma::umat::ConstRow& xobs);
+  void set_class_loglik(const arma::umat& x, bool reset=false);
+  void set_class_loglik_collapsed(const arma::umat& x, const Hyperparameter &hparams);
   
 public:
   void domain_resetCounts();
-  void domain_addCount(const Rcpp::IntegerMatrix::ConstRow& xobs, int xclass);
-  void domain_addCounts(const Rcpp::IntegerMatrix& x, bool reset_counts=true);
+  void domain_addCount(const arma::umat::ConstRow& xobs, int xclass);
+  void domain_addCounts(const arma::umat& x, bool reset_counts=true);
   void domain_resetCounts(std::vector<std::map<int,  DomainCount> >& domains);
-  void domain_addCount(const Rcpp::IntegerMatrix::ConstRow& xobs, int xclass, std::vector<std::map<int,  DomainCount> >& domains);
-  void domain_addCounts(const Rcpp::IntegerMatrix& x, const Rcpp::IntegerVector& classes, bool reset_counts, std::vector<std::map<int,  DomainCount> >& domains);
+  void domain_addCount(const arma::umat::ConstRow& xobs, int xclass, std::vector<std::map<int,  DomainCount> >& domains);
+  void domain_addCounts(const arma::umat& x, const arma::uvec& classes, bool reset_counts, std::vector<std::map<int,  DomainCount> >& domains);
   
 public:
   int nclass_calc() {return class_pi.size();};
   int nitems_calc() {return domains[0].begin()->second.nitems_calc();};
   int nobs_calc() {return classes.size();};
-  Rcpp::IntegerVector nobs_classes_calc();
-  Rcpp::IntegerMatrix item2domainid_calc(const Hyperparameter& hparams);
+  arma::uvec nobs_classes_calc();
+  arma::umat item2domainid_calc(const Hyperparameter& hparams);
   int domain_id_new(int class2domain_id, const Hyperparameter& hparams);
-  static Rcpp::IntegerVector get_superdomains(Rcpp::IntegerMatrix& item2domainid, const Hyperparameter& hparams);
-  static bool is_identifiable(Rcpp::IntegerVector& item2superdomainid, const Hyperparameter& hparams);
+  static arma::uvec get_superdomains(arma::umat& item2domainid, const Hyperparameter& hparams);
+  static bool is_identifiable(arma::uvec& item2superdomainid, const Hyperparameter& hparams);
   bool is_identifiable(domainProposalOut& proposal, const Hyperparameter& hparams);
   
 public:
-  Rcpp::NumericVector class_pi_args(const Hyperparameter& hparams);
+  arma::vec class_pi_args(const Hyperparameter& hparams);
   void class_pi_next(const Hyperparameter& hparams);
-  void classes_next(const Rcpp::IntegerMatrix& x, const Hyperparameter& hparams, const bool is_collapsed);
-  void thetas_next(const Rcpp::IntegerMatrix& x, const Hyperparameter& hparams);
+  void classes_next(const arma::umat& x, const Hyperparameter& hparams, const bool is_collapsed);
+  void thetas_next(const arma::umat& x, const Hyperparameter& hparams);
   
 public:
-  static float domain_prior(Rcpp::IntegerVector& item2domainid_vec, const Hyperparameter& hparams);
+  static float domain_prior(arma::uvec& item2domainid_vec, const Hyperparameter& hparams);
   domainProposalOut domain_proposal(int class2domain_id, const Hyperparameter& hparams, int maxitr=5);
-  domainAcceptOut domain_accept(const Rcpp::IntegerMatrix& x, domainProposalOut& proposal, const Hyperparameter& hparams);
-  int domain_next(int class2domain_id, const Rcpp::IntegerMatrix& x, const Hyperparameter& hparams);
-  void domains_next(const Rcpp::IntegerMatrix& x, const Hyperparameter& hparams);
+  domainAcceptOut domain_accept(const arma::umat& x, domainProposalOut& proposal, const Hyperparameter& hparams);
+  int domain_next(int class2domain_id, const arma::umat& x, const Hyperparameter& hparams);
+  void domains_next(const arma::umat& x, const Hyperparameter& hparams);
 };
 
 //' @name BayesParameter::set_initial
@@ -968,19 +923,19 @@ public:
 //' @description Set all BayesParameter properties
 //' See getStart_bayes_params(.) in dependentLCM.r for more details
 //' @keywords internal
-void BayesParameter::set_initial(Rcpp::NumericVector class_pi_in, Rcpp::IntegerVector classes_in, std::vector<std::map<int,  DomainCount> > domains_in, const Hyperparameter& hparams) {
+void BayesParameter::set_initial(arma::vec class_pi_in, arma::uvec classes_in, std::vector<std::map<int,  DomainCount> > domains_in, const Hyperparameter& hparams) {
   TROUBLE_START(("BayesParameter::set_initial #V1"));
   class_pi = class_pi_in;
   classes = classes_in;
   domains = domains_in;
   item2domainid = item2domainid_calc(hparams);
-  domains_accept = Rcpp::IntegerMatrix(hparams.domain_nproposals, hparams.nclass2domain);
+  domains_accept = arma::umat(hparams.domain_nproposals, hparams.nclass2domain);
   domains_accept.fill(-1);
   if (hparams.steps_active["likelihood"] == true) {
-    class_loglik = Rcpp::NumericMatrix(hparams.nclass, hparams.nobs); // initialize with all zeroes
+    class_loglik = arma::mat(hparams.nclass, hparams.nobs); // initialize with all zeroes
   }
   if (hparams.steps_active["class_collapse"] == true) {
-    class_loglik_collapsed = Rcpp::NumericMatrix(hparams.nclass, hparams.nobs); // initialize with all zeroes
+    class_loglik_collapsed = arma::mat(hparams.nclass, hparams.nobs); // initialize with all zeroes
   }
   TROUBLE_END;
 }
@@ -992,8 +947,8 @@ void BayesParameter::set_initial(Rcpp::NumericVector class_pi_in, Rcpp::IntegerV
 //' @keywords internal
 void BayesParameter::set_initial(Rcpp::List list_bparam, const Hyperparameter& hparams) {
   TROUBLE_START(("BayesParameter::set_initial #V2"));
-  Rcpp::NumericVector class_pi_in = list_bparam("class_pi");
-  Rcpp::IntegerVector classes_in = list_bparam("classes");
+  arma::vec class_pi_in = list_bparam("class_pi");
+  arma::uvec classes_in = list_bparam("classes");
   Rcpp::List list_domains_in = list_bparam("domains");
   std::vector<std::map<int,  DomainCount> > domains_in = DomainCount::list2domains(list_domains_in, hparams);
   set_initial(class_pi_in, classes_in, domains_in, hparams);
@@ -1003,11 +958,11 @@ void BayesParameter::set_initial(Rcpp::List list_bparam, const Hyperparameter& h
 //' @name BayesParameter::nobs_classes_calc
 //' @title BayesParameter::nobs_classes_calc
 //' @description How many observations are in each class?
-Rcpp::IntegerVector BayesParameter::nobs_classes_calc() {
+arma::uvec BayesParameter::nobs_classes_calc() {
   int nclass = nclass_calc();
-  Rcpp::IntegerVector class_nobs (nclass);
+  arma::uvec class_nobs (nclass);
   for (int iclass=0; iclass<nclass; iclass++) {
-    class_nobs[iclass] = Rcpp::sum(domains[iclass].begin()->second.counts);
+    class_nobs[iclass] = arma::accu(domains[iclass].begin()->second.counts);
   }
   return class_nobs;
 };
@@ -1018,7 +973,7 @@ Rcpp::IntegerVector BayesParameter::nobs_classes_calc() {
 //' @param xobs The response pattern we are investigation.
 //' @param xclass The class this observation is (assumed to be) in
 //' @keywords internal
-float BayesParameter::class_lprob(const Rcpp::IntegerMatrix::ConstRow& xobs, int xclass) {
+float BayesParameter::class_lprob(const arma::umat::ConstRow& xobs, int xclass) {
   TROUBLE_START(("BayesParameter::class_lprob #V1"));
   float lprob = 0;
   std::map<int,  DomainCount>::iterator domain_iter;
@@ -1038,9 +993,9 @@ float BayesParameter::class_lprob(const Rcpp::IntegerMatrix::ConstRow& xobs, int
 //' Assumes all parameters are fixed/known.
 //' @param xobs The response pattern we are investigation.
 //' @keywords internal
-Rcpp::NumericVector BayesParameter::class_lprob(const Rcpp::IntegerMatrix::ConstRow& xobs) {
+arma::vec BayesParameter::class_lprob(const arma::umat::ConstRow& xobs) {
   TROUBLE_START(("BayesParameter::class_lprob #V2"));
-  Rcpp::NumericVector lprobs = Rcpp::NumericVector(nclass_calc());
+  arma::vec lprobs = arma::vec(nclass_calc());
   
   for (int i=0; i < nclass_calc(); i++) {
     lprobs[i] = class_lprob(xobs, i);
@@ -1056,7 +1011,7 @@ Rcpp::NumericVector BayesParameter::class_lprob(const Rcpp::IntegerMatrix::Const
 //' @param x Matrix of responses
 //' @param reset Whether to initialize the matrix dimensions before running
 //' @keywords internal
-void BayesParameter::set_class_loglik(const Rcpp::IntegerMatrix& x, bool reset) {
+void BayesParameter::set_class_loglik(const arma::umat& x, bool reset) {
   TROUBLE_START(("BayesParameter::set_class_loglik"));
   // One column per observation and row per class. Get conditional likelihood
   
@@ -1064,7 +1019,7 @@ void BayesParameter::set_class_loglik(const Rcpp::IntegerMatrix& x, bool reset) 
   
   if (reset == true) {
     // Initialize matrix
-    class_loglik = Rcpp::NumericMatrix(nclass_calc(), xnrow);
+    class_loglik = arma::mat(nclass_calc(), xnrow);
   }
   
   for (int i = 0; i < xnrow; i++) {
@@ -1081,12 +1036,12 @@ void BayesParameter::set_class_loglik(const Rcpp::IntegerMatrix& x, bool reset) 
 //' @param x Matrix of responses
 //' @param hparams Hyperparameter values
 //' @keywords internal
-void BayesParameter::set_class_loglik_collapsed(const Rcpp::IntegerMatrix& x, const Hyperparameter& hparams) {
+void BayesParameter::set_class_loglik_collapsed(const arma::umat& x, const Hyperparameter& hparams) {
   TROUBLE_START(("BayesParameter::set_class_loglik_collapsed"));
   // One column per observation and row per class
   // influence via pi
-  Rcpp::NumericVector nobs_classes = Rcpp::as<Rcpp::NumericVector>(nobs_classes_calc());
-  Rcpp::NumericMatrix log_pi_collapsed = Rcpp::NumericMatrix(hparams.nclass, hparams.nclass);
+  arma::vec nobs_classes = arma::conv_to<arma::vec>::from(nobs_classes_calc());
+  arma::mat log_pi_collapsed = arma::mat(hparams.nclass, hparams.nclass);
   for (int iclass=0; iclass<hparams.nclass; iclass++) {
     
     // get dirichlet parameters
@@ -1095,8 +1050,8 @@ void BayesParameter::set_class_loglik_collapsed(const Rcpp::IntegerMatrix& x, co
     
     // get expected value
     log_pi_collapsed.column(iclass) = (
-      Rcpp::log(log_pi_collapsed.column(iclass))
-      - std::log(Rcpp::sum(log_pi_collapsed.column(iclass)))
+      arma::log(log_pi_collapsed.column(iclass))
+      - std::log(arma::accu(log_pi_collapsed.column(iclass)))
     );
   }
   for (int iobs = 0; iobs < hparams.nobs; iobs++) {
@@ -1107,9 +1062,9 @@ void BayesParameter::set_class_loglik_collapsed(const Rcpp::IntegerMatrix& x, co
   // influence via theta
   std::map<int,  DomainCount>::iterator domain_iter;
   std::map<int,  DomainCount>::const_iterator domain_end;
-  Rcpp::NumericVector icounts;
-  Rcpp::NumericVector ilog_theta_collapsed;
-  Rcpp::NumericVector ilog_theta_collapsed1;
+  arma::vec icounts;
+  arma::vec ilog_theta_collapsed;
+  arma::vec ilog_theta_collapsed1;
   for (int iclass = 0; iclass < hparams.nclass; iclass++) {
     
     domain_end = domains[iclass].end();
@@ -1117,18 +1072,18 @@ void BayesParameter::set_class_loglik_collapsed(const Rcpp::IntegerMatrix& x, co
       
       // get dirichlet parameters
       icounts = (
-        Rcpp::as<Rcpp::NumericVector>(domain_iter->second.counts)
+        arma::conv_to<arma::vec>::from(domain_iter->second.counts)
         + hparams.theta_alpha
        );
       
       // get expected values
       ilog_theta_collapsed = (
-        Rcpp::log(icounts) 
-        - std::log(Rcpp::sum(icounts))
+        arma::log(icounts) 
+        - std::log(arma::accu(icounts))
       );
       ilog_theta_collapsed1 = (
-        Rcpp::log(icounts-1)
-        - std::log(Rcpp::sum(icounts) - 1)
+        arma::log(icounts-1)
+        - std::log(arma::accu(icounts) - 1)
       );  // subtract one to not count iobs'th observation itself
       for (int iobs = 0; iobs < hparams.nobs; iobs++) {
         if (iclass == classes[iobs]) {
@@ -1179,7 +1134,7 @@ void BayesParameter::domain_resetCounts() {
 //' @param xlcass The class of this observation. Needed because different domains correspond to different classes.
 //' @param domains map of domains we wish to add this pattern to
 //' @keywords internal
-void BayesParameter::domain_addCount(const Rcpp::IntegerMatrix::ConstRow& xobs, int xclass, std::vector<std::map<int,  DomainCount> >& domains) {
+void BayesParameter::domain_addCount(const arma::umat::ConstRow& xobs, int xclass, std::vector<std::map<int,  DomainCount> >& domains) {
   TROUBLE_START(("BayesParameter::domain_addCount #V1"));
   std::map<int,  DomainCount>::iterator domain_iter;
   std::map<int,  DomainCount>::const_iterator domain_end;
@@ -1196,7 +1151,7 @@ void BayesParameter::domain_addCount(const Rcpp::IntegerMatrix::ConstRow& xobs, 
 //' @param xobs the response pattern we are counting
 //' @param xlcass The class of this observation. Needed because different domains correspond to different classes.
 //' @keywords internal
-void BayesParameter::domain_addCount(const Rcpp::IntegerMatrix::ConstRow& xobs, int xclass) {
+void BayesParameter::domain_addCount(const arma::umat::ConstRow& xobs, int xclass) {
   TROUBLE_START(("BayesParameter::domain_addCount #V2"));
   domain_addCount(xobs, xclass, domains);
   TROUBLE_END;
@@ -1210,7 +1165,7 @@ void BayesParameter::domain_addCount(const Rcpp::IntegerMatrix::ConstRow& xobs, 
 //' @param domains Map of domains holding counts
 //' @description Assumes the classes of x correspond to the classes in BayesParameter.
 //' @keywords internal
-void BayesParameter::domain_addCounts(const Rcpp::IntegerMatrix& x, const Rcpp::IntegerVector& classes, bool reset_counts, std::vector<std::map<int,  DomainCount> >& domains) {
+void BayesParameter::domain_addCounts(const arma::umat& x, const arma::uvec& classes, bool reset_counts, std::vector<std::map<int,  DomainCount> >& domains) {
   TROUBLE_START(("BayesParameter::domain_addCounts #V1"));
   
   if (reset_counts == true) {
@@ -1229,7 +1184,7 @@ void BayesParameter::domain_addCounts(const Rcpp::IntegerMatrix& x, const Rcpp::
 //' @param x Matrix of the response patterns
 //' @param reset_counts True if we should set all counts to zero before counting x.
 //' @keywords internal
-void BayesParameter::domain_addCounts(const Rcpp::IntegerMatrix& x, bool reset_counts) {
+void BayesParameter::domain_addCounts(const arma::umat& x, bool reset_counts) {
   TROUBLE_START(("BayesParameter::domain_addCounts #V2"));
   domain_addCounts(x, classes, reset_counts, domains);
   TROUBLE_END;
@@ -1240,18 +1195,18 @@ void BayesParameter::domain_addCounts(const Rcpp::IntegerMatrix& x, bool reset_c
 //' @description For each item find the id for the domain it belongs to.
 //' If there are multiple class2domain, then multiple columns are provided (one for each)
 //' @keywords internal
-Rcpp::IntegerMatrix BayesParameter::item2domainid_calc(const Hyperparameter& hparams) {
+arma::umat BayesParameter::item2domainid_calc(const Hyperparameter& hparams) {
   TROUBLE_START(("BayesParameter::item2domainid_calc"));
   
-  Rcpp::IntegerMatrix out = Rcpp::IntegerMatrix(hparams.nitem, hparams.nclass2domain);
+  arma::umat out = arma::umat(hparams.nitem, hparams.nclass2domain);
   
   int iclass;
-  Rcpp::IntegerVector iitems;
+  arma::uvec iitems;
   std::map<int,  DomainCount>::iterator domain_iter;
   std::map<int,  DomainCount>::const_iterator domain_end;
   
   for (int iclass2domain=0; iclass2domain < hparams.nclass2domain; iclass2domain++) {
-    iclass = which(hparams.class2domain == iclass2domain)[0];
+    iclass = arma::find(hparams.class2domain == iclass2domain)[0];
     domain_end = domains[iclass].end();
     for (domain_iter = domains[iclass].begin(); domain_iter!=domain_end; ++domain_iter) {
       iitems = domain_iter->second.items;
@@ -1271,7 +1226,7 @@ Rcpp::IntegerMatrix BayesParameter::item2domainid_calc(const Hyperparameter& hpa
 //' Note that for domain_theta_prior_type="restrictive" some of the prior is also given in DomainCount::getloglik_marginal()
 //' Some choices of domains may be more likely than other based on prior.
 //' @keywords internal
-float BayesParameter::domain_prior(Rcpp::IntegerVector& item2domainid_vec, const Hyperparameter& hparams) {
+float BayesParameter::domain_prior(arma::uvec& item2domainid_vec, const Hyperparameter& hparams) {
   TROUBLE_START(("BayesParameter::domain_prior"));
   
   if (hparams.domain_theta_prior_type=="niave") {
@@ -1295,7 +1250,7 @@ float BayesParameter::domain_prior(Rcpp::IntegerVector& item2domainid_vec, const
 //' @param item2domainid Each colum describes what items must be grouped together for this item2domainid
 //' @param hparams hyperparameters
 //' @keywords internal
-Rcpp::IntegerVector BayesParameter::get_superdomains(Rcpp::IntegerMatrix& item2domainid, const Hyperparameter& hparams) {
+arma::uvec BayesParameter::get_superdomains(arma::umat& item2domainid, const Hyperparameter& hparams) {
   TROUBLE_START(("BayesParameter::get_superdomains"));
   int nitems = item2domainid.nrow();
   int nclass2domain = item2domainid.ncol();
@@ -1303,18 +1258,18 @@ Rcpp::IntegerVector BayesParameter::get_superdomains(Rcpp::IntegerMatrix& item2d
   
   if (nclass2domain == 1) {
     // Nothing to merge. Return item to domain associations
-    TROUBLE_END; return Rcpp::IntegerVector(item2domainid.column(0));
+    TROUBLE_END; return arma::uvec(item2domainid.column(0));
   }
   
   // Find connections across class2domain
-  Rcpp::IntegerMatrix adjmat = Rcpp::IntegerMatrix(nitems, nitems);
+  arma::umat adjmat = arma::umat(nitems, nitems);
   for (i=0; i < nclass2domain; i++) {
     adjmat += equal_to_adjmat(item2domainid.column(i));
     // Can we make faster by ignoring singleton domains?
   }
   
   // Merge linked nodes
-  Rcpp::IntegerVector item2superdomainid = adjmat_to_equal(adjmat, hparams.nitem);
+  arma::uvec item2superdomainid = adjmat_to_equal(adjmat, hparams.nitem);
   
   TROUBLE_END; return item2superdomainid;
 }
@@ -1327,7 +1282,7 @@ Rcpp::IntegerVector BayesParameter::get_superdomains(Rcpp::IntegerMatrix& item2d
 //' @param item2superdomainid Vector describing which items must be grouped together
 //' @param hparams hyperparameters
 //' @keywords internal
-bool BayesParameter::is_identifiable(Rcpp::IntegerVector& item2superdomainid, const Hyperparameter& hparams) {
+bool BayesParameter::is_identifiable(arma::uvec& item2superdomainid, const Hyperparameter& hparams) {
   TROUBLE_START(("BayesParameter::is_identifiable #V1"));
   
   bool identifiable = ::is_identifiable(item2superdomainid, hparams.nclass, hparams.item_nlevels)
@@ -1345,7 +1300,7 @@ bool BayesParameter::is_identifiable(domainProposalOut& proposal, const Hyperpar
   TROUBLE_START(("BayesParameter::is_identifiable #V2"));
   
   // Check identifiability of proposal
-  Rcpp::IntegerVector item2superdomainid_proposed = get_superdomains(proposal.item2domainid_new, hparams);
+  arma::uvec item2superdomainid_proposed = get_superdomains(proposal.item2domainid_new, hparams);
   bool identifiable = is_identifiable(item2superdomainid_proposed, hparams);
   
   TROUBLE_END; return identifiable ;
@@ -1359,7 +1314,7 @@ int BayesParameter::domain_id_new(int class2domain_id, const Hyperparameter& hpa
   TROUBLE_START(("BayesParameter::domain_id_new"));
   
   int domain_id = -1;
-  int domain_class = which(hparams.class2domain == class2domain_id)[0];
+  int domain_class = arma::find(hparams.class2domain == class2domain_id)[0];
   int nmax = minimum(hparams.ndomains, hparams.nitem+1);
   
   for (int i=0; i < nmax; i++) {
@@ -1385,13 +1340,13 @@ int BayesParameter::domain_id_new(int class2domain_id, const Hyperparameter& hpa
 //' @title BayesParameter::class_pi_args
 //' @description Calculate the dirichlet parameters for the posterior of pi (pi used for classes)
 //' @keywords internal
-Rcpp::NumericVector BayesParameter::class_pi_args(const Hyperparameter& hparams) {
+arma::vec BayesParameter::class_pi_args(const Hyperparameter& hparams) {
   TROUBLE_START(("BayesParameter::class_pi_args"));
   
-  Rcpp::NumericVector args = Rcpp::clone(hparams.classPi_alpha);  // Prevent overwrites. Maybe instead remove & from input
+  arma::vec args = (hparams.classPi_alpha);  // Prevent overwrites. Maybe instead remove & from input
   
-  Rcpp::IntegerVector::iterator classes_itr;
-  Rcpp::IntegerVector::const_iterator classes_end = classes.end();
+  arma::uvec::iterator classes_itr;
+  arma::uvec::const_iterator classes_end = classes.end();
   for (classes_itr = classes.begin();
        classes_itr != classes_end;
        ++classes_itr) {
@@ -1408,7 +1363,7 @@ Rcpp::NumericVector BayesParameter::class_pi_args(const Hyperparameter& hparams)
 void BayesParameter::class_pi_next(const Hyperparameter& hparams) {
   TROUBLE_START(("BayesParameter::class_pi_next"));
   
-  Rcpp::NumericVector args = class_pi_args(hparams);
+  arma::vec args = class_pi_args(hparams);
   class_pi = rDirichlet(args);
   TROUBLE_END;
 }
@@ -1417,29 +1372,29 @@ void BayesParameter::class_pi_next(const Hyperparameter& hparams) {
 //' @title BayesParameter::classes_next
 //' @description Do gibbs sampling to calculate the class of each observation
 //' @keywords internal
-void BayesParameter::classes_next(const Rcpp::IntegerMatrix& x, const Hyperparameter& hparams, const bool is_collapsed) {
+void BayesParameter::classes_next(const arma::umat& x, const Hyperparameter& hparams, const bool is_collapsed) {
   TROUBLE_START(("BayesParameter::classes_next"));
   
-  Rcpp::NumericMatrix *iclass_loglik;
-  Rcpp::NumericVector class_args_init(nclass_calc());
-  Rcpp::NumericMatrix class_args_init_base;
+  arma::mat *iclass_loglik;
+  arma::vec class_args_init(nclass_calc());
+  arma::mat class_args_init_base;
   if (is_collapsed==false) {
     iclass_loglik = &class_loglik;
-    class_args_init = Rcpp::log(class_pi);
+    class_args_init = arma::log(class_pi);
   } else {
     iclass_loglik = &class_loglik_collapsed;
     // leave class_args_init at zero
   }
   
   int nrow = x.nrow();
-  Rcpp::NumericVector class_args(nclass_calc());
+  arma::vec class_args(nclass_calc());
   for (int i=0; i < nrow; i++) {
     class_args = (
       class_args_init
       + (*iclass_loglik).column(i));
-    class_args = class_args - Rcpp::max(class_args); // Divide by max for precision: [e^a,e^b,e^c] = e^a[1, e^(b-a), e^(c-a)]
+    class_args = class_args - arma::max(class_args); // Divide by max for precision: [e^a,e^b,e^c] = e^a[1, e^(b-a), e^(c-a)]
     class_args = Rcpp::exp(class_args);
-    class_args = class_args / Rcpp::sum(class_args);
+    class_args = class_args / arma::accu(class_args);
     classes(i) = rCategorical(class_args);
   }
   TROUBLE_END;
@@ -1449,19 +1404,19 @@ void BayesParameter::classes_next(const Rcpp::IntegerMatrix& x, const Hyperparam
 //' @title BayesParameter::thetas_next
 //' @description Do gibbs sampling to calculate thetas for each domain
 //' @keywords internal
-void BayesParameter::thetas_next(const Rcpp::IntegerMatrix& x, const Hyperparameter& hparams) {
+void BayesParameter::thetas_next(const arma::umat& x, const Hyperparameter& hparams) {
   TROUBLE_START(("BayesParameter::thetas_next"));
   
   std::map<int,  DomainCount>::iterator domain_iter;
   std::map<int,  DomainCount>::const_iterator domain_end;
   DomainCount *idomain;
-  Rcpp::NumericVector iconcentration;
+  arma::vec iconcentration;
   for (int iclass=0; iclass < hparams.nclass; iclass++) {
     domain_end = domains[iclass].end();
     for (domain_iter = domains[iclass].begin(); domain_iter!=domain_end; ++domain_iter) {
       idomain = &(domain_iter->second);
       iconcentration = idomain->counts + hparams.theta_alpha;
-      idomain->lthetas = Rcpp::log(rDirichlet(iconcentration));
+      idomain->lthetas = arma::log(rDirichlet(iconcentration));
     }
   }
   TROUBLE_END;
@@ -1483,9 +1438,9 @@ domainProposalOut BayesParameter::domain_proposal(int class2domain_id, const Hyp
    * Choose Domains
    */
   
-  Rcpp::IntegerVector domain_classes = which(hparams.class2domain == class2domain_id); // maybe make fixed
-  Rcpp::IntegerVector domains_nonempty = Rcpp::unique(item2domainid.column(class2domain_id));
-  Rcpp::IntegerVector domains_chosen;
+  arma::uvec domain_classes = arma::find(hparams.class2domain == class2domain_id); // maybe make fixed
+  arma::uvec domains_nonempty = arma::unique(item2domainid.column(class2domain_id));
+  arma::uvec domains_chosen;
   if (domains_nonempty.size() >= 2) {
     // always do this except in edge case
     domains_chosen = Rcpp::sample(domains_nonempty, 2, false);
@@ -1494,7 +1449,7 @@ domainProposalOut BayesParameter::domain_proposal(int class2domain_id, const Hyp
     domains_chosen = {Rcpp::sample(domains_nonempty, 1, false)[0], -1};
   }
   
-  Rcpp::IntegerVector items0_old = which(item2domainid.column(class2domain_id) == domains_chosen[0]);
+  arma::uvec items0_old = arma::find(item2domainid.column(class2domain_id) == domains_chosen[0]);
   int items0_old_size = items0_old.size();
   
   /*
@@ -1526,13 +1481,13 @@ domainProposalOut BayesParameter::domain_proposal(int class2domain_id, const Hyp
    * Get old item info
    */
   
-  Rcpp::IntegerVector items1_old = which(item2domainid.column(class2domain_id) == domains_chosen[1]);
+  arma::uvec items1_old = arma::find(item2domainid.column(class2domain_id) == domains_chosen[1]);
   
   int items1_old_size = items1_old.size();
   int items_old_size = items0_old_size + items1_old_size;
   
-  Rcpp::IntegerVector items_old (items_old_size);
-  Rcpp::IntegerVector mask_old (items_old_size);
+  arma::uvec items_old (items_old_size);
+  arma::uvec mask_old (items_old_size);
   for (int i=0; i < items_old_size; i++) {
     if (i < items0_old_size) {
       items_old[i] = items0_old[i];
@@ -1549,15 +1504,15 @@ domainProposalOut BayesParameter::domain_proposal(int class2domain_id, const Hyp
    * Move Items
    */
   
-  Rcpp::IntegerVector items0_new;
-  Rcpp::IntegerVector items1_new;
+  arma::uvec items0_new;
+  arma::uvec items1_new;
   
   // get new mask
   int is_ok;
-  Rcpp::IntegerVector mask_new (items_old_size);
+  arma::uvec mask_new (items_old_size);
   if (items_old_size <= 2) {
     // special case. Separated strictly for speed
-    mask_new = Rcpp::clone(mask_old);
+    mask_new = (mask_old);
     int i = (int)(R::runif(0, 1) < 0.5);
     mask_new[i] = 1-mask_new[i]; // flip
     is_ok = 0; // Unknown
@@ -1571,15 +1526,15 @@ domainProposalOut BayesParameter::domain_proposal(int class2domain_id, const Hyp
       }
       
       
-      diff = Rcpp::sum(mask_new-mask_old);
+      diff = arma::accu(mask_new-mask_old);
       if (
           (diff == 0)
         | (diff == items_old_size)
       ) {
         ; // no change. Loop and try again
       } else if (
-          (Rcpp::sum(mask_new==0) > hparams.domain_maxitems)
-        | (Rcpp::sum(mask_new==1) > hparams.domain_maxitems)
+          (arma::accu(mask_new==0) > hparams.domain_maxitems)
+        | (arma::accu(mask_new==1) > hparams.domain_maxitems)
       ) {
         ; // Too many items. Loop and try again
       } else {
@@ -1595,9 +1550,9 @@ domainProposalOut BayesParameter::domain_proposal(int class2domain_id, const Hyp
   std::sort(items1_new.begin(),items1_new.end());
   
   // item2domainid
-  Rcpp::IntegerMatrix item2domainid_new = Rcpp::clone(item2domainid);
+  arma::umat item2domainid_new = (item2domainid);
   int domain_id;
-  Rcpp::IntegerVector items;
+  arma::uvec items;
   for (int i=0; i<2; i++) {
     domain_id = domains_chosen[i];
     if (i == 0) {
@@ -1720,17 +1675,17 @@ domainProposalOut BayesParameter::domain_proposal(int class2domain_id, const Hyp
 //' We examine the proposal and decide whether to accept it.
 //' ASSUMPTIONS domain_addCounts has been run on proposal.domains_new
 //' @keywords internal
-domainAcceptOut BayesParameter::domain_accept(const Rcpp::IntegerMatrix& x, domainProposalOut& proposal, const Hyperparameter& hparams) {
+domainAcceptOut BayesParameter::domain_accept(const arma::umat& x, domainProposalOut& proposal, const Hyperparameter& hparams) {
   TROUBLE_START(("BayesParameter::domain_accept"));
   
   domainAcceptOut out;
   
-  Rcpp::IntegerVector item2domainid_vec;
+  arma::uvec item2domainid_vec;
   item2domainid_vec = item2domainid.column(proposal.class2domain_id);
-  item2domainid_vec = Rcpp::clone(item2domainid_vec); // do we need to explcitly clone?
+  item2domainid_vec = (item2domainid_vec); // do we need to explcitly clone?
   out.loglik_old = domain_prior(item2domainid_vec, hparams);
   item2domainid_vec = proposal.item2domainid_new.column(proposal.class2domain_id);
-  item2domainid_vec = Rcpp::clone(item2domainid_vec); // do we need to explcitly clone?
+  item2domainid_vec = (item2domainid_vec); // do we need to explcitly clone?
   out.loglik_new = domain_prior(item2domainid_vec, hparams);
   
   
@@ -1766,7 +1721,7 @@ domainAcceptOut BayesParameter::domain_accept(const Rcpp::IntegerMatrix& x, doma
 //' @description We use a metropolis algorithm to try to update domains
 //' In essence we choose one item at random and either move it to another domain or swap it with an item from another domain
 //' @keywords internal
-int BayesParameter::domain_next(int class2domain_id, const Rcpp::IntegerMatrix& x, const Hyperparameter& hparams) {
+int BayesParameter::domain_next(int class2domain_id, const arma::umat& x, const Hyperparameter& hparams) {
   TROUBLE_START(("BayesParameter::domain_next"));
   
   /***
@@ -1844,7 +1799,7 @@ int BayesParameter::domain_next(int class2domain_id, const Rcpp::IntegerMatrix& 
 //' @title BayesParameter::domains_next
 //' @description Use metropolis algorithm to update domains. Repeat # of times set by hparams.
 //' @keywords internal
-void BayesParameter::domains_next(const Rcpp::IntegerMatrix& x, const Hyperparameter& hparams) {
+void BayesParameter::domains_next(const arma::umat& x, const Hyperparameter& hparams) {
   TROUBLE_START(("BayesParameter::domains_next"));
   
   for (int i=0; i < hparams.domain_nproposals; i++) {
@@ -1865,25 +1820,25 @@ void BayesParameter::domains_next(const Rcpp::IntegerMatrix& x, const Hyperparam
 class Archive {
   
 public:
-  Rcpp::NumericMatrix class_pi;
-  Rcpp::IntegerMatrix classes;
-  std::vector<Rcpp::IntegerMatrix> domains_id; // Row for iter, classid,  domain_id, pattern_id, items_id
-  std::vector<Rcpp::NumericVector> domains_lprobs;
-  std::vector<Rcpp::IntegerMatrix> domains_accept;
-  std::vector<Rcpp::NumericMatrix> class_loglik;
-  std::vector<Rcpp::NumericMatrix> class_loglik_collapsed;
+  arma::mat class_pi;
+  arma::umat classes;
+  std::vector<arma::umat> domains_id; // Row for iter, classid,  domain_id, pattern_id, items_id
+  std::vector<arma::vec> domains_lprobs;
+  std::vector<arma::umat> domains_accept;
+  std::vector<arma::mat> class_loglik;
+  std::vector<arma::mat> class_loglik_collapsed;
   int next_itr;
 public:
-  Rcpp::NumericVector obsLik;
-  Rcpp::NumericVector obsLogLik;
-  Rcpp::NumericVector obsLogLik2;
-  Rcpp::NumericVector itrLogLik;
+  arma::vec obsLik;
+  arma::vec obsLogLik;
+  arma::vec obsLogLik2;
+  arma::vec itrLogLik;
   int nitrLik;
   
 public:
   void set_initial(const Hyperparameter& hparams);
   void add(BayesParameter& aparams, const Hyperparameter& hparams);
-  void domains2mat(BayesParameter& params, int itr, Rcpp::IntegerMatrix& out_domains_id, Rcpp::NumericVector& out_domains_lprobs);
+  void domains2mat(BayesParameter& params, int itr, arma::umat& out_domains_id, arma::vec& out_domains_lprobs);
   Rcpp::List toList();
 };
 
@@ -1895,32 +1850,32 @@ void Archive::set_initial(const Hyperparameter& hparams) {
   TROUBLE_START(("Archive::set_initial"));
   next_itr = 0;
   
-  class_pi = Rcpp::NumericMatrix(hparams.nclass, hparams.nitr);
-  classes = Rcpp::IntegerMatrix(hparams.nobs, hparams.nitr);
+  class_pi = arma::mat(hparams.nclass, hparams.nitr);
+  classes = arma::umat(hparams.nobs, hparams.nitr);
   
   domains_id.resize(hparams.nitr);
   domains_lprobs.resize(hparams.nitr);
   
   domains_accept.resize(hparams.save_itrs["domains_accept"]);
   std::fill(domains_accept.begin(), domains_accept.end()
-              , Rcpp::IntegerMatrix(hparams.domain_nproposals, hparams.nclass2domain)
+              , arma::umat(hparams.domain_nproposals, hparams.nclass2domain)
   ); // does initializing actually speed things up later? I considered removing the std::vector and then implicitly working with a 3d matrix by way of a super-long 1d rcpp:vector (and attr("dim")). But this was unstable
   
   class_loglik.resize(hparams.save_itrs["class_loglik"]);
   std::fill(class_loglik.begin(), class_loglik.end()
-              , Rcpp::NumericMatrix(hparams.nclass, hparams.nobs));
+              , arma::mat(hparams.nclass, hparams.nobs));
   
   class_loglik_collapsed.resize(hparams.save_itrs["class_loglik_collapsed"]);
   std::fill(class_loglik_collapsed.begin(), class_loglik_collapsed.end()
-              , Rcpp::NumericMatrix(hparams.nclass, hparams.nobs));
+              , arma::mat(hparams.nclass, hparams.nobs));
   
   
   int save_itrs_agg_loglik = hparams.save_itrs["agg_loglik"]; // direct call causing issues downstream
   if (save_itrs_agg_loglik>0) {
-    obsLik = Rcpp::NumericVector(hparams.nobs);
-    obsLogLik = Rcpp::NumericVector(hparams.nobs);
-    itrLogLik = Rcpp::NumericVector(save_itrs_agg_loglik);
-    obsLogLik2 = Rcpp::NumericVector(hparams.nobs);
+    obsLik = arma::vec(hparams.nobs);
+    obsLogLik = arma::vec(hparams.nobs);
+    itrLogLik = arma::vec(save_itrs_agg_loglik);
+    obsLogLik2 = arma::vec(hparams.nobs);
   }
   nitrLik = 0;
   
@@ -1933,7 +1888,7 @@ void Archive::set_initial(const Hyperparameter& hparams) {
 //' Used to convert the domains from map form to matrix form for storage
 //' Although we could make a deep copy of the domain map each time, this would be unproductive because we need it in matrix form later for R. Therfore we convert to matrix.
 //' @keywords internal
-void Archive::domains2mat(BayesParameter& params, int itr, Rcpp::IntegerMatrix& out_domains_id, Rcpp::NumericVector& out_domains_lprobs) {
+void Archive::domains2mat(BayesParameter& params, int itr, arma::umat& out_domains_id, arma::vec& out_domains_lprobs) {
   TROUBLE_START(("Archive::domains2mat"));
   
   std::map<int,  DomainCount>::iterator domain_iter;
@@ -1960,8 +1915,8 @@ void Archive::domains2mat(BayesParameter& params, int itr, Rcpp::IntegerMatrix& 
       npatterns += idomain->npatterns;
     }
   }
-  out_domains_id = Rcpp::IntegerMatrix(5, npatterns); // Row for iter, classid,  domain_id, pattern_id, items_id
-  out_domains_lprobs = Rcpp::NumericVector(npatterns);
+  out_domains_id = arma::umat(5, npatterns); // Row for iter, classid,  domain_id, pattern_id, items_id
+  out_domains_lprobs = arma::vec(npatterns);
   
   
   ithis_pattern_id = 0;
@@ -2008,28 +1963,28 @@ void Archive::add(BayesParameter& aparams, const Hyperparameter& hparams) {
   
   inext_itr = next_itr - ( hparams.nitr - hparams.save_itrs["domains_accept"] );
   if (inext_itr >= 0) {
-    domains_accept[inext_itr] = Rcpp::clone(aparams.domains_accept);
+    domains_accept[inext_itr] = (aparams.domains_accept);
   }
   
   inext_itr = next_itr - ( hparams.nitr - hparams.save_itrs["class_loglik"] );
   if (inext_itr >= 0) {
-    class_loglik[inext_itr] = Rcpp::clone(aparams.class_loglik);
+    class_loglik[inext_itr] = (aparams.class_loglik);
   }
   
   inext_itr = next_itr - ( hparams.nitr - hparams.save_itrs["class_loglik_collapsed"] );
   if (inext_itr >= 0) {
-    class_loglik_collapsed[inext_itr] = Rcpp::clone(aparams.class_loglik_collapsed);
+    class_loglik_collapsed[inext_itr] = (aparams.class_loglik_collapsed);
   }
   
   inext_itr = next_itr - ( hparams.nitr - hparams.save_itrs["agg_loglik"] );
   if (inext_itr >= 0) {
-    Rcpp::NumericVector iobsLogLik (hparams.nobs);
+    arma::vec iobsLogLik (hparams.nobs);
     for (int iobs=0; iobs<hparams.nobs; iobs++) {
       iobsLogLik[iobs] = sumLogs(aparams.class_loglik.column(iobs) + log(aparams.class_pi));
     }
     
     obsLogLik += iobsLogLik;
-    obsLogLik2 += iobsLogLik*iobsLogLik;
+    obsLogLik2 += iobsLogLik % iobsLogLik;
     obsLik += exp(iobsLogLik);
     itrLogLik[inext_itr] = sum(iobsLogLik);
     nitrLik += 1;
@@ -2071,19 +2026,19 @@ class BayesContainer {
 public:
   Hyperparameter hparams;
   BayesParameter params;
-  Rcpp::IntegerMatrix x;
+  arma::umat x;
   Archive archive;
 public:
-  void set_initial(const Rcpp::IntegerMatrix& x_in, Rcpp::List hparams_list, Rcpp::List params_list);
+  void set_initial(const arma::umat& x_in, Rcpp::List hparams_list, Rcpp::List params_list);
   void run();
-  void run_init(const Rcpp::IntegerMatrix& x_in, Rcpp::List hparams_list, Rcpp::List params_list);
+  void run_init(const arma::umat& x_in, Rcpp::List hparams_list, Rcpp::List params_list);
 };
 
 //' @name BayesContainer::set_initial
 //' @title BayesContainer::set_initial
 //' @description Sets all properties of BayesContainer
 //' @keywords internal
-void BayesContainer::set_initial(const Rcpp::IntegerMatrix& x_in, Rcpp::List hparams_list, Rcpp::List params_list) {
+void BayesContainer::set_initial(const arma::umat& x_in, Rcpp::List hparams_list, Rcpp::List params_list) {
   TROUBLE_START(("BayesContainer::set_initial"));
   x = x_in;
   hparams.set_hparams(hparams_list);
@@ -2165,7 +2120,7 @@ void BayesContainer::run() {
 //' @title BayesContainer::run_init
 //' @description First initializes, and then does hparams.nitr MCMC steps on all bayes parameters
 //' @keywords internal
-void BayesContainer::run_init(const Rcpp::IntegerMatrix& x_in, Rcpp::List hparams_list, Rcpp::List params_list) {
+void BayesContainer::run_init(const arma::umat& x_in, Rcpp::List hparams_list, Rcpp::List params_list) {
   TROUBLE_START(("BayesContainer::run_init"));
   set_initial(x_in, hparams_list, params_list);
   run();
@@ -2186,7 +2141,7 @@ void BayesContainer::run_init(const Rcpp::IntegerMatrix& x_in, Rcpp::List hparam
 //' @param params_list List of parameter info. See getStart_bayes_params() in R.
 //' @keywords internal
 // [[Rcpp::export]]
-Rcpp::List dependentLCM_fit_cpp(Rcpp::IntegerMatrix& x_in, Rcpp::List hparams_list, Rcpp::List params_list) {
+Rcpp::List dependentLCM_fit_cpp(arma::umat& x_in, Rcpp::List hparams_list, Rcpp::List params_list) {
   TROUBLE_INIT;
   TROUBLE_START(("dependentLCM_fit_cpp"));
   BayesContainer bcontainer;
@@ -2209,10 +2164,10 @@ Rcpp::List dependentLCM_fit_cpp(Rcpp::IntegerMatrix& x_in, Rcpp::List hparams_li
 //' If we have a vector id of 12 we cand find a corresponding vector of [0,0,1,1].
 //' @export
 // [[Rcpp::export]]
-Rcpp::IntegerMatrix id2pattern(const Rcpp::IntegerVector& xpattern, const Rcpp::IntegerVector& mapvec) {
+arma::umat id2pattern(const arma::uvec& xpattern, const arma::uvec& mapvec) {
   int npatterns = xpattern.size();
   int nmapvec = mapvec.size();
-  Rcpp::IntegerMatrix unmapped_mat = Rcpp::IntegerMatrix(nmapvec, npatterns);
+  arma::umat unmapped_mat = arma::umat(nmapvec, npatterns);
   
   for (int i = 0; i < npatterns; i++) {
     unmapped_mat.column(i) = id2pattern(xpattern(i), mapvec);
@@ -2238,27 +2193,27 @@ Rcpp::IntegerMatrix id2pattern(const Rcpp::IntegerVector& xpattern, const Rcpp::
 //' }
 //' @export
 // [[Rcpp::export]]
-Rcpp::IntegerVector itemid2patterns(const Rcpp::IntegerVector& pattern_ids, const Rcpp::IntegerVector& items_ids, const Rcpp::IntegerVector& item_nlevels) {
+arma::uvec itemid2patterns(const arma::uvec& pattern_ids, const arma::uvec& items_ids, const arma::uvec& item_nlevels) {
   int n = pattern_ids.size();
   int nitems = item_nlevels.size();
-  Rcpp::IntegerVector items_2s (nitems, 2);
-  Rcpp::IntegerMatrix patterns (nitems, n);
-  std::map<std::tuple<int,int>, Rcpp::IntegerVector> lookups;
+  arma::uvec items_2s (nitems, 2);
+  arma::umat patterns (nitems, n);
+  std::map<std::tuple<int,int>, arma::uvec> lookups;
   
   std::tuple<int,int> key;
   Rcpp::LogicalVector items;
-  Rcpp::IntegerVector pattern (nitems);
+  arma::uvec pattern (nitems);
   for (int i=0; i<n; i++) {
     key = std::make_pair(items_ids[i], pattern_ids[i]);
     if (lookups.count(key) > 0) {
       // use stored pattern
-      patterns.column(i) = Rcpp::clone(lookups[key]);
+      patterns.column(i) = (lookups[key]);
     } else {
       // find pattern
       items = id2pattern(std::get<0>(key), items_2s)==1;
       pattern.fill(-1);
       pattern[items] = id2pattern(std::get<1>(key), item_nlevels[items]);
-      lookups[key] = Rcpp::clone(pattern);
+      lookups[key] = (pattern);
       patterns.column(i) = pattern;
     }
   }
@@ -2276,6 +2231,6 @@ Rcpp::IntegerVector itemid2patterns(const Rcpp::IntegerVector& pattern_ids, cons
 //' @keywords internal
 //' @export
 // [[Rcpp::export]]
-double expSumLog(const Rcpp::NumericVector& x) {
+double expSumLog(const arma::vec& x) {
   return sumLogs(x);
 }
