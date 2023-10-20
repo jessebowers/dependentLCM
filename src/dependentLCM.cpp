@@ -2087,11 +2087,11 @@ public:
   Hyperparameter hparams;
   BayesParameter params;
   Rcpp::IntegerMatrix x;
-  Archive archive;
 public:
   void set_initial(const Rcpp::IntegerMatrix& x_in, Rcpp::List hparams_list, Rcpp::List params_list);
-  void run();
-  void run_init(const Rcpp::IntegerMatrix& x_in, Rcpp::List hparams_list, Rcpp::List params_list);
+  void next(const bool skip_class_update);
+  Archive run();
+  Archive run_init(const Rcpp::IntegerMatrix& x_in, Rcpp::List hparams_list, Rcpp::List params_list);
 };
 
 //' @name BayesContainer::set_initial
@@ -2104,7 +2104,44 @@ void BayesContainer::set_initial(const Rcpp::IntegerMatrix& x_in, Rcpp::List hpa
   hparams.set_hparams(hparams_list);
   hparams.set_dataInfo(x_in);
   params.set_initial(params_list, hparams);
-  archive.set_initial(hparams);
+  TROUBLE_END;
+}
+
+//' @name BayesContainer::next
+//' @title BayesContainer::next
+//' @description Does a single MCMC step on all bayes parameters
+//' @keywords internal
+void BayesContainer::next(const bool skip_class_update) {
+  TROUBLE_START(("BayesContainer::run"));
+  
+  if ((hparams.steps_active["class_collapse"]==true) & !skip_class_update) {
+    params.set_class_loglik_collapsed(x, hparams);
+  }
+  
+  if ((hparams.steps_active["classes"]==true) & !skip_class_update) {
+    params.classes_next(x, hparams, hparams.steps_active["class_collapse"]);
+  }
+  
+  if (
+    (hparams.steps_active["thetas"]==true)
+    | (hparams.steps_active["domains"]==true)
+  ) {
+    params.domain_addCounts(x, true);
+  }
+  if (hparams.steps_active["domains"]==true) {
+    params.domains_next(x, hparams);
+  }
+  if (hparams.steps_active["thetas"]==true) {
+    params.thetas_next(x, hparams);
+  }
+  if (hparams.steps_active["class_pi"]==true) {
+    params.class_pi_next(hparams);
+  }
+  
+  if (hparams.steps_active["likelihood"]) {
+    params.set_class_loglik(x); // always last because it recalculates likelihood for above choices
+  }
+  
   TROUBLE_END;
 }
 
@@ -2112,79 +2149,36 @@ void BayesContainer::set_initial(const Rcpp::IntegerMatrix& x_in, Rcpp::List hpa
 //' @title BayesContainer::run
 //' @description Does hparams.nitr MCMC steps on all bayes parameters
 //' @keywords internal
-void BayesContainer::run() {
+Archive BayesContainer::run() {
   TROUBLE_START(("BayesContainer::run"));
+  
+  Archive archive;
+  archive.set_initial(hparams);
   
   archive.add(params, hparams); // save initial value (iteration 0)
   
-  const bool countDomains = (
-    (hparams.steps_active["thetas"]==true)
-    | (hparams.steps_active["domains"]==true)
-  );
-  
   if (0 < hparams.nitr) {
     // In first iteration we update parameters but not classes (iteration 1)
-    if (countDomains==true) {
-      params.domain_addCounts(x, true);
-    }
-    
-    if (hparams.steps_active["domains"]==true) {
-      params.domains_next(x, hparams);
-    }
-    if (hparams.steps_active["thetas"]==true) {
-      params.thetas_next(x, hparams);
-    }
-    if (hparams.steps_active["class_pi"]==true) {
-      params.class_pi_next(hparams);
-    }
-    
-    if (hparams.steps_active["likelihood"]) {
-      params.set_class_loglik(x);
-    }
-    
+    next(true);
     archive.add(params, hparams);
   }
   
   for (int i=2; i < hparams.nitr; i++) {
-    
-    if (hparams.steps_active["class_collapse"]==true) {
-      params.set_class_loglik_collapsed(x, hparams);
-    }
-    
-    if ((hparams.steps_active["classes"]==true)) {
-      params.classes_next(x, hparams, hparams.steps_active["class_collapse"]);
-    }
-    
-    if (countDomains==true) {
-      params.domain_addCounts(x, true);
-    }
-    if (hparams.steps_active["domains"]==true) {
-      params.domains_next(x, hparams);
-    }
-    if (hparams.steps_active["thetas"]==true) {
-      params.thetas_next(x, hparams);
-    }
-    if (hparams.steps_active["class_pi"]==true) {
-      params.class_pi_next(hparams);
-    }
-    
-    if (hparams.steps_active["likelihood"]) {
-      params.set_class_loglik(x); // always last because it recalculates likelihood for above choices
-    }
+    next(false);
     archive.add(params, hparams);
   }
-  TROUBLE_END;
+  TROUBLE_END; return archive;
 }
 
 //' @name BayesContainer::run_init
 //' @title BayesContainer::run_init
 //' @description First initializes, and then does hparams.nitr MCMC steps on all bayes parameters
 //' @keywords internal
-void BayesContainer::run_init(const Rcpp::IntegerMatrix& x_in, Rcpp::List hparams_list, Rcpp::List params_list) {
+Archive BayesContainer::run_init(const Rcpp::IntegerMatrix& x_in, Rcpp::List hparams_list, Rcpp::List params_list) {
   TROUBLE_START(("BayesContainer::run_init"));
   set_initial(x_in, hparams_list, params_list);
-  run();
-  TROUBLE_END;
+  Archive archive = run();
+  TROUBLE_END; return archive;
 }
 
 
@@ -2205,8 +2199,8 @@ Rcpp::List dependentLCM_fit_cpp(Rcpp::IntegerMatrix& x_in, Rcpp::List hparams_li
   TROUBLE_INIT;
   TROUBLE_START(("dependentLCM_fit_cpp"));
   BayesContainer bcontainer;
-  bcontainer.run_init(x_in, hparams_list, params_list);
-  TROUBLE_END; return bcontainer.archive.toList();
+  Archive archive = bcontainer.run_init(x_in, hparams_list, params_list);
+  TROUBLE_END; return archive.toList();
 }
 
 //' @name id2pattern
