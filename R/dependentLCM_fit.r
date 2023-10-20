@@ -28,7 +28,7 @@ DOMAIN_THETA_PRIOR_TYPE = c("permissive", "restrictive", "niave")
 CLASS_INIT_METHODS = c("random_centers_polar", "random_centers", "random", "kmodes")
 DOMAIN_PROPOSAL_EMPTY = 0.3
 STEPS_ACTIVE = c("thetas"=TRUE, "domains"=TRUE, "class_pi"=TRUE, "classes"=TRUE, "identifiable"=TRUE, "likelihood"=TRUE, "class_collapse"=FALSE)
-SAVE_ITRS <- c(domains_accept=0, class_loglik=0, class_loglik_collapsed=0, agg_loglik=Inf)
+SAVE_ITRS <- c(domains_accept=0, class_loglik=0, class_loglik_collapsed=0, agg_loglik=Inf, classes=0, class_counts=Inf)
 DOMAIN_MAXITEMS = 10
 CLASS2DOMAIN_FUNS = list(
   "HOMO" = function(nclass) rep(0, nclass)
@@ -272,8 +272,11 @@ dependentLCM_fit <- function(
   }
   
   # name
+  if (length(mcmc$classes)>0) {
+    mcmc$classes <- set_dimnames(mcmc$classes, c("obs", "itr"))
+  }
   mcmc$class_pi <- set_dimnames(mcmc$class_pi, c("class", "itr"))
-  mcmc$classes <- set_dimnames(mcmc$classes, c("obs", "itr"))
+  mcmc$class_counts <- set_dimnames(mcmc$class_counts, c("class", "obs"))
   
   
   datetimes <- c(datetimes, "fun_end"=Sys.time())

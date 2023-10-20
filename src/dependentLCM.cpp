@@ -1867,6 +1867,7 @@ class Archive {
 public:
   Rcpp::NumericMatrix class_pi;
   Rcpp::IntegerMatrix classes;
+  Rcpp::IntegerMatrix class_counts;
   std::vector<Rcpp::IntegerMatrix> domains_id; // Row for iter, classid,  domain_id, pattern_id, items_id
   std::vector<Rcpp::NumericVector> domains_lprobs;
   std::vector<Rcpp::IntegerMatrix> domains_accept;
@@ -1896,7 +1897,9 @@ void Archive::set_initial(const Hyperparameter& hparams) {
   next_itr = 0;
   
   class_pi = Rcpp::NumericMatrix(hparams.nclass, hparams.nitr);
-  classes = Rcpp::IntegerMatrix(hparams.nobs, hparams.nitr);
+  classes = Rcpp::IntegerMatrix(hparams.nobs, hparams.save_itrs["classes"]);
+  
+  class_counts = Rcpp::IntegerMatrix(hparams.nclass, hparams.nobs);
   
   domains_id.resize(hparams.nitr);
   domains_lprobs.resize(hparams.nitr);
@@ -2002,9 +2005,20 @@ void Archive::add(BayesParameter& aparams, const Hyperparameter& hparams) {
   int inext_itr;
   
   class_pi.column(next_itr) = aparams.class_pi;
-  classes.column(next_itr) = aparams.classes;
   Archive::domains2mat(aparams, next_itr
                          , domains_id[next_itr], domains_lprobs[next_itr]);
+  
+  inext_itr = next_itr - ( hparams.nitr - hparams.save_itrs["classes"] );
+  if (inext_itr >= 0) {
+    classes.column(inext_itr) = aparams.classes;
+  }
+  
+  inext_itr = next_itr - ( hparams.nitr - hparams.save_itrs["class_counts"] );
+  if (inext_itr >= 0) {
+    for (int iobs=0; iobs<hparams.nobs; iobs++) {
+      class_counts(aparams.classes[iobs], iobs) += 1L;
+    }
+  }
   
   inext_itr = next_itr - ( hparams.nitr - hparams.save_itrs["domains_accept"] );
   if (inext_itr >= 0) {
@@ -2048,6 +2062,7 @@ Rcpp::List Archive::toList() {
   TROUBLE_END; return Rcpp::List::create(
       Rcpp::Named("class_pi") = class_pi
     , Rcpp::Named("classes") = classes
+    , Rcpp::Named("class_counts") = class_counts
     , Rcpp::Named("domains_id") = wrap(domains_id)
     , Rcpp::Named("domains_lprobs") = wrap(domains_lprobs)
     , Rcpp::Named("domains_accept") = domains_accept

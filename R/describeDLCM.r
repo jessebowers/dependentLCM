@@ -108,27 +108,38 @@ dlcm.summary <- function(dlcm, nwarmup=NULL, waic_method="agg") {
     )
   }
   
-  if (dlcm$hparams$nclass>1) {
-    # Summarize Classes
+  
+  # Summarize Classes
+  if (length(dlcm$mcmc$class_counts)>0) {
+    classes_cnts <- dlcm$mcmc$class_counts # use existing summary
+  } else if (dlcm$hparams$nclass>1) {
+    # build summary
+    itrs <- intersect(
+      seq(from=dlcm$hparams$nitr-dlcm$hparams$save_itrs["classes"], to=dlcm$hparams$nitr) # saved itrs
+      , seq(from=nwarmup, to=dlcm$hparams$nitr) # post-warmup itrs
+    )
+    itrs <- itrs - (dlcm$hparams$nitr - dlcm$hparams$save_itrs["classes"])
     
     classes_cnts <- apply(
-      dlcm$mcmc$classes[,-seq_len(nwarmup)], 1
-      , function(iclasses, class_vec_default) {
-        table_cnts <- table(iclasses)
-        # put table in correct format, namely do not drop zero-count values
-        out <- class_vec_default
-        out[names(table_cnts)] <- table_cnts
-        return(out)
+      dlcm$mcmc$classes[,itrs], 1
+      , function(iclasses, class_levels) {
+        return(table(factor(iclasses, levels=class_levels)))
       }
-      , class_vec_default = setNames(rep(0, dlcm$hparams$nclass), paste0(seq_len(dlcm$hparams$nclass)-1))
+      , class_levels = seq(from=0, to=dlcm$hparams$nclass-1)
     )
     rownames(classes_cnts) <- paste0("class", rownames(classes_cnts))
+    colnames(classes_cnts) <- paste0("obs", seq_len(ncol(classes_cnts)))
     
-    classes <- apply(classes_cnts, 2, which.max) - 1 # unname(apply(dlcm$mcmc$classes[,-seq_len(nwarmup)], 1, getMode))
   } else {
     classes_cnts <- NA
+  }
+  
+  if (!identical(classes_cnts, NA)) {
+    classes <- apply(classes_cnts, 2, which.max) - 1
+  } else {
     classes <- NA
   }
+  
   
   waic <- dlcm.get_waic(dlcm, itrs=(nwarmup+1):dlcm$hparams$nitr, method=waic_method)
   names(waic) <- paste0("waic_", names(waic))
