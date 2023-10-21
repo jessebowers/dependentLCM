@@ -33,6 +33,7 @@ DOMAIN_MAXITEMS = 10
 CLASS2DOMAIN_FUNS = list(
   "HOMO" = function(nclass) rep(0, nclass)
   , "HET" = function(nclass) seq(0, nclass-1)
+  , "TRAD" = function(nclass) rep(0, nclass) # this term essentially ignored since domains are off
 )
 CLASS2DOMAINS = names(CLASS2DOMAIN_FUNS)
 
@@ -79,11 +80,13 @@ CLASS2DOMAINS = names(CLASS2DOMAIN_FUNS)
 #' # Run Model
 #' set.seed(4)
 #' dlcm <- dependentLCM_fit(
-#'   nitr = 6000, save_itrs=c(all=6000-1000)
+#'   nitr = 6000
+#'   , save_itrs=c(all=6000-1000) # warmup of 1000 used here
 #'   , df=xdf
 #'   , nclass=3
+#'   , class2domain = "HOMO"
 #' )
-#' dlcm$summary <- dlcm.summary(dlcm, nwarmup=1000)
+#' dlcm$summary <- dlcm.summary(dlcm)
 #' 
 #' 
 #' # Class of each observation
@@ -344,7 +347,14 @@ getStart_hparams <- function(
   }
   
   # class2domain
+  domains_off_override = FALSE
   if ((typeof(class2domain) == "character") & length(class2domain)==1) {
+    class2domain <- toupper(class2domain)
+    if (class2domain=="TRAD") {
+      # Do traditional LCM without domains
+      domains_off_override <- TRUE
+    }
+    
     # convert string description into raw numbers we need
     class2domain = CLASS2DOMAIN_FUNS[[toupper(class2domain)]](nclass)
   }
@@ -376,6 +386,9 @@ getStart_hparams <- function(
   if (steps_active_fn["classes"] & !steps_active_fn["class_collapse"]) {
     # if doing un-collapsed classes, classLikelihood will be calculated
     steps_active_fn["likelihood"] <- TRUE
+  }
+  if (domains_off_override) {
+    steps_active_fn["domains"] <- FALSE
   }
   
   # steps_active (fill in missing values)
