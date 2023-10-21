@@ -597,6 +597,7 @@ get_class_probs <- function(dlcm) {
 
 #' For each iteration, calculate the prior probabilities of each parameter and conditional probability of our responses (marginalized over class)
 #' Assumes domain prior of "permissive".
+#' Might require save_itrs=c(all=0, classes=Inf) in DLCM model.
 #' @inheritParams get_jointLikelihood_obs
 #' @export
 get_jointLikelihood <- function(dlcm, method="itrLogLik") {
