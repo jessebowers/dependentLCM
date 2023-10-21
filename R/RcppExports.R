@@ -507,6 +507,12 @@ NULL
 #' @keywords internal
 NULL
 
+#' @name BayesContainer::next
+#' @title BayesContainer::next
+#' @description Does a single MCMC step on all bayes parameters
+#' @keywords internal
+NULL
+
 #' @name BayesContainer::run
 #' @title BayesContainer::run
 #' @description Does hparams.nitr MCMC steps on all bayes parameters

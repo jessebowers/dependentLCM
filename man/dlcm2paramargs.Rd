@@ -6,12 +6,12 @@
 and convert it into Hyper/Bayes parameter arguments to put into dependentLCM_fit.
 Used namely for nesting dependentLCM_fit.}
 \usage{
-dlcm2paramargs(dlcm, iter = NULL)
+dlcm2paramargs(dlcm, iter_diff = 0)
 }
 \arguments{
 \item{dlcm}{Dependent latent class model from dependentLCM_fit()}
 
-\item{iter}{which iteration to pull values from (by default last itration)}
+\item{iter_diff}{Zero indicates last iteration. One indicates the previous iteration. Etc.}
 }
 \description{
 Take dependent latent class model (dlcm) output (i.e. from dependentLCM_fit)

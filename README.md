@@ -2,7 +2,7 @@
 
 Dependent LCM is an R package running Rcpp (a C++ interface).
 
-Latent Class Models (LCMs) are used to cluster multivariate categorical data (e.g. group participants based on survey responses). Traditional LCMs assume a property called conditional independence. This assumption can be restrictive, leading to model misspecification and overparameterization. To combat this problem, we developed a novel Bayesian model called a Dependent Latent Class Model (DLCM), which permits conditional dependence. Compared to traditional LCMs, DLCMs are effective in applications with time series, overlapping items, and structural zeroes.
+Latent Class Models (LCMs) are used to cluster multivariate categorical data (e.g. group participants based on survey responses). Traditional LCMs assume a property called conditional independence. This assumption can be restrictive, leading to model misspecification and overparameterization. To combat this problem, we developed a novel Bayesian model called a Domain Latent Class Model (DLCM), which permits conditional dependence. Compared to traditional LCMs, DLCMs are effective in applications with time series, overlapping items, and structural zeroes.
 
 Bowers, J., & Culpepper, S. (2022). Dependent Latent Class Models (Version 1). arXiv. https://doi.org/10.48550/ARXIV.2205.08677
 
@@ -29,11 +29,12 @@ xdf <- na.omit(probability[,c("b101", "b102", "b103", "b104", "b105", "b106", "b
 # Run Model
 set.seed(4)
 dlcm <- dependentLCM_fit(
-  nitr = 6000, save_itrs=c(agg_loglik=6000-1000)
+  nitr = 6000
+  , save_itrs=c(agg_loglik=6000-1000) # warmup of 1000
   , df=xdf
   , nclass=3
 )
-dlcm$summary <- dlcm.summary(dlcm, nwarmup=1000)
+dlcm$summary <- dlcm.summary(dlcm)
 
 
 # Class of each observation

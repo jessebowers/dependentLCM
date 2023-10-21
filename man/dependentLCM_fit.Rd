@@ -97,6 +97,9 @@ class1 = list(
 \item{"class_loglik=#}{ saves the probability that a response is observed conditional on each class}
 \item{"class_loglik_collapsed=#}{ as class_loglik but after collapsing on response probabilities}
 \item{"agg_loglik=#}{ saves aggregate likelihood of each iteration}
+\item{"classes=#}{ saves the class vector of each iteration.}
+\item{"class_counts=#}{ saves the number of times an observation is in each class.}
+\item{"all=#}{ saves everything. If lower, takes precidence over other terms.}
 }}
 
 \item{class_init_method}{string. Decides how 'classes' is defaulted if NULL. One of "kmodes" or "random" or "random_centers", "random_centers_polar"}
@@ -149,11 +152,13 @@ xdf <- na.omit(probability[,c("b101", "b102", "b103", "b104", "b105", "b106", "b
 # Run Model
 set.seed(4)
 dlcm <- dependentLCM_fit(
-  nitr = 6000, save_itrs=c(agg_loglik=6000-1000)
+  nitr = 6000
+  , save_itrs=c(all=6000-1000) # warmup of 1000 used here
   , df=xdf
   , nclass=3
+  , class2domain = "HOMO"
 )
-dlcm$summary <- dlcm.summary(dlcm, nwarmup=1000)
+dlcm$summary <- dlcm.summary(dlcm)
 
 
 # Class of each observation

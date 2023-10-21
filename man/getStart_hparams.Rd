@@ -63,6 +63,9 @@ If "HOMO" then defaults to c(0,0,...). If "HET" then defaults to c(0, 1, 2, ...)
 \item{"class_loglik=#}{ saves the probability that a response is observed conditional on each class}
 \item{"class_loglik_collapsed=#}{ as class_loglik but after collapsing on response probabilities}
 \item{"agg_loglik=#}{ saves aggregate likelihood of each iteration}
+\item{"classes=#}{ saves the class vector of each iteration.}
+\item{"class_counts=#}{ saves the number of times an observation is in each class.}
+\item{"all=#}{ saves everything. If lower, takes precidence over other terms.}
 }}
 
 \item{domain_theta_prior_type}{string. Defines what sort of prior is used for domains and theta. One of the following.
