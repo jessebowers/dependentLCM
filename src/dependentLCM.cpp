@@ -1896,13 +1896,15 @@ void Archive::set_initial(const Hyperparameter& hparams) {
   TROUBLE_START(("Archive::set_initial"));
   next_itr = 0;
   
-  class_pi = Rcpp::NumericMatrix(hparams.nclass, hparams.nitr);
+  int nitr_all = hparams.save_itrs["all"];
+  
+  class_pi = Rcpp::NumericMatrix(hparams.nclass, nitr_all);
   classes = Rcpp::IntegerMatrix(hparams.nobs, hparams.save_itrs["classes"]);
   
   class_counts = Rcpp::IntegerMatrix(hparams.nclass, hparams.nobs);
   
-  domains_id.resize(hparams.nitr);
-  domains_lprobs.resize(hparams.nitr);
+  domains_id.resize(nitr_all);
+  domains_lprobs.resize(nitr_all);
   
   domains_accept.resize(hparams.save_itrs["domains_accept"]);
   std::fill(domains_accept.begin(), domains_accept.end()
@@ -2000,13 +2002,21 @@ void Archive::add(BayesParameter& aparams, const Hyperparameter& hparams) {
   TROUBLE_START(("Archive::add"));
   
   // Iterations are added by column for speed
-  // Currently assumes fixed number of iterations. For flexible iterations std::list allows for easier extension.
+  // Currently assumes fixed number of iterations. For flexible iterations std::list would allow for easier extension, but slower.
+  
+  int inext_itr_all = next_itr - ( hparams.nitr - hparams.save_itrs["all"] );
+  
+  if (inext_itr_all < 0) {
+    // too early, add nothing
+    next_itr += 1;
+    TROUBLE_END; return;
+  }
+  
+  class_pi.column(inext_itr_all) = aparams.class_pi;
+  Archive::domains2mat(aparams, next_itr
+                         , domains_id[inext_itr_all], domains_lprobs[inext_itr_all]);
   
   int inext_itr;
-  
-  class_pi.column(next_itr) = aparams.class_pi;
-  Archive::domains2mat(aparams, next_itr
-                         , domains_id[next_itr], domains_lprobs[next_itr]);
   
   inext_itr = next_itr - ( hparams.nitr - hparams.save_itrs["classes"] );
   if (inext_itr >= 0) {

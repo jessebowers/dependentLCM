@@ -28,7 +28,7 @@ NULL
 dlcm.summary <- function(dlcm, nwarmup=NULL, waic_method="agg") {
   
   if (is.null(nwarmup)) {
-    nwarmup = floor(min(c(1000, dlcm$hparams$nitr/2)))
+    nwarmup = 0
   }
   
   { # Summarize most common domain structures
@@ -114,14 +114,10 @@ dlcm.summary <- function(dlcm, nwarmup=NULL, waic_method="agg") {
     classes_cnts <- dlcm$mcmc$class_counts # use existing summary
   } else if (dlcm$hparams$nclass>1) {
     # build summary
-    itrs <- intersect(
-      seq(from=dlcm$hparams$nitr-dlcm$hparams$save_itrs["classes"], to=dlcm$hparams$nitr) # saved itrs
-      , seq(from=nwarmup, to=dlcm$hparams$nitr) # post-warmup itrs
-    )
-    itrs <- itrs - (dlcm$hparams$nitr - dlcm$hparams$save_itrs["classes"])
+    itrs <- get_itrs_helper(nsaved=dlcm$hparams$save_itrs["classes"], nwarmup=nwarmup, nitr=dlcm$hparams$nitr)
     
     classes_cnts <- apply(
-      dlcm$mcmc$classes[,itrs], 1
+      dlcm$mcmc$classes[,itrs,drop=FALSE], 1
       , function(iclasses, class_levels) {
         return(table(factor(iclasses, levels=class_levels)))
       }
@@ -141,15 +137,35 @@ dlcm.summary <- function(dlcm, nwarmup=NULL, waic_method="agg") {
   }
   
   
-  waic <- dlcm.get_waic(dlcm, itrs=(nwarmup+1):dlcm$hparams$nitr, method=waic_method)
+  waic <- dlcm.get_waic(
+    dlcm
+    , itrs=get_itrs_helper(nsaved=dlcm$mcmc$nitrLik, nwarmup=nwarmup, nitr=dlcm$hparams$nitr)
+    , method=waic_method)
   names(waic) <- paste0("waic_", names(waic))
   
-  class_pi = rowMeans(dlcm$mcmc$class_pi[,-seq_len(nwarmup), drop=FALSE])
+  itrs <- get_itrs_helper(nsaved=ncol(dlcm$mcmc$class_pi), nwarmup=nwarmup, nitr=dlcm$hparams$nitr)
+  class_pi = rowMeans(dlcm$mcmc$class_pi[,itrs, drop=FALSE])
   
   return(c(
     list("thetas_avg"=thetas_avg, "domain_items"=domain_items, "domain_items_all"=domain_items_all, "classes"=classes, "class_pi"=class_pi, "thetas_avg_mode"=thetas_avg_mode, "mode_domains"=mode_domains, "first_mode_domain_itr"=first_mode_domain_itr, "classes_cnts"=classes_cnts, "dependence_intensity_dfs"=dependence_intensity_dfs)
     , waic
   ))
+}
+
+#' Generate a range of iterations which are both saved and occur after warmup.
+#' @keywords internal
+get_itrs_helper <- function(nsaved, nwarmup, nitr) {
+  itrs <- seq(
+    from=max(
+      1 # take all saved itrs
+      , nwarmup-(nitr-nsaved) # warmup itrs only
+      )
+    , to=nsaved # indexed based on saved location, not based on raw iteration
+    )
+  
+  # itrs <- itrs + (nitr-nsaved) # convert to raw iteration, if desired
+  
+  return(itrs)
 }
 
 

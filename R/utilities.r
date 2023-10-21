@@ -21,12 +21,16 @@ getMode <- function(x) {
 #' @param axis_names The name of each axis of this array
 #' @keywords internal
 set_dimnames <- function(xarray, axis_names) {
+  
+  
+  axis_names[dim(xarray)==0] <- NA
+  
   dimnames(xarray) <- lapply(
     seq_along(axis_names)
     , function(iaxis) {
       iaxis_name <- axis_names[iaxis]
-      if (is.null(iaxis_name)) {
-        return(null)
+      if (is.na(iaxis_name)) {
+        return(NULL)
       }
       paste0(
         iaxis_name

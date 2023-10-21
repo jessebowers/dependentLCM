@@ -28,7 +28,7 @@ DOMAIN_THETA_PRIOR_TYPE = c("permissive", "restrictive", "niave")
 CLASS_INIT_METHODS = c("random_centers_polar", "random_centers", "random", "kmodes")
 DOMAIN_PROPOSAL_EMPTY = 0.3
 STEPS_ACTIVE = c("thetas"=TRUE, "domains"=TRUE, "class_pi"=TRUE, "classes"=TRUE, "identifiable"=TRUE, "likelihood"=TRUE, "class_collapse"=FALSE)
-SAVE_ITRS <- c(domains_accept=0, class_loglik=0, class_loglik_collapsed=0, agg_loglik=Inf, classes=0, class_counts=Inf)
+SAVE_ITRS <- c(domains_accept=0, class_loglik=0, class_loglik_collapsed=0, agg_loglik=Inf, classes=1, class_counts=Inf, all=Inf)
 DOMAIN_MAXITEMS = 10
 CLASS2DOMAIN_FUNS = list(
   "HOMO" = function(nclass) rep(0, nclass)
@@ -79,7 +79,7 @@ CLASS2DOMAINS = names(CLASS2DOMAIN_FUNS)
 #' # Run Model
 #' set.seed(4)
 #' dlcm <- dependentLCM_fit(
-#'   nitr = 6000, save_itrs=c(agg_loglik=6000-1000)
+#'   nitr = 6000, save_itrs=c(all=6000-1000)
 #'   , df=xdf
 #'   , nclass=3
 #' )
@@ -272,9 +272,7 @@ dependentLCM_fit <- function(
   }
   
   # name
-  if (length(mcmc$classes)>0) {
-    mcmc$classes <- set_dimnames(mcmc$classes, c("obs", "itr"))
-  }
+  mcmc$classes <- set_dimnames(mcmc$classes, c("obs", "itr"))
   mcmc$class_pi <- set_dimnames(mcmc$class_pi, c("class", "itr"))
   mcmc$class_counts <- set_dimnames(mcmc$class_counts, c("class", "obs"))
   
@@ -317,6 +315,9 @@ dependentLCM_fit <- function(
 #' \item{"class_loglik=#}{ saves the probability that a response is observed conditional on each class}
 #' \item{"class_loglik_collapsed=#}{ as class_loglik but after collapsing on response probabilities}
 #' \item{"agg_loglik=#}{ saves aggregate likelihood of each iteration}
+#' \item{"classes=#}{ saves the class vector of each iteration.}
+#' \item{"class_counts=#}{ saves the number of times an observation is in each class.}
+#' \item{"all=#}{ saves everything. If lower, takes precidence over other terms.}
 #' }
 #' @param domain_theta_prior_type string. Defines what sort of prior is used for domains and theta. One of the following.
 #' \itemize{
@@ -381,6 +382,7 @@ getStart_hparams <- function(
   save_itrs_fn = SAVE_ITRS
   save_itrs_fn[names(save_itrs)] = save_itrs
   save_itrs_fn[save_itrs_fn>nitr] = nitr
+  save_itrs_fn[save_itrs_fn>save_itrs_fn["all"]] <- save_itrs_fn["all"]
   if (steps_active_fn["class_collapse"]==FALSE) {
     save_itrs_fn["class_loglik_collapsed"] <- 0
   }
@@ -389,7 +391,6 @@ getStart_hparams <- function(
     save_itrs_fn["agg_loglik"] <- 0
   }
   
-
   return(list(
     nitr=nitr, nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, nitems = nitems, item_nlevels = item_nlevels, nclass2domain = nclass2domain, domain_proposal_empty=domain_proposal_empty, domain_nproposals=domain_nproposals, steps_active = steps_active_fn, save_itrs=save_itrs_fn
     , domain_theta_prior_type = domain_theta_prior_type
@@ -507,6 +508,9 @@ doWarmup <- function(args, warmup_settings=NULL, warmup_dlcm=NULL) {
       warmup_settings <- list()
       warmup_settings$nitr <- round(median(c(100, 1000, nitr/20)))
       warmup_settings$class2domain <- "HOMO"
+      
+      warmup_settings$save_itrs <- SAVE_ITRS
+      warmup_settings$save_itrs[SAVE_ITRS>0] <- 1 # only archive last iteration warmup by default
     } else {
       # Other situations have no default
       warmup_settings = NULL
@@ -733,13 +737,12 @@ check_params <- function(all_params) {
 #' and convert it into Hyper/Bayes parameter arguments to put into dependentLCM_fit.
 #' Used namely for nesting dependentLCM_fit.
 #' @param dlcm Dependent latent class model from dependentLCM_fit()
-#' @param iter which iteration to pull values from (by default last itration)
+#' @param iter_diff Zero indicates last iteration. One indicates the previous iteration. Etc.
 #' @keywords internal
-dlcm2paramargs <- function(dlcm, iter=NULL) {
-  iter <- dlcm$hparams$nitr
+dlcm2paramargs <- function(dlcm, iter_diff=0) {
   nitems <- dlcm$hparams$nitems
   
-  domains_mat <- dlcm$mcmc$domains %>% dplyr::filter(itr == iter)
+  domains_mat <- dlcm$mcmc$domains %>% dplyr::filter(itr == dlcm$hparams$nitr-iter_diff)
   domains_mat$items <- (
     # apply(id2pattern(domains_mat$items_id, rep(2, nitems))==1, 2, which)
     unlist(apply(domains_mat[,dlcm$hparams$domain_item_cols] >= 0, 1, function(x) list(which(x)-1)), recursive = FALSE)
@@ -761,8 +764,8 @@ dlcm2paramargs <- function(dlcm, iter=NULL) {
   )
   
   bayesparams <- list(
-    class_pi = unname(dlcm$mcmc$class_pi[,iter])
-    , classes = unname(dlcm$mcmc$classes[,iter])
+    class_pi = unname(dlcm$mcmc$class_pi[,dim(dlcm$mcmc$class_pi)[2]]-iter_diff)
+    , classes = unname(dlcm$mcmc$classes[,dim(dlcm$mcmc$classes)[2]]-iter_diff)
     , domains =  domains_list
   )
   
@@ -782,3 +785,4 @@ dlcm2paramargs <- function(dlcm, iter=NULL) {
 ndomains_singleton_mode <- function(nitems, prop=2) {
   ceiling(nitems+prop*nitems*(nitems-1)/2-1)
 }
+
