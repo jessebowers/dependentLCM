@@ -6,7 +6,8 @@
 
 
 OPEN ITEMS:
- * change counts incrementally and remove likelihood_collapsed matrix
+ * Update class update when collapsing on thetas. Set the counts to update incrementally and remove likelihood_collapsed matrix
+ * Update fix_class_label_switching() to allow dlcm$hparams$save_itrs["all"] < dlcm$hparams$nitr.
 
 FUTURE ENHANCEMENTS:
  * Find more transparent way of doing domain prior. Right now (for "restrictive") the domain prior is split across two functions. Maybe put BayesParameter::domain_prior() into DomainCount::getloglik_marginal(). But be careful since DomainCount::getloglik_marginal() is executed once per class even for homogeneous.

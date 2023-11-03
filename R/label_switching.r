@@ -131,6 +131,18 @@ apply_swaps_helper <- function(
 #' @export
 fix_class_label_switching <- function(dlcm, nwarmup, initial_target_classes=NULL, maxitr=5) {
   
+  if (!(
+    (dlcm$hparams$save_itrs["all"] == dlcm$hparams$nitr)
+    & (dlcm$hparams$save_itrs["classes"] == dlcm$hparams$nitr)
+  )) {
+    stop("Required: dlcm$hparams$save_itrs['all'] == dlcm$hparams$save_itrs['classes'] == dlcm$hparams$nitr")
+    return(NULL)
+  }
+  
+  dlcm$hparams$nitr
+  dlcm$hparams$save_itrs["all"]
+  dlcm$hparams$save_itrs["classes"]
+  
   if (is.null(initial_target_classes)) {
     initial_target_classes <- unname(apply(dlcm$mcmc$classes[,-seq_len(nwarmup)], 1, getMode))
   }

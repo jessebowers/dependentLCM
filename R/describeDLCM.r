@@ -329,8 +329,9 @@ dlcm.get_waic_fromraw <- function(dlcm, itrs=NULL) {
 theta_item_probs <- function(items, this_sim, itrs=NULL, merge_itrs=TRUE, classes=NULL) {
   
   if (is.null(itrs)) {
-    itrs <- seq_len(this_sim$hparams$nitr)
+    itrs <- seq(to=this_sim$hparams$nitr, length.out=this_sim$hparams$save_itrs["all"])
   }
+  skipped_itrs <- this_sim$hparams$nitr - this_sim$hparams$save_itrs["all"]
   
   class_filter <- TRUE
   if (!is.null(classes)
@@ -363,7 +364,7 @@ theta_item_probs <- function(items, this_sim, itrs=NULL, merge_itrs=TRUE, classe
   )
   thetas_agg <- thetas_agg[!(rowSums(thetas_agg[, seq_len(nitems), drop=FALSE]) == -nitems), ] # Remove unrelated rows
   thetas_agg$prob_log <- log(thetas_agg$prob)
-  thetas_agg$class_pi <- this_sim$mcmc$class_pi[cbind(thetas_agg$class+1, thetas_agg$itr)]
+  thetas_agg$class_pi <- this_sim$mcmc$class_pi[cbind(thetas_agg$class+1, thetas_agg$itr-skipped_itrs)]
   
   all_patterns <- expand.grid(
     lapply(this_sim$hparams$item_nlevels[items], function(n) 0:(n-1))
@@ -378,7 +379,7 @@ theta_item_probs <- function(items, this_sim, itrs=NULL, merge_itrs=TRUE, classe
       | thetas_agg[,seq_len(nitems), drop=FALSE] < 0 # Or is undefined
     ) == nitems
     iprobs <- (
-      thetas_agg 
+      thetas_agg
       %>% dplyr::filter(imatch_pattern) 
       %>% dplyr::group_by(itr, class) 
       %>% dplyr::summarize(prob=exp(sum(prob_log)), class_pi=dplyr::first(class_pi), .groups="keep"))
@@ -577,23 +578,6 @@ ldomain_prior <- function(x, ndomains, specific_items=FALSE, log=TRUE, domain_th
   return(lprob)
 }
 
-
-#' For each iteration calculate the probability that a given observation is in each class.
-#' Warning: Only works if class_loglik is saved, as in: dependentLCM_fit(..., save_itrs=c(class_loglik=Inf, ...))
-#' @param dlcm Dependent latent class model outptut from dependentLCM_fit
-#' @export
-get_class_probs <- function(dlcm) {
-  obsLogLiks <- sweep(dlcm$mcmc$class_loglik[,,, drop=FALSE]
-                      , c(1,3) # Include pi. Repeat for each observation (2)
-                      , log(dlcm$mcmc$class_pi[,, drop=FALSE]), "+")
-  obsLogLiks_sum <- apply(obsLogLiks, c(2,3), expSumLog)
-  obsLogLiks <- sweep(obsLogLiks
-                      , c(2,3)
-                      , obsLogLiks_sum
-                      , "-"
-  )
-  return(exp(obsLogLiks))
-}
 
 #' For each iteration, calculate the prior probabilities of each parameter and conditional probability of our responses (marginalized over class)
 #' Assumes domain prior of "permissive".
