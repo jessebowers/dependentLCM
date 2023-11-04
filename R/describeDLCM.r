@@ -99,8 +99,8 @@ dlcm.summary <- function(dlcm, nwarmup=NULL, waic_method="agg") {
       , dlcm=dlcm
       , items_ids = unique(mode_domains$items_id)
     )
-
-
+    
+    
     thetas_avg_mode <- reshape2::dcast(
       data=thetas_avg %>% dplyr::filter(is_mode==TRUE)
       , formula = items_id + pattern_id + items + item_value ~ class
@@ -159,9 +159,9 @@ get_itrs_helper <- function(nsaved, nwarmup, nitr) {
     from=max(
       1 # take all saved itrs
       , nwarmup-(nitr-nsaved) # warmup itrs only
-      )
-    , to=nsaved # indexed based on saved location, not based on raw iteration
     )
+    , to=nsaved # indexed based on saved location, not based on raw iteration
+  )
   
   # itrs <- itrs + (nitr-nsaved) # convert to raw iteration, if desired
   
@@ -481,6 +481,7 @@ dependence_intensity <- function(thetas_avg, dlcm, items_ids=NULL) {
 #' @keywords internal
 dependence_intensity_one <- function(values, probs) {
   
+  nvalues <- apply(values, 2, max)+1
   class(values) <- "character"
   
   item_prob_marginal <- lapply(
@@ -510,7 +511,9 @@ dependence_intensity_one <- function(values, probs) {
   odds_ratio_str <- sapply(
     odds_ratio
     , function(x) {
-      if (x >= 1) {
+      if (is.na(x)) {
+        out_str = "NaN"
+      } else if (x >= 1) {
         out_str <- format(x, digits=1, nsmall=1)
       } else {
         out_str <- paste0("1/", format(1/x, digits=1, nsmall=1), collapse="")
@@ -518,6 +521,8 @@ dependence_intensity_one <- function(values, probs) {
     }
   )
   
+  kl_div <- kl_divergence(true_probs=probs, alternate_probs=prob_marginal)
+  kl_max <- kl_max(nlevels = nvalues)
   
   df_out <- data.frame(
     values
@@ -525,9 +530,36 @@ dependence_intensity_one <- function(values, probs) {
     , prob_marginal=prob_marginal
     , odds_ratio=odds_ratio
     , odds_ratio_str=odds_ratio_str
+    , diff_prob = probs - prob_marginal
+    , kl_divergence = kl_div
+    , kl_maximum = kl_max
+    , kl_ratio = kl_div / kl_max
   )
   
   return(df_out)
+}
+
+kl_divergence <- function(true_probs, alternate_probs) {
+  ifilter <- true_probs>0
+  divs <- true_probs * (log(true_probs) - log(alternate_probs))
+  
+  return(sum(divs[ifilter]))
+} # tkjmb
+
+kl_max <- function(nlevels) {
+  npatterns <- prod(nlevels)
+  min_nlevels <- min(nlevels)
+  nmarginal <- min_nlevels ^ length(nlevels)
+  prob_dependent_best <- c(
+    rep(1/min_nlevels, min_nlevels)
+    , rep(0, npatterns-min_nlevels)
+  )
+  prob_marginal_best <- c(
+    rep(1/nmarginal, nmarginal)
+    , rep(0, npatterns-nmarginal)
+  )
+  kl_max <- kl_divergence(prob_dependent_best, prob_marginal_best)
+  return(kl_max)
 }
 
 
