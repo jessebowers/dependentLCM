@@ -3,7 +3,8 @@
 \name{get_jointLikelihood}
 \alias{get_jointLikelihood}
 \title{For each iteration, calculate the prior probabilities of each parameter and conditional probability of our responses (marginalized over class)
-Assumes domain prior of "permissive".}
+Assumes domain prior of "permissive".
+Might require save_itrs=c(all=0, classes=Inf) in DLCM model.}
 \usage{
 get_jointLikelihood(dlcm, method = "itrLogLik")
 }
@@ -15,4 +16,5 @@ get_jointLikelihood(dlcm, method = "itrLogLik")
 \description{
 For each iteration, calculate the prior probabilities of each parameter and conditional probability of our responses (marginalized over class)
 Assumes domain prior of "permissive".
+Might require save_itrs=c(all=0, classes=Inf) in DLCM model.
 }
