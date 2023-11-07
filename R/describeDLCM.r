@@ -100,7 +100,6 @@ dlcm.summary <- function(dlcm, nwarmup=NULL, waic_method="agg") {
       , items_ids = unique(mode_domains$items_id)
     )
     
-    
     thetas_avg_mode <- reshape2::dcast(
       data=thetas_avg %>% dplyr::filter(is_mode==TRUE)
       , formula = items_id + pattern_id + items + item_value ~ class
@@ -414,13 +413,23 @@ theta_item_probs <- function(items, this_sim, itrs=NULL, merge_itrs=TRUE, classe
 #' For each domain domain, compare the probabilities under local dependence (DLCM) versus under local independence (traditional LCM). Describes the amount of dependence captured by our DLCM model.
 #' @param thetas_avg dataframe. Describes average response probabilities for different domains. As returned from dlcm.summary()
 #' @param dlcm list. Fitted dependent LCM
-#' @param items_ids integerVector Which domains do we want to process?
-#' @return DataFrames with:
+#' @param items_ids integerVector. Optional. Which domains do we want to process?
+#' @return Returns two objects.
+#' "ratio_dfs" has one element per domain. For each domain we examine each response pattern and compare the response probability under conditional dependence versus conditional independence.
 #' \itemize{
+#' \item{"items_id"}{= Unique identifier for the items in the domain. Matches dlcm$mcmc$domains$items_id.}
 #' \item{"prob_dependent"}{= Probability under local dependence. Same as input 'probs'.}
 #' \item{"prob_marginal"}{= Probability of this response pattern under local independence.}
 #' \item{"odds_ratio"}{= Compares prob_dependent and prob_marginal. Values far from '1' show strong dependence.}
 #' \item{"odds_ratio_str"}{= odds_ratio as a fraction}
+#' \item{"diff_prob"}{= gives the risk difference: prob_dependent minus prob_marginal.}
+#' }
+#' "kl_df" measures the KL divergence for each domain and class. The higher the KL divergence the greater the dependence.
+#' \itemize{
+#' \item{"items_id"}{= Unique identifier for the items in the domain. Matches dlcm$mcmc$domains$items_id.}
+#' \item{"kl_divergence"}{= Calculates the Kullback-Leibler divergence. Assumes the dependent model is true. On log scale, gets the expected likelihood ratio under dependence versus independence. Zero indicates independence. The higher the number the greate the dependence.}
+#' \item{"kl_maximum"}{= The KL divergence value under perfect dependence.}
+#' \item{"kl_ratio"}{= The KL divergence scaled to 0 (independence) to 1 (perfect dependence).}
 #' }
 #' @export
 dependence_intensity <- function(thetas_avg, dlcm, items_ids=NULL) {
@@ -445,12 +454,18 @@ dependence_intensity <- function(thetas_avg, dlcm, items_ids=NULL) {
       , patterns=list(do.call(rbind, pattern))
       , probs=list(prob), .groups="drop")
   )
-  thetas_marginal_ratio$ratios <- mapply(
+  ratios_kls <- mapply(
     function(values, probs, ...) {
       out <- dependence_intensity_one(values, probs)
       ids <- do.call(cbind.data.frame, list(...))
-      out <- cbind.data.frame(ids, out)
-      return(out)
+      ratio_df <- cbind.data.frame(ids, out$ratios)
+      kl_vector <- c(
+        unlist(ids[1,c("class", "items_id"),drop=TRUE])
+        , out$kl)
+      return(list(
+        ratio_df=ratio_df
+        , kl_vector=kl_vector
+      ))
     }
     , values=thetas_marginal_ratio$patterns
     , probs=thetas_marginal_ratio$probs
@@ -460,17 +475,32 @@ dependence_intensity <- function(thetas_avg, dlcm, items_ids=NULL) {
     , pattern_id=thetas_marginal_ratio$pattern_id
     , SIMPLIFY = FALSE
   )
+  thetas_marginal_ratio$ratios <- lapply(
+    ratios_kls
+    , function(x) x$ratio_df
+  )
+  thetas_marginal_ratio$kl <- lapply(
+    ratios_kls
+    , function(x) x$kl_vector
+  )
   
-  out <- split(
+  
+  ratio_df <- split(
     thetas_marginal_ratio
     , f=thetas_marginal_ratio$items_id
   )
-  out <- lapply(
-    out
+  ratio_df <- lapply(
+    ratio_df
     , function(x) do.call(rbind.data.frame, x$ratios)
   )
   
-  return(out)
+  kl_df <- do.call(rbind.data.frame, thetas_marginal_ratio$kl)
+  colnames(kl_df) <- names(thetas_marginal_ratio$kl[[1]])
+  
+  return(list(
+    ratio_dfs=ratio_df
+    , kl_df=kl_df
+  ))
 }
 
 
@@ -521,43 +551,55 @@ dependence_intensity_one <- function(values, probs) {
     }
   )
   
-  kl_div <- kl_divergence(true_probs=probs, alternate_probs=prob_marginal)
-  kl_max <- kl_max(nlevels = nvalues)
-  
-  df_out <- data.frame(
+  df_ratios <- data.frame(
     values
     , prob_dependent=probs
     , prob_marginal=prob_marginal
     , odds_ratio=odds_ratio
     , odds_ratio_str=odds_ratio_str
     , diff_prob = probs - prob_marginal
-    , kl_divergence = kl_div
+  )
+  
+  kl_div <- kl_divergence(true_probs=probs, alternate_probs=prob_marginal)
+  kl_max <- kl_max(nlevels = nvalues)
+  kl_vector <- c(
+    kl_divergence = kl_div
     , kl_maximum = kl_max
     , kl_ratio = kl_div / kl_max
   )
   
-  return(df_out)
+  return(list(
+    ratios=df_ratios
+    , kl=kl_vector
+  ))
 }
 
+#' Calculates the Kullback-Leibler (KL) divergence for a categorical response.
+#' @keywords internal
 kl_divergence <- function(true_probs, alternate_probs) {
   ifilter <- true_probs>0
   divs <- true_probs * (log(true_probs) - log(alternate_probs))
   
   return(sum(divs[ifilter]))
-} # tkjmb
+}
 
+#' Calculates the maximum KL divergence for a domain under dependence (truth) versus independence (alternate)
+#' @keywords internal
 kl_max <- function(nlevels) {
   npatterns <- prod(nlevels)
-  min_nlevels <- min(nlevels)
+  min_nlevels <- min(nlevels) # For every item levels greater than min_nlevels are considered empty
   nmarginal <- min_nlevels ^ length(nlevels)
+  
   prob_dependent_best <- c(
     rep(1/min_nlevels, min_nlevels)
     , rep(0, npatterns-min_nlevels)
-  )
+  ) # if you know the value of one item, you know the value for all other items
+  
   prob_marginal_best <- c(
     rep(1/nmarginal, nmarginal)
     , rep(0, npatterns-nmarginal)
-  )
+  ) # probabilities under independence
+  
   kl_max <- kl_divergence(prob_dependent_best, prob_marginal_best)
   return(kl_max)
 }

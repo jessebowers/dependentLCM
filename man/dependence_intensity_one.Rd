@@ -12,12 +12,22 @@ dependence_intensity_one(values, probs)
 \item{probs}{numericVector. For a single class, probability of returning this response pattern.}
 }
 \value{
-DataFrames with:
+Returns two objects.
+"ratio_dfs" has one element per domain. For each domain we examine each response pattern and compare the response probability under conditional dependence versus conditional independence.
 \itemize{
+\item{"items_id"}{= Unique identifier for the items in the domain. Matches dlcm$mcmc$domains$items_id.}
 \item{"prob_dependent"}{= Probability under local dependence. Same as input 'probs'.}
 \item{"prob_marginal"}{= Probability of this response pattern under local independence.}
 \item{"odds_ratio"}{= Compares prob_dependent and prob_marginal. Values far from '1' show strong dependence.}
 \item{"odds_ratio_str"}{= odds_ratio as a fraction}
+\item{"diff_prob"}{= gives the risk difference: prob_dependent minus prob_marginal.}
+}
+"kl_df" measures the KL divergence for each domain and class. The higher the KL divergence the greater the dependence.
+\itemize{
+\item{"items_id"}{= Unique identifier for the items in the domain. Matches dlcm$mcmc$domains$items_id.}
+\item{"kl_divergence"}{= Calculates the Kullback-Leibler divergence. Assumes the dependent model is true. On log scale, gets the expected likelihood ratio under dependence versus independence. Zero indicates independence. The higher the number the greate the dependence.}
+\item{"kl_maximum"}{= The KL divergence value under perfect dependence.}
+\item{"kl_ratio"}{= The KL divergence scaled to 0 (independence) to 1 (perfect dependence).}
 }
 }
 \description{
