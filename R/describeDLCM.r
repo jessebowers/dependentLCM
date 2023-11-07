@@ -31,6 +31,9 @@ dlcm.summary <- function(dlcm, nwarmup=NULL, waic_method="agg") {
     nwarmup = 0
   }
   
+  itrs <- get_itrs_helper(nsaved=ncol(dlcm$mcmc$class_pi), nwarmup=nwarmup, nitr=dlcm$hparams$nitr)
+  class_pi = rowMeans(dlcm$mcmc$class_pi[,itrs, drop=FALSE])
+  
   { # Summarize most common domain structures
     
     # Per domain
@@ -98,6 +101,7 @@ dlcm.summary <- function(dlcm, nwarmup=NULL, waic_method="agg") {
       thetas_avg=thetas_avg
       , dlcm=dlcm
       , items_ids = unique(mode_domains$items_id)
+      , class_pi = class_pi
     )
     
     thetas_avg_mode <- reshape2::dcast(
@@ -141,9 +145,6 @@ dlcm.summary <- function(dlcm, nwarmup=NULL, waic_method="agg") {
     , itrs=get_itrs_helper(nsaved=dlcm$mcmc$nitrLik, nwarmup=nwarmup, nitr=dlcm$hparams$nitr)
     , method=waic_method)
   names(waic) <- paste0("waic_", names(waic))
-  
-  itrs <- get_itrs_helper(nsaved=ncol(dlcm$mcmc$class_pi), nwarmup=nwarmup, nitr=dlcm$hparams$nitr)
-  class_pi = rowMeans(dlcm$mcmc$class_pi[,itrs, drop=FALSE])
   
   return(c(
     list("thetas_avg"=thetas_avg, "domain_items"=domain_items, "domain_items_all"=domain_items_all, "classes"=classes, "class_pi"=class_pi, "thetas_avg_mode"=thetas_avg_mode, "mode_domains"=mode_domains, "first_mode_domain_itr"=first_mode_domain_itr, "classes_cnts"=classes_cnts, "dependence_intensity_dfs"=dependence_intensity_dfs)
@@ -414,9 +415,11 @@ theta_item_probs <- function(items, this_sim, itrs=NULL, merge_itrs=TRUE, classe
 #' @param thetas_avg dataframe. Describes average response probabilities for different domains. As returned from dlcm.summary()
 #' @param dlcm list. Fitted dependent LCM
 #' @param items_ids integerVector. Optional. Which domains do we want to process?
+#' @param class_pi numericVector. Optional. Prior probability of being in each class. Used to aggregate certain terms across classes.
 #' @return Returns two objects.
 #' "ratio_dfs" has one element per domain. For each domain we examine each response pattern and compare the response probability under conditional dependence versus conditional independence.
 #' \itemize{
+#' \item{"class"}{= Which class does this apply to? NA indicates this term is aggregated across classes.}
 #' \item{"items_id"}{= Unique identifier for the items in the domain. Matches dlcm$mcmc$domains$items_id.}
 #' \item{"prob_dependent"}{= Probability under local dependence. Same as input 'probs'.}
 #' \item{"prob_marginal"}{= Probability of this response pattern under local independence.}
@@ -426,13 +429,14 @@ theta_item_probs <- function(items, this_sim, itrs=NULL, merge_itrs=TRUE, classe
 #' }
 #' "kl_df" measures the KL divergence for each domain and class. The higher the KL divergence the greater the dependence.
 #' \itemize{
+#' \item{"class"}{= Which class does this apply to? NA indicates this term is aggregated across classes.}
 #' \item{"items_id"}{= Unique identifier for the items in the domain. Matches dlcm$mcmc$domains$items_id.}
 #' \item{"kl_divergence"}{= Calculates the Kullback-Leibler divergence. Assumes the dependent model is true. On log scale, gets the expected likelihood ratio under dependence versus independence. Zero indicates independence. The higher the number the greate the dependence.}
 #' \item{"kl_maximum"}{= The KL divergence value under perfect dependence.}
 #' \item{"kl_ratio"}{= The KL divergence scaled to 0 (independence) to 1 (perfect dependence).}
 #' }
 #' @export
-dependence_intensity <- function(thetas_avg, dlcm, items_ids=NULL) {
+dependence_intensity <- function(thetas_avg, dlcm, items_ids=NULL, class_pi=NULL) {
   
   response_patterns <- dlcm$mcmc$response_patterns
   response_patterns$nitems <- sapply(response_patterns$items, length) 
@@ -454,62 +458,132 @@ dependence_intensity <- function(thetas_avg, dlcm, items_ids=NULL) {
       , patterns=list(do.call(rbind, pattern))
       , probs=list(prob), .groups="drop")
   )
-  ratios_kls <- mapply(
-    function(values, probs, ...) {
-      out <- dependence_intensity_one(values, probs)
-      ids <- do.call(cbind.data.frame, list(...))
-      ratio_df <- cbind.data.frame(ids, out$ratios)
-      kl_vector <- c(
-        unlist(ids[1,c("class", "items_id"),drop=TRUE])
-        , out$kl)
-      return(list(
-        ratio_df=ratio_df
-        , kl_vector=kl_vector
-      ))
+  
+  thetas_marginal_ratio$probs_marginal <- mapply(
+    function(values, probs) {
+      out <- dependence_intensity_marginals(values, probs)
+      return(out$prob_marginal)
     }
     , values=thetas_marginal_ratio$patterns
     , probs=thetas_marginal_ratio$probs
-    # identifiers:
-    , class=thetas_marginal_ratio$class
-    , items_id=thetas_marginal_ratio$items_id
-    , pattern_id=thetas_marginal_ratio$pattern_id
     , SIMPLIFY = FALSE
   )
-  thetas_marginal_ratio$ratios <- lapply(
-    ratios_kls
-    , function(x) x$ratio_df
-  )
-  thetas_marginal_ratio$kl <- lapply(
-    ratios_kls
-    , function(x) x$kl_vector
+  
+  if (!identical(class_pi, NULL)) {
+    # Marginalize on classes
+    
+    thetas_marginal_ratio$class_pi <- class_pi[thetas_marginal_ratio$class+1]
+    
+    thetas_split <- split(
+      thetas_marginal_ratio
+      , f=thetas_marginal_ratio$items_id
+    )
+    
+    thetas_merged <- lapply(
+      thetas_split
+      , function(x) {
+        out <- x[1,]
+        out$class <- NA
+        out$class_pi <- sum(x$class_pi)
+        
+        out$probs[[1]] <- (do.call(cbind, x$probs) %*% x$class_pi)[,1] / out$class_pi
+        out$probs_marginal[[1]] <- (do.call(cbind, x$probs_marginal) %*% x$class_pi)[,1] / out$class_pi
+        
+        return(out)
+      }
+    )
+    thetas_merged <- do.call(rbind.data.frame, thetas_merged)
+    
+    thetas_marginal_ratio <- rbind.data.frame(
+      thetas_marginal_ratio
+      , thetas_merged
+    )
+    
+    rm(thetas_split); rm(thetas_merged)
+  }
+  
+  thetas_marginal_ratio$ratios <- mapply(
+    dependence_intensity_ratios
+    , probs = thetas_marginal_ratio$probs
+    , prob_marginal = thetas_marginal_ratio$probs_marginal
+    , SIMPLIFY = FALSE
   )
   
+  # calculate kl divergence
+  # kl values for class==NA will be overwritten
+  thetas_marginal_ratio$kl_divergence <- mapply(
+    kl_divergence
+    , true_probs = thetas_marginal_ratio$probs
+    , alternate_probs = thetas_marginal_ratio$probs_marginal
+  )
+  thetas_marginal_ratio$kl_max <- sapply(
+    lapply(thetas_marginal_ratio$patterns, function(x) apply(x, 2, max)+1) # nlevels
+    , kl_max
+  )
+  thetas_marginal_ratio$kl_ratio <- (
+    thetas_marginal_ratio$kl_divergence
+    / thetas_marginal_ratio$kl_max
+  )
   
-  ratio_df <- split(
-    thetas_marginal_ratio
+  if (!identical(class_pi, NULL)) {
+    
+    ifilter <- is.na(thetas_marginal_ratio$class)
+    thetas_marginal_ratio[ifilter, c("kl_divergence", "kl_max", "kl_ratio")] <- NA
+    
+    kls_collapsed = (
+      thetas_marginal_ratio
+      %>% dplyr::filter(!is.na(class))
+      %>% dplyr::group_by(items_id)
+      %>% dplyr::summarize(
+        kl_divergence = sum(kl_divergence * class_pi) / sum(class_pi)
+        , kl_max = sum(kl_max * class_pi)  / sum(class_pi)
+      )
+      %>% dplyr::mutate(
+        kl_ratio = kl_divergence / kl_max
+      )
+    )
+    
+    match_inds <- match(
+      x=unlist(thetas_marginal_ratio[ifilter, "items_id"])
+      , table=kls_collapsed$items_id)
+    thetas_marginal_ratio[ifilter, c("kl_divergence", "kl_max", "kl_ratio")] <- kls_collapsed[
+      match_inds
+      , c("kl_divergence", "kl_max", "kl_ratio")
+    ]
+    
+  }
+  
+  
+  thetas_split <- split(
+    thetas_marginal_ratio[,c("class", "items_id", "pattern_id", "patterns", "probs", "probs_marginal", "class_pi", "ratios")]
     , f=thetas_marginal_ratio$items_id
   )
-  ratio_df <- lapply(
-    ratio_df
-    , function(x) do.call(rbind.data.frame, x$ratios)
+  ratio_dfs <- lapply(
+    thetas_split
+    , function(x) {
+      df <- apply(x, 1, cbind.data.frame, simplify = FALSE)
+      df <- do.call(rbind.data.frame, df)
+      colnames(df) <- gsub("^patterns\\.", "X", colnames(df))
+      colnames(df) <- gsub("^ratios\\.", "", colnames(df))
+      return(df)
+    }
   )
   
-  kl_df <- do.call(rbind.data.frame, thetas_marginal_ratio$kl)
-  colnames(kl_df) <- names(thetas_marginal_ratio$kl[[1]])
+  kl_df <- thetas_marginal_ratio[,c("class", "items_id", "class_pi", "kl_divergence", "kl_max", "kl_ratio")]
   
   return(list(
-    ratio_dfs=ratio_df
+    ratio_dfs=ratio_dfs
     , kl_df=kl_df
   ))
 }
 
 
-#' Takes a single domain. Compare the probabilites under the given probabilities versus under local independence.
+#' Takes a single domain. Calculates teh marginal probabilities
 #' @param values characterMatrix One row for each response pattern to this domain. One column per item. Cell contains the value of a given item under the given response pattern.
 #' @param probs numericVector. For a single class, probability of returning this response pattern.
-#' @inherit dependence_intensity return
+#' @return Marginal probabilities as part of a dataframe
 #' @keywords internal
-dependence_intensity_one <- function(values, probs) {
+dependence_intensity_marginals <- function(values, probs) {
   
   nvalues <- apply(values, 2, max)+1
   class(values) <- "character"
@@ -533,6 +607,21 @@ dependence_intensity_one <- function(values, probs) {
   )
   prob_marginal <- apply(prob_marginal, 1, prod)
   
+  probs_dep_marg <- data.frame(
+    values
+    , prob_dependent=probs
+    , prob_marginal=prob_marginal
+  )
+  
+  return(probs_dep_marg)
+}
+
+#' Takes a single domain. Compares dependent versus marginal probabilities of each pattern.
+#' @param probs numericVector. For a single class, probability of returning this response pattern.
+#' @param probs_marginal numericVector. For a single class under conditonal independence, probability of returning this response pattern.
+#' @keywords internal
+dependence_intensity_ratios <- function(probs, prob_marginal) {
+  
   odds_ratio <- (
     ( probs / (1-probs) )
     / (prob_marginal / (1-prob_marginal) )
@@ -551,27 +640,13 @@ dependence_intensity_one <- function(values, probs) {
     }
   )
   
-  df_ratios <- data.frame(
-    values
-    , prob_dependent=probs
-    , prob_marginal=prob_marginal
-    , odds_ratio=odds_ratio
+  iratio <- data.frame(
+    odds_ratio=odds_ratio
     , odds_ratio_str=odds_ratio_str
     , diff_prob = probs - prob_marginal
   )
   
-  kl_div <- kl_divergence(true_probs=probs, alternate_probs=prob_marginal)
-  kl_max <- kl_max(nlevels = nvalues)
-  kl_vector <- c(
-    kl_divergence = kl_div
-    , kl_maximum = kl_max
-    , kl_ratio = kl_div / kl_max
-  )
-  
-  return(list(
-    ratios=df_ratios
-    , kl=kl_vector
-  ))
+  return(iratio)
 }
 
 #' Calculates the Kullback-Leibler (KL) divergence for a categorical response.
