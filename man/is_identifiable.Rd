@@ -3,9 +3,6 @@
 \name{is_identifiable}
 \alias{is_identifiable}
 \title{is_identifiable}
-\usage{
-is_identifiable(item2superdomainid, nclass, item_nlevels)
-}
 \arguments{
 \item{item2superdomainid}{Vector describing which items must be grouped together}
 
@@ -18,3 +15,4 @@ Check if choice of domains is generically identifiable
 Uses greedy algorithm. May give false negatives in some cases, but is quick and deterministic
 See Allman paper (DOI:10.1214/09-AOS689 Theorem 4.) for criteria used: min(patterns1,nclass)+min(patterns2,nclass)+min(patterns3,nclass) > 2*nclass+2
 }
+\keyword{internal}

@@ -348,8 +348,7 @@ int powl(int x, int p) {
 //' @param item2superdomainid Vector describing which items must be grouped together
 //' @param nclass Number of classes
 //' @param item_nlevels Vector with levels of items
-//' @export
-// [[Rcpp::export]]
+//' @keywords internal
 bool is_identifiable(const Rcpp::IntegerVector& item2superdomainid, int nclass, const Rcpp::IntegerVector& item_nlevels) {
   TROUBLE_START(("is_identifiable"));
   
@@ -945,7 +944,7 @@ public:
   Rcpp::IntegerVector nobs_classes_calc();
   Rcpp::IntegerMatrix item2domainid_calc(const Hyperparameter& hparams);
   int domain_id_new(int class2domain_id, const Hyperparameter& hparams);
-  static Rcpp::IntegerVector get_superdomains(Rcpp::IntegerMatrix& item2domainid, const Hyperparameter& hparams);
+  static Rcpp::IntegerVector get_superdomains(const Rcpp::IntegerMatrix& item2domainid);
   static bool is_identifiable(Rcpp::IntegerVector& item2superdomainid, const Hyperparameter& hparams);
   bool is_identifiable(domainProposalOut& proposal, const Hyperparameter& hparams);
   
@@ -1293,9 +1292,8 @@ float BayesParameter::domain_prior(Rcpp::IntegerVector& item2domainid_vec, const
 //' @title BayesParameter::get_superdomains
 //' @description Merge overlapping domains from different class2domainid
 //' @param item2domainid Each colum describes what items must be grouped together for this item2domainid
-//' @param hparams hyperparameters
 //' @keywords internal
-Rcpp::IntegerVector BayesParameter::get_superdomains(Rcpp::IntegerMatrix& item2domainid, const Hyperparameter& hparams) {
+Rcpp::IntegerVector BayesParameter::get_superdomains(const Rcpp::IntegerMatrix& item2domainid) {
   TROUBLE_START(("BayesParameter::get_superdomains"));
   int nitems = item2domainid.nrow();
   int nclass2domain = item2domainid.ncol();
@@ -1314,7 +1312,7 @@ Rcpp::IntegerVector BayesParameter::get_superdomains(Rcpp::IntegerMatrix& item2d
   }
   
   // Merge linked nodes
-  Rcpp::IntegerVector item2superdomainid = adjmat_to_equal(adjmat, hparams.nitem);
+  Rcpp::IntegerVector item2superdomainid = adjmat_to_equal(adjmat, nitems);
   
   TROUBLE_END; return item2superdomainid;
 }
@@ -1345,7 +1343,7 @@ bool BayesParameter::is_identifiable(domainProposalOut& proposal, const Hyperpar
   TROUBLE_START(("BayesParameter::is_identifiable #V2"));
   
   // Check identifiability of proposal
-  Rcpp::IntegerVector item2superdomainid_proposed = get_superdomains(proposal.item2domainid_new, hparams);
+  Rcpp::IntegerVector item2superdomainid_proposed = get_superdomains(proposal.item2domainid_new);
   bool identifiable = is_identifiable(item2superdomainid_proposed, hparams);
   
   TROUBLE_END; return identifiable ;
@@ -2297,4 +2295,23 @@ Rcpp::IntegerVector itemid2patterns(const Rcpp::IntegerVector& pattern_ids, cons
 // [[Rcpp::export]]
 double expSumLog(const Rcpp::NumericVector& x) {
   return sumLogs(x);
+}
+
+//' @name is_identifiable_r
+//' @title is_identifiable_r
+//' @description Check if choice of domains is generically identifiable
+//' Uses greedy algorithm. May give false negatives in some cases, but is quick and deterministic
+//' @param item2domainid Integer matrix with one row per item. For homogeneous DLCM give a single column. In this column items with the same value are interpreted as being in the same domain. For heterogeneous DLCM, provide one column per class. In a single column, items with the same value are assumed to be in the same domain for that class. Putting every item into its own domain is analogous to checking generic identifiability of a traditional LCM.
+//' @param nclass Number of classes
+//' @param item_nlevels Vector with levels of each item
+//' @export
+// [[Rcpp::export]]
+bool is_identifiable_r(const Rcpp::IntegerMatrix& item2domainid, int nclass, const Rcpp::IntegerVector& item_nlevels) {
+  
+  // group into conditionally indpendent blocks (i.e. for heterogeneous)
+  Rcpp::IntegerVector item2superdomainid = BayesParameter::get_superdomains(item2domainid);
+  
+  bool identifiable = is_identifiable(item2superdomainid, nclass, item_nlevels);
+  
+  return identifiable;
 }

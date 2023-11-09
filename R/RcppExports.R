@@ -127,6 +127,17 @@ NULL
 #' @keywords internal
 NULL
 
+#' @name is_identifiable
+#' @title is_identifiable
+#' @description Check if choice of domains is generically identifiable
+#' Uses greedy algorithm. May give false negatives in some cases, but is quick and deterministic
+#' See Allman paper (DOI:10.1214/09-AOS689 Theorem 4.) for criteria used: min(patterns1,nclass)+min(patterns2,nclass)+min(patterns3,nclass) > 2*nclass+2
+#' @param item2superdomainid Vector describing which items must be grouped together
+#' @param nclass Number of classes
+#' @param item_nlevels Vector with levels of items
+#' @keywords internal
+NULL
+
 #' @name Hyperparameter::set_hparams
 #' @title Hyperparameter::set_hparams
 #' @description Set hyperparameter values
@@ -393,7 +404,6 @@ NULL
 #' @title BayesParameter::get_superdomains
 #' @description Merge overlapping domains from different class2domainid
 #' @param item2domainid Each colum describes what items must be grouped together for this item2domainid
-#' @param hparams hyperparameters
 #' @keywords internal
 NULL
 
@@ -525,19 +535,6 @@ NULL
 #' @keywords internal
 NULL
 
-#' @name is_identifiable
-#' @title is_identifiable
-#' @description Check if choice of domains is generically identifiable
-#' Uses greedy algorithm. May give false negatives in some cases, but is quick and deterministic
-#' See Allman paper (DOI:10.1214/09-AOS689 Theorem 4.) for criteria used: min(patterns1,nclass)+min(patterns2,nclass)+min(patterns3,nclass) > 2*nclass+2
-#' @param item2superdomainid Vector describing which items must be grouped together
-#' @param nclass Number of classes
-#' @param item_nlevels Vector with levels of items
-#' @export
-is_identifiable <- function(item2superdomainid, nclass, item_nlevels) {
-    .Call(`_dependentLCM_is_identifiable`, item2superdomainid, nclass, item_nlevels)
-}
-
 #' @name dependentLCM_fit_cpp
 #' @title dependentLCM_fit_cpp
 #' @description Does MCMC simulations for dependent LCM model.
@@ -598,6 +595,18 @@ itemid2patterns <- function(pattern_ids, items_ids, item_nlevels) {
 #' @export
 expSumLog <- function(x) {
     .Call(`_dependentLCM_expSumLog`, x)
+}
+
+#' @name is_identifiable_r
+#' @title is_identifiable_r
+#' @description Check if choice of domains is generically identifiable
+#' Uses greedy algorithm. May give false negatives in some cases, but is quick and deterministic
+#' @param item2domainid Integer matrix with one row per item. For homogeneous DLCM give a single column. In this column items with the same value are interpreted as being in the same domain. For heterogeneous DLCM, provide one column per class. In a single column, items with the same value are assumed to be in the same domain for that class. Putting every item into its own domain is analogous to checking generic identifiability of a traditional LCM.
+#' @param nclass Number of classes
+#' @param item_nlevels Vector with levels of each item
+#' @export
+is_identifiable_r <- function(item2domainid, nclass, item_nlevels) {
+    .Call(`_dependentLCM_is_identifiable_r`, item2domainid, nclass, item_nlevels)
 }
 
 #' @name trouble_start
