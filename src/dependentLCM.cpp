@@ -443,6 +443,7 @@ public:
   float theta_alpha;
   Rcpp::LogicalVector steps_active;
   std::string domain_theta_prior_type;
+  Rcpp::NumericMatrix domainPriorKnowledgeLog_mat;
   // Data Info
   Rcpp::IntegerVector item_nlevels;
   int nobs;
@@ -451,13 +452,15 @@ public:
   int nclass2domain;
   int nitr;
   Rcpp::IntegerVector save_itrs;
+  std::list<std::pair<int,int>> domainPriorKnowledgeLog_pairs;
   
 public:
   int nclass2domain_calc() const {return count_unique(class2domain);};
   int nitem_calc() const {return item_nlevels.size();};
-  void set_hparams(int ndomains_in, int nclass_in, const Rcpp::IntegerVector& class2domain_in, const Rcpp::NumericVector& classPi_alpha_in, int domain_maxitems_in, float theta_alpha_in, float domain_proposal_empty_in, int domain_nproposals_in, Rcpp::LogicalVector steps_active_in, std::string domain_theta_prior_type_in, int nitr_in, Rcpp::IntegerVector& save_itrs_in);
+  void set_hparams(int ndomains_in, int nclass_in, const Rcpp::IntegerVector& class2domain_in, const Rcpp::NumericVector& classPi_alpha_in, int domain_maxitems_in, float theta_alpha_in, float domain_proposal_empty_in, int domain_nproposals_in, Rcpp::LogicalVector steps_active_in, std::string domain_theta_prior_type_in, int nitr_in, Rcpp::IntegerVector& save_itrs_in, const Rcpp::NumericMatrix& domainPriorKnowledgeLog_mat_in);
   void set_hparams(Rcpp::List hparams_in);
   void set_dataInfo(const Rcpp::IntegerMatrix& x);
+  static std::list<std::pair<int,int>> make_pairs(const Rcpp::NumericMatrix& domainPriorKnowledgeLog_mat_in);
 };
 
 //' @name Hyperparameter::set_hparams
@@ -477,7 +480,8 @@ void Hyperparameter::set_hparams(
   , Rcpp::LogicalVector steps_active_in
   , std::string domain_theta_prior_type_in
   , int nitr_in
-  , Rcpp::IntegerVector& save_itrs_in) {
+  , Rcpp::IntegerVector& save_itrs_in
+  , const Rcpp::NumericMatrix& domainPriorKnowledgeLog_mat_in) {
   TROUBLE_START(("Hyperparameter::set_hparams #V1"));
   ndomains = ndomains_in;
   nclass = nclass_in;
@@ -491,9 +495,11 @@ void Hyperparameter::set_hparams(
   domain_theta_prior_type = domain_theta_prior_type_in;
   nitr = nitr_in;
   save_itrs = save_itrs_in;
+  domainPriorKnowledgeLog_mat = domainPriorKnowledgeLog_mat_in;
   
   // Inferred
   nclass2domain = nclass2domain_calc();
+  domainPriorKnowledgeLog_pairs = make_pairs(domainPriorKnowledgeLog_mat)
   TROUBLE_END;
 }
 
@@ -505,6 +511,7 @@ void Hyperparameter::set_hparams(
 //' @keywords internal
 void Hyperparameter::set_hparams(Rcpp::List hparams_in) {
   TROUBLE_START(("Hyperparameter::set_hparams #V2"));
+  
   int ndomains = hparams_in("ndomains");
   int nclass = hparams_in("nclass");
   Rcpp::IntegerVector class2domain = hparams_in("class2domain");
@@ -517,8 +524,9 @@ void Hyperparameter::set_hparams(Rcpp::List hparams_in) {
   std::string domain_theta_prior_type = hparams_in("domain_theta_prior_type");
   int nitr = hparams_in("nitr");
   Rcpp::IntegerVector save_itrs = hparams_in("save_itrs");
+  Rcpp::NumericMatrix domainPriorKnowledgeLog_mat = hparams_in("domainPriorKnowledgeLog");
   
-  set_hparams(ndomains, nclass, class2domain, classPi_alpha, domain_maxitems, theta_alpha, domain_proposal_empty, domain_nproposals, steps_active, domain_theta_prior_type, nitr, save_itrs);
+  set_hparams(ndomains, nclass, class2domain, classPi_alpha, domain_maxitems, theta_alpha, domain_proposal_empty, domain_nproposals, steps_active, domain_theta_prior_type, nitr, save_itrs, domainPriorKnowledgeLog_mat);
   TROUBLE_END;
 }
 
@@ -534,6 +542,30 @@ void Hyperparameter::set_dataInfo(const Rcpp::IntegerMatrix& x) {
   nitem = nitem_calc();
   TROUBLE_END;
 }
+
+//' @name Hyperparameter::make_pairs
+//' @title Hyperparameter::make_pairs
+//' @description Find every nonzero index of domainPriorKnowledgeLog_mat_in. Only searches upper triangle
+//' @return One column per nonzero value. Two rows indicating the row and column position respectively.
+//' @keywords internal
+ std::list<std::pair<int,int>> Hyperparameter::make_pairs(const Rcpp::NumericMatrix& domainPriorKnowledgeLog_mat_in) {
+  TROUBLE_START(("Hyperparameter::set_dataInfo"));
+  
+  const double epsilon = 1e-8;
+  
+  // find nonzero pairs
+  std::list<std::pair<int,int>> indices;
+  for (int irow=0; irow < domainPriorKnowledgeLog_mat_in.nrow(); irow++) {
+    for (int icol=irow+1; icol < domainPriorKnowledgeLog_mat_in.ncol(); icol++) {
+      if (std::abs(domainPriorKnowledgeLog_mat_in(irow, icol)) > epsilon) {
+        indices.push_back(std::pair<int,int>{irow, icol});
+      }
+    }
+  }
+  
+  TROUBLE_END; return indices;
+}
+
 
 
 /*****************************************************
@@ -1284,6 +1316,14 @@ float BayesParameter::domain_prior(Rcpp::IntegerVector& item2domainid_vec, const
     - std::lgamma(hparams.ndomains - ndomains_nonempty + 1) // permuting groups
     - hparams.nitem * std::log(hparams.ndomains) // denominator
   );
+  
+  std::list<std::pair<int,int>>::const_iterator iter;
+  std::list<std::pair<int,int>>::const_iterator iter_end = hparams.domainPriorKnowledgeLog_pairs.end();
+  for (iter=hparams.domainPriorKnowledgeLog_pairs.begin(); iter!=iter_end; iter++) {
+    if (item2domainid_vec[iter->first] == item2domainid_vec[iter->second]) {
+      loglik += hparams.domainPriorKnowledgeLog_mat(iter->first, iter->second);
+    }
+  }
   
   TROUBLE_END; return loglik; // Assume flat prior
 }

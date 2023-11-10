@@ -24,7 +24,8 @@ dependentLCM_fit(
   save_itrs = SAVE_ITRS,
   class_init_method = CLASS_INIT_METHODS[1],
   warmup_settings = "default",
-  warmup_dlcm = NULL
+  warmup_dlcm = NULL,
+  domainPriorKnowledgeLog = NULL
 )
 }
 \arguments{
@@ -107,6 +108,8 @@ class1 = list(
 \item{warmup_settings}{list. Optionally allows for an extra warmup cycle using different parameters vs the arguments given for the main process. Any parameters in the given list will overwrite the arguments of the same name in the warmup cycle.}
 
 \item{warmup_dlcm}{list. A past DLCM fit (from dependentLCM_fit). The last iteration of the DLCM is used as the Bayes parameters.}
+
+\item{domainPriorKnowledgeLog}{An nitem*nitem upper triangular matrix. Values of zero indicate no prior knowledge of the domain structure. Values greater than zero indicate that this pair of items should be more likely to be in the same domain. Values less than zero indicate that this pair of items should be less likely to be in the same domain.}
 }
 \value{
 Returns a list with three items. hparams describes the hyperparmeters chosen by the model. These match the arguments input into the function plus any default values. mcmc describes the simulated (fitted) bayes parameter values. warmup describes extra/special warmup iterations using the 'warmup_settings' argument.

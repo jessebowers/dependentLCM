@@ -19,7 +19,8 @@ getStart_hparams(
   domain_nproposals = NULL,
   steps_active = STEPS_ACTIVE,
   save_itrs = SAVE_ITRS,
-  domain_theta_prior_type = DOMAIN_THETA_PRIOR_TYPE[1]
+  domain_theta_prior_type = DOMAIN_THETA_PRIOR_TYPE[1],
+  domainPriorKnowledgeLog = NULL
 )
 }
 \arguments{
@@ -74,6 +75,8 @@ If "HOMO" then defaults to c(0,0,...). If "HET" then defaults to c(0, 1, 2, ...)
 \item{"restrictive=}{ has strong regularization on domains. As permissive, but domain prior is adjusted further to cancel out any theta prior.}
 \item{"niave=}{ no regularization on domains. Bad outcomes result. For demonstration purposes only. Assumes all domains are equally likely.}
 }}
+
+\item{domainPriorKnowledgeLog}{An nitem*nitem upper triangular matrix. Values of zero indicate no prior knowledge of the domain structure. Values greater than zero indicate that this pair of items should be more likely to be in the same domain. Values less than zero indicate that this pair of items should be less likely to be in the same domain.}
 }
 \description{
 Generate hyperparameters

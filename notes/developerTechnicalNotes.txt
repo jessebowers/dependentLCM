@@ -10,25 +10,19 @@ OPEN ITEMS:
  * Update fix_class_label_switching() to allow dlcm$hparams$save_itrs["all"] < dlcm$hparams$nitr.
 
 FUTURE ENHANCEMENTS:
+ * Allow domainPriorKnowledgeLog_mat to vary in the heterogeneous DLCM
+ * In some cases there may be hyperparameters specific to a class (partially heterogeneous DLCM, heterogeneous domainPriorKnowledgeLog_mat). There can be a label swapping problem here where the incorrect observations are assigned an inappropriate hyperparameter value. Fix by adding a label swapping step in your MCMC.
  * Find more transparent way of doing domain prior. Right now (for "restrictive") the domain prior is split across two functions. Maybe put BayesParameter::domain_prior() into DomainCount::getloglik_marginal(). But be careful since DomainCount::getloglik_marginal() is executed once per class even for homogeneous.
+ * Make prior domain_theta_prior_type="restrictive" more clear in implementation.
  * allow multiple chains
  * allow with/without parallel for single chain 
- * For save_itrs argument, allow negative values. Negatives save all but the first negative-value iterations.
- * Make additional version of fix_class_label_switching() which does not require homogeneous data structure.
- * Allow warmup without archiving
- * add to SAVE_ITRS: class_pi=Inf, classes=Inf, domains=Inf (difficult due to downstream changes needed)
+ * Allow saving of sufficient statistics instead of values iteration by iteration (inspiration: arma::running_stat)
  * Incorporate optional checks/consistency checks eg domain size, nclasses, etc
- * Aggregate X (ie include counts) so that we can get counts of duplicates all at once rather than one-at-a-time
  * Maybe remove unnecessary functions in cpp (e.g. lchoose)
  * For domain split action, use reduce_items function twice. Use dropItem for faster counting. Tried this in dropItemSpeedup branch but was not faster in practice. There should be an implementation which is faster. One idea is to change domains from a map of domains to a map of pointers to domains. Then in Bayes.domainCounts have an option just to count the empty domains. You would need to create a new map of just the empty domains then proceed as usual (where updating the new map updates the old).
- * Change how warmup is done. Allow us to input an old DLCM into this DLCM (also allow to just work as is)
- * Fix devtools::check() identified issues
-   > importFrom("stats", "aggregate", "formula", "median", "na.omit", "quantile", "rmultinom", "runif", "var")
-   > importFrom("utils", "tail")
-   > Use .data$varname for dplyr
-   > CPP: Fix is free text not code as expected at: @examples Suppose we
+ * Run devtools::check() and fix identified issues
  * Maybe make 'get pooled domains' an exportable function? Do we care?
- * allow pre-specified structual zeroes. allow prespecified domains (latter is possible already but requires preprocessing)
+ * allow pre-specified structual zeroes
  * allow restricted latent class model
 
 

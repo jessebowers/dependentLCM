@@ -160,6 +160,13 @@ NULL
 #' @keywords internal
 NULL
 
+#' @name Hyperparameter::make_pairs
+#' @title Hyperparameter::make_pairs
+#' @description Find every nonzero index of domainPriorKnowledgeLog_mat_in. Only searches upper triangle
+#' @return One column per nonzero value. Two rows indicating the row and column position respectively.
+#' @keywords internal
+NULL
+
 #' @name DomainCount::set_initial
 #' @title DomainCount::set_initial
 #' @description Set all (non-count) values for this domain

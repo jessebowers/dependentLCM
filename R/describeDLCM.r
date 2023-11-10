@@ -459,6 +459,10 @@ dependence_intensity <- function(thetas_avg, dlcm, items_ids=NULL, class_pi=NULL
       , probs=list(prob), .groups="drop")
   )
   
+  if (length(thetas_marginal_ratio)) {
+    return(list())
+  }
+  
   thetas_marginal_ratio$probs_marginal <- mapply(
     function(values, probs) {
       out <- dependence_intensity_marginals(values, probs)

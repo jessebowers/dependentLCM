@@ -111,6 +111,7 @@ dependentLCM_fit <- function(
     , steps_active = STEPS_ACTIVE, save_itrs=SAVE_ITRS
     , class_init_method = CLASS_INIT_METHODS[1]
     , warmup_settings = "default", warmup_dlcm=NULL
+    , domainPriorKnowledgeLog=NULL
 ) {
   
   #
@@ -137,7 +138,7 @@ dependentLCM_fit <- function(
   hparams <- getStart_hparams(
     nitr=nitr, df=mat
     # Hyperparameters
-    ,nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, domain_proposal_empty=domain_proposal_empty, domain_nproposals=domain_nproposals, steps_active=steps_active, save_itrs=save_itrs, domain_theta_prior_type=domain_theta_prior_type
+    ,nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, domain_proposal_empty=domain_proposal_empty, domain_nproposals=domain_nproposals, steps_active=steps_active, save_itrs=save_itrs, domain_theta_prior_type=domain_theta_prior_type, domainPriorKnowledgeLog=domainPriorKnowledgeLog
   )
   
   warmup_dlcm <- doWarmup(
@@ -328,11 +329,12 @@ dependentLCM_fit <- function(
 #' \item{"restrictive=}{ has strong regularization on domains. As permissive, but domain prior is adjusted further to cancel out any theta prior.}
 #' \item{"niave=}{ no regularization on domains. Bad outcomes result. For demonstration purposes only. Assumes all domains are equally likely.}
 #' }
+#' @param domainPriorKnowledgeLog An nitem*nitem upper triangular matrix. Values of zero indicate no prior knowledge of the domain structure. Values greater than zero indicate that this pair of items should be more likely to be in the same domain. Values less than zero indicate that this pair of items should be less likely to be in the same domain.
 #' @keywords internal
 getStart_hparams <- function(
     nitr, df=NULL, nitems=NULL
     # Hyperparameters
-    ,nclass=NCLASS, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_nproposals=NULL, steps_active=STEPS_ACTIVE, save_itrs=SAVE_ITRS, domain_theta_prior_type=DOMAIN_THETA_PRIOR_TYPE[1]
+    ,nclass=NCLASS, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_nproposals=NULL, steps_active=STEPS_ACTIVE, save_itrs=SAVE_ITRS, domain_theta_prior_type=DOMAIN_THETA_PRIOR_TYPE[1], domainPriorKnowledgeLog=NULL
 ) {
   # Purpose: Add default hyperparameters
   
@@ -404,9 +406,13 @@ getStart_hparams <- function(
     save_itrs_fn["agg_loglik"] <- 0
   }
   
+  if (identical(domainPriorKnowledgeLog, NULL)) {
+    domainPriorKnowledgeLog = matrix(data=0, nrow=nitems, ncol=nitems)
+  }
+  
   return(list(
     nitr=nitr, nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, nitems = nitems, item_nlevels = item_nlevels, nclass2domain = nclass2domain, domain_proposal_empty=domain_proposal_empty, domain_nproposals=domain_nproposals, steps_active = steps_active_fn, save_itrs=save_itrs_fn
-    , domain_theta_prior_type = domain_theta_prior_type
+    , domain_theta_prior_type = domain_theta_prior_type, domainPriorKnowledgeLog=domainPriorKnowledgeLog
   ))
 }
 
@@ -741,6 +747,21 @@ check_params <- function(all_params) {
   if ((all_params$hparams$domain_theta_prior_type == "restrictive") & (all_params$hparams$theta_alpha!=1)) {
     warning("domain_theta_prior_type=restrictive requires theta_alpha=1")
     is_problem = TRUE
+  }
+  
+  domainPriorKnowledgeLog = all_params$hparams$domainPriorKnowledgeLog
+  if (nrow(domainPriorKnowledgeLog) != all_params$hparams$nitems) {
+    warning("domainPriorKnowledgeLog should be an nitems*nitems matrix")
+    is_problem = TRUE
+  } else if (ncol(domainPriorKnowledgeLog) != all_params$hparams$nitems) {
+    warning("domainPriorKnowledgeLog should be an nitems*nitems matrix")
+    is_problem = TRUE
+  } else if (sum(domainPriorKnowledgeLog[lower.tri(domainPriorKnowledgeLog, diag=TRUE)] != 0, na.rm = TRUE)>0) {
+    warning("domainPriorKnowledgeLog should be zero except in upper triangle")
+    is_problem = TRUE
+  } else if (max(domainPriorKnowledgeLog, na.rm = TRUE) > log(all_params$hparams$ndomains - all_params$hparams$nitems + 1)) {
+    warning("domainPriorKnowledgeLog larger than recommended")
+    # do not set is_problem
   }
   
   return(is_problem)
