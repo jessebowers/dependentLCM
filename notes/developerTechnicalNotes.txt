@@ -10,6 +10,7 @@ OPEN ITEMS:
  * Update fix_class_label_switching() to allow dlcm$hparams$save_itrs["all"] < dlcm$hparams$nitr.
 
 FUTURE ENHANCEMENTS:
+ * The metropolis proposal is not optimized for domainPriorKnowledgeLog_mat, especially extreme values of it. 
  * Allow domainPriorKnowledgeLog_mat to vary in the heterogeneous DLCM
  * In some cases there may be hyperparameters specific to a class (partially heterogeneous DLCM, heterogeneous domainPriorKnowledgeLog_mat). There can be a label swapping problem here where the incorrect observations are assigned an inappropriate hyperparameter value. Fix by adding a label swapping step in your MCMC.
  * Find more transparent way of doing domain prior. Right now (for "restrictive") the domain prior is split across two functions. Maybe put BayesParameter::domain_prior() into DomainCount::getloglik_marginal(). But be careful since DomainCount::getloglik_marginal() is executed once per class even for homogeneous.
