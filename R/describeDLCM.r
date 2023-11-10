@@ -459,7 +459,7 @@ dependence_intensity <- function(thetas_avg, dlcm, items_ids=NULL, class_pi=NULL
       , probs=list(prob), .groups="drop")
   )
   
-  if (length(thetas_marginal_ratio)==0) {
+  if (nrow(thetas_marginal_ratio)==0) {
     return(list())
   }
   
