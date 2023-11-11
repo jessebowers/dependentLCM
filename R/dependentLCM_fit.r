@@ -330,7 +330,7 @@ dependentLCM_fit <- function(
 #' \item{"niave=}{ no regularization on domains. Bad outcomes result. For demonstration purposes only. Assumes all domains are equally likely.}
 #' }
 #' @param domainPriorKnowledgeLog Numeric. An nitem*nitem upper triangular matrix. Values of zero indicate no prior knowledge of the domain structure. Values greater than zero indicate that this pair of items should be more likely to be in the same domain. Values less than zero indicate that this pair of items should be less likely to be in the same domain.
-#' @param print_itrs Integer. Optional. Print every print_itrs iterations.
+#' @param print_itrs Integer. Optional. Prints progress by printing every print_itrs iterations.
 #' @keywords internal
 getStart_hparams <- function(
     nitr, df=NULL, nitems=NULL

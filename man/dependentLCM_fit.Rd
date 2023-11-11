@@ -112,7 +112,7 @@ class1 = list(
 
 \item{domainPriorKnowledgeLog}{Numeric. An nitem*nitem upper triangular matrix. Values of zero indicate no prior knowledge of the domain structure. Values greater than zero indicate that this pair of items should be more likely to be in the same domain. Values less than zero indicate that this pair of items should be less likely to be in the same domain.}
 
-\item{print_itrs}{Integer. Optional. Print every print_itrs iterations.}
+\item{print_itrs}{Integer. Optional. Prints progress by printing every print_itrs iterations.}
 }
 \value{
 Returns a list with three items. hparams describes the hyperparmeters chosen by the model. These match the arguments input into the function plus any default values. mcmc describes the simulated (fitted) bayes parameter values. warmup describes extra/special warmup iterations using the 'warmup_settings' argument.

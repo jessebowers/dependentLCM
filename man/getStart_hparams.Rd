@@ -79,7 +79,7 @@ If "HOMO" then defaults to c(0,0,...). If "HET" then defaults to c(0, 1, 2, ...)
 
 \item{domainPriorKnowledgeLog}{Numeric. An nitem*nitem upper triangular matrix. Values of zero indicate no prior knowledge of the domain structure. Values greater than zero indicate that this pair of items should be more likely to be in the same domain. Values less than zero indicate that this pair of items should be less likely to be in the same domain.}
 
-\item{print_itrs}{Integer. Optional. Print every print_itrs iterations.}
+\item{print_itrs}{Integer. Optional. Prints progress by printing every print_itrs iterations.}
 }
 \description{
 Generate hyperparameters

@@ -6,6 +6,7 @@
  ****** UTILITIES
  *****************************************************/
 
+
 //' @name colMax
 //' @title colMax
 //' @description Get the max of each column column of matrix
@@ -424,6 +425,13 @@ bool is_identifiable(const Rcpp::IntegerVector& item2superdomainid, int nclass, 
   TROUBLE_END; return (tripart_sum >= goal);
 }
 
+//' @name print_itr
+//' @title print_itr
+//' @description If itr is divisible by print_itrs then print progress to terminal
+//' @param itr Number of iterations completed
+//' @param nclass Number of classes.
+//' @param print_itrs How frequently to print progress.
+//' @keywords internal
 void print_itr(const int itr, const int print_itrs) {
   TROUBLE_START(("print_itr"));
   
@@ -438,6 +446,7 @@ void print_itr(const int itr, const int print_itrs) {
 /*****************************************************
  ****** Hyperparameters
  *****************************************************/
+
 
 // Fixed settings for our bayes modeling
 class Hyperparameter {
@@ -580,7 +589,6 @@ void Hyperparameter::set_dataInfo(const Rcpp::IntegerMatrix& x) {
   
   TROUBLE_END; return indices;
 }
-
 
 
 /*****************************************************
@@ -921,6 +929,7 @@ double dINF = std::numeric_limits<double>::infinity();
 /*****************************************************
  ****** Helpers for Bayes Parameters
  *****************************************************/
+
 
 // Output for BayesParameter::domain_proposal(.)
 struct domainProposalOut {
@@ -2140,9 +2149,11 @@ Rcpp::List Archive::toList() {
   );
 }
 
+
 /*****************************************************
  ****** BayesContainer
  *****************************************************/
+
 
 // Houses everything: hyperparameters, bayes parameters, archive, data, etc.
 class BayesContainer {
@@ -2249,6 +2260,7 @@ Archive BayesContainer::run_init(const Rcpp::IntegerMatrix& x_in, Rcpp::List hpa
 /*****************************************************
  ****** Public Functions
  *****************************************************/
+
 
 //' @name dependentLCM_fit_cpp
 //' @title dependentLCM_fit_cpp

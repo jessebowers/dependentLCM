@@ -138,6 +138,15 @@ NULL
 #' @keywords internal
 NULL
 
+#' @name print_itr
+#' @title print_itr
+#' @description If itr is divisible by print_itrs then print progress to terminal
+#' @param itr Number of iterations completed
+#' @param nclass Number of classes.
+#' @param print_itrs How frequently to print progress.
+#' @keywords internal
+NULL
+
 #' @name Hyperparameter::set_hparams
 #' @title Hyperparameter::set_hparams
 #' @description Set hyperparameter values
