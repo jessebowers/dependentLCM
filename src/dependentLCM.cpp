@@ -424,6 +424,16 @@ bool is_identifiable(const Rcpp::IntegerVector& item2superdomainid, int nclass, 
   TROUBLE_END; return (tripart_sum >= goal);
 }
 
+void print_itr(const int itr, const int print_itrs) {
+  TROUBLE_START(("print_itr"));
+  
+  if (itr % print_itrs == 0) {
+    Rcpp::Rcout << "." << itr;
+  }
+  
+  TROUBLE_END;
+}
+
 
 /*****************************************************
  ****** Hyperparameters
@@ -453,11 +463,12 @@ public:
   int nitr;
   Rcpp::IntegerVector save_itrs;
   std::list<std::pair<int,int>> domainPriorKnowledgeLog_pairs;
+  int print_itrs;
   
 public:
   int nclass2domain_calc() const {return count_unique(class2domain);};
   int nitem_calc() const {return item_nlevels.size();};
-  void set_hparams(int ndomains_in, int nclass_in, const Rcpp::IntegerVector& class2domain_in, const Rcpp::NumericVector& classPi_alpha_in, int domain_maxitems_in, float theta_alpha_in, float domain_proposal_empty_in, int domain_nproposals_in, Rcpp::LogicalVector steps_active_in, std::string domain_theta_prior_type_in, int nitr_in, Rcpp::IntegerVector& save_itrs_in, const Rcpp::NumericMatrix& domainPriorKnowledgeLog_mat_in);
+  void set_hparams(int ndomains_in, int nclass_in, const Rcpp::IntegerVector& class2domain_in, const Rcpp::NumericVector& classPi_alpha_in, int domain_maxitems_in, float theta_alpha_in, float domain_proposal_empty_in, int domain_nproposals_in, Rcpp::LogicalVector steps_active_in, std::string domain_theta_prior_type_in, int nitr_in, Rcpp::IntegerVector& save_itrs_in, const Rcpp::NumericMatrix& domainPriorKnowledgeLog_mat_in, const int print_itrs_in);
   void set_hparams(Rcpp::List hparams_in);
   void set_dataInfo(const Rcpp::IntegerMatrix& x);
   static std::list<std::pair<int,int>> make_pairs(const Rcpp::NumericMatrix& domainPriorKnowledgeLog_mat_in);
@@ -481,7 +492,8 @@ void Hyperparameter::set_hparams(
   , std::string domain_theta_prior_type_in
   , int nitr_in
   , Rcpp::IntegerVector& save_itrs_in
-  , const Rcpp::NumericMatrix& domainPriorKnowledgeLog_mat_in) {
+  , const Rcpp::NumericMatrix& domainPriorKnowledgeLog_mat_in
+  , const int print_itrs_in) {
   TROUBLE_START(("Hyperparameter::set_hparams #V1"));
   ndomains = ndomains_in;
   nclass = nclass_in;
@@ -496,6 +508,7 @@ void Hyperparameter::set_hparams(
   nitr = nitr_in;
   save_itrs = save_itrs_in;
   domainPriorKnowledgeLog_mat = domainPriorKnowledgeLog_mat_in;
+  print_itrs = print_itrs_in;
   
   // Inferred
   nclass2domain = nclass2domain_calc();
@@ -525,8 +538,10 @@ void Hyperparameter::set_hparams(Rcpp::List hparams_in) {
   int nitr = hparams_in("nitr");
   Rcpp::IntegerVector save_itrs = hparams_in("save_itrs");
   Rcpp::NumericMatrix domainPriorKnowledgeLog_mat = hparams_in("domainPriorKnowledgeLog");
+  int print_itrs = hparams_in("print_itrs");
   
-  set_hparams(ndomains, nclass, class2domain, classPi_alpha, domain_maxitems, theta_alpha, domain_proposal_empty, domain_nproposals, steps_active, domain_theta_prior_type, nitr, save_itrs, domainPriorKnowledgeLog_mat);
+  set_hparams(ndomains, nclass, class2domain, classPi_alpha, domain_maxitems, theta_alpha, domain_proposal_empty, domain_nproposals, steps_active, domain_theta_prior_type, nitr, save_itrs, domainPriorKnowledgeLog_mat, print_itrs);
+  
   TROUBLE_END;
 }
 
@@ -2214,6 +2229,7 @@ Archive BayesContainer::run() {
   for (int i=2; i < hparams.nitr; i++) {
     next(false);
     archive.add(params, hparams);
+    print_itr(i, hparams.print_itrs);
   }
   TROUBLE_END; return archive;
 }

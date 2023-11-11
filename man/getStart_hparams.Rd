@@ -20,7 +20,8 @@ getStart_hparams(
   steps_active = STEPS_ACTIVE,
   save_itrs = SAVE_ITRS,
   domain_theta_prior_type = DOMAIN_THETA_PRIOR_TYPE[1],
-  domainPriorKnowledgeLog = NULL
+  domainPriorKnowledgeLog = NULL,
+  print_itrs = Inf
 )
 }
 \arguments{
@@ -76,7 +77,9 @@ If "HOMO" then defaults to c(0,0,...). If "HET" then defaults to c(0, 1, 2, ...)
 \item{"niave=}{ no regularization on domains. Bad outcomes result. For demonstration purposes only. Assumes all domains are equally likely.}
 }}
 
-\item{domainPriorKnowledgeLog}{An nitem*nitem upper triangular matrix. Values of zero indicate no prior knowledge of the domain structure. Values greater than zero indicate that this pair of items should be more likely to be in the same domain. Values less than zero indicate that this pair of items should be less likely to be in the same domain.}
+\item{domainPriorKnowledgeLog}{Numeric. An nitem*nitem upper triangular matrix. Values of zero indicate no prior knowledge of the domain structure. Values greater than zero indicate that this pair of items should be more likely to be in the same domain. Values less than zero indicate that this pair of items should be less likely to be in the same domain.}
+
+\item{print_itrs}{Integer. Optional. Print every print_itrs iterations.}
 }
 \description{
 Generate hyperparameters

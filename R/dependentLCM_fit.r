@@ -111,7 +111,7 @@ dependentLCM_fit <- function(
     , steps_active = STEPS_ACTIVE, save_itrs=SAVE_ITRS
     , class_init_method = CLASS_INIT_METHODS[1]
     , warmup_settings = "default", warmup_dlcm=NULL
-    , domainPriorKnowledgeLog=NULL
+    , domainPriorKnowledgeLog=NULL, print_itrs=Inf
 ) {
   
   #
@@ -138,7 +138,7 @@ dependentLCM_fit <- function(
   hparams <- getStart_hparams(
     nitr=nitr, df=mat
     # Hyperparameters
-    ,nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, domain_proposal_empty=domain_proposal_empty, domain_nproposals=domain_nproposals, steps_active=steps_active, save_itrs=save_itrs, domain_theta_prior_type=domain_theta_prior_type, domainPriorKnowledgeLog=domainPriorKnowledgeLog
+    ,nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, domain_proposal_empty=domain_proposal_empty, domain_nproposals=domain_nproposals, steps_active=steps_active, save_itrs=save_itrs, domain_theta_prior_type=domain_theta_prior_type, domainPriorKnowledgeLog=domainPriorKnowledgeLog, print_itrs=print_itrs
   )
   
   warmup_dlcm <- doWarmup(
@@ -329,12 +329,13 @@ dependentLCM_fit <- function(
 #' \item{"restrictive=}{ has strong regularization on domains. As permissive, but domain prior is adjusted further to cancel out any theta prior.}
 #' \item{"niave=}{ no regularization on domains. Bad outcomes result. For demonstration purposes only. Assumes all domains are equally likely.}
 #' }
-#' @param domainPriorKnowledgeLog An nitem*nitem upper triangular matrix. Values of zero indicate no prior knowledge of the domain structure. Values greater than zero indicate that this pair of items should be more likely to be in the same domain. Values less than zero indicate that this pair of items should be less likely to be in the same domain.
+#' @param domainPriorKnowledgeLog Numeric. An nitem*nitem upper triangular matrix. Values of zero indicate no prior knowledge of the domain structure. Values greater than zero indicate that this pair of items should be more likely to be in the same domain. Values less than zero indicate that this pair of items should be less likely to be in the same domain.
+#' @param print_itrs Integer. Optional. Print every print_itrs iterations.
 #' @keywords internal
 getStart_hparams <- function(
     nitr, df=NULL, nitems=NULL
     # Hyperparameters
-    ,nclass=NCLASS, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_nproposals=NULL, steps_active=STEPS_ACTIVE, save_itrs=SAVE_ITRS, domain_theta_prior_type=DOMAIN_THETA_PRIOR_TYPE[1], domainPriorKnowledgeLog=NULL
+    ,nclass=NCLASS, ndomains=NULL, class2domain=NULL, classPi_alpha=CLASSPI_ALPHA, domain_maxitems=NULL, theta_alpha=THETA_ALPHA, domain_proposal_empty=DOMAIN_PROPOSAL_EMPTY, domain_nproposals=NULL, steps_active=STEPS_ACTIVE, save_itrs=SAVE_ITRS, domain_theta_prior_type=DOMAIN_THETA_PRIOR_TYPE[1], domainPriorKnowledgeLog=NULL, print_itrs=Inf
 ) {
   # Purpose: Add default hyperparameters
   
@@ -412,7 +413,7 @@ getStart_hparams <- function(
   
   return(list(
     nitr=nitr, nclass=nclass, ndomains=ndomains, class2domain=class2domain, classPi_alpha=classPi_alpha, domain_maxitems=domain_maxitems, theta_alpha=theta_alpha, nitems = nitems, item_nlevels = item_nlevels, nclass2domain = nclass2domain, domain_proposal_empty=domain_proposal_empty, domain_nproposals=domain_nproposals, steps_active = steps_active_fn, save_itrs=save_itrs_fn
-    , domain_theta_prior_type = domain_theta_prior_type, domainPriorKnowledgeLog=domainPriorKnowledgeLog
+    , domain_theta_prior_type = domain_theta_prior_type, domainPriorKnowledgeLog=domainPriorKnowledgeLog, print_itrs=print_itrs
   ))
 }
 
