@@ -17,3 +17,7 @@ Collate:
     'dependentLCM_fit.r'
     'describeDLCM.r'
     'generateData.r'
+Suggests: 
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr

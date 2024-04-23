@@ -1,0 +1,96 @@
+---
+title: "Introduction to Domain LCMs"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to Domain LCMs}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, warning=FALSE, message=FALSE}
+library(dependentLCM)
+library(dplyr)
+```
+
+# What are Domain LCMs?
+
+*LCMs:* Latent Class Models (LCMs) are used to cluster and interpret multivariate categorical data, commonly survey responses. Example: Suppose 100 people answer 20 yes/no questions, you want to group together people who answered similarly, and you want to interpret these groups.
+
+*Domain LCMs:* Domain LCMs allow for questions (items) to be related. Traditional LCMs assume all items are answered separately/independently. Domain LCMs group related items into `domains'. The answer to one question in a domain impacts the responses to other questions in the same domain. Conversely the answer to questions in one domain do not impact the answers to the questions in any other domains.
+
+For details see: Bowers, J., & Culpepper, S. (2022). Dependent Latent Class Models (Version 1). arXiv. \url{https://doi.org/10.48550/ARXIV.2205.08677}
+
+# Data
+
+A provided dataset is assumed to have one row per observation and one column per item (question). For a given question, the values should range from zero up to the max value for that question. Questions with more than 2 values are supported, and all responses are treated as nominal (unordered). The current version of the code does not support missing values.
+
+We use data collected on $n=533$ infants.  Each infant has four visits to the doctor. At each visit, the doctor records whether the infant has four symptoms: Night cough, wheezing, itchy rash, and flexural dermatitis. This data was collected by collected by Mihrshai et al (2001) and is available in the randomLCA package (randomLCA::symptoms).
+
+```{r}
+data("randomLCA_symptoms_data", package="dependentLCM")
+idata <- as.matrix(randomLCA_symptoms_data)
+
+# Example Rows
+knitr::kable(idata[c(37L, 80L, 163L, 352L, 412L),], format = "html")
+```
+
+# Running the Model
+
+We seek to group similar infants together. We conjecture that there might be four groups of infants.
+
+```{r, warning=FALSE}
+set.seed(1)
+dlcm <- dependentLCM_fit(
+  nitr = 6000
+  , save_itrs=c(all=6000-1000) # warmup of 1000 used here
+  , mat=idata
+  , nclass=4 # number of clusters
+)
+```
+
+To determine the appropriate number of clusters (classes), multiple models should be fit. The model with the best goodness of fit should be chosen. Our package supports measuring goodness of fit using Watanabe-Akaike Information Criterion (WAIC): dependentLCM::dlcm.get_waic(dlcm). In this example four groups of infants fits well, and we omit any competing models.
+
+# Summarizing Results
+
+Basic summary statistics of the DLCM can be produced as follows:
+
+```{r}
+dlcm$summary <- dlcm.summary(dlcm)
+```
+
+*domain_items_all*: The value `dlcm$summary$domain_items_all` identifies which items (questions) are related. In about ~85% of iterations the items are grouped into domains as follows: `1,2|11,12|13,14|15,16|3,4|7,8|9,10|5|6`. Items 1 and 2 are related (grouped into the same domain). These items represent Nightcough.1 and Wheeze.1 respectively, two lung symptoms at the first time point. Items 11 and 12 are also related. These items are Itchyrash.3 and FlexDerma.3, two skin symptoms for the third time point. Examining each in group in detail reveals the following pattern. At each time point the skin symptoms are related, and the lung symptoms are also related. The only exception is items 5 and 6, two lung symptoms which were not grouped together. For additional documentation see: `dlcm.summary()`.
+
+```{r}
+knitr::kable(head(dlcm$summary$domain_items_all), format = "html")
+```
+
+*thetas_avg_mode*: We now seek to interpret our four classes. The value `dlcm$summary$thetas_avg_mode` describes the how each class (group of infants) responds to each item (symptom). Each row takes a particular response to a particular group of items, and describes how likely we are to observe that response. The trailing columns give these response probabilities for each class in turn. In this example each of the four classes corresponds with either a high/low prevalence of skin symptoms, and either a high/low prevalence of lung symptoms. For additional documentation see: `dlcm.summary()`.
+
+```{r}
+knitr::kable(head(dlcm$summary$thetas_avg_mode, 10), format = "html")
+```
+
+*class_pi*: The size of each class is given in `dlcm$summary$class_pi`. This indicates the amount of people we expect to be in each class. Additionally `dlcm$summary$classes` gives the predicted class of each observation.
+
+```{r}
+dlcm$summary$class_pi
+```
+
+*dependence_intensity_dfs*: It is useful to understand what sort of dependence underlies a group of related items (a domain). Information about this is provided in `dlcm$summary$dependence_intensity_dfs`. Above we saw that items 3,4 are grouped together. In `dlcm$summary$thetas_avg_mode` we see that this group has an identifier of `items_id=12`. We can look up this pair of items below:
+
+```{r}
+# Dependence found between items 3 and 4
+knitr::kable(
+  dlcm$summary$dependence_intensity_dfs$ratio_dfs[["12"]] # select items 3 and 4 based on items_id
+  %>% dplyr::filter(is.na(class)) # marginalize across classes for simplicity
+  , format = "html")
+```
+
+For each response (Xitem_3, Xitem_4), we see the probability first under dependence (probs) and then under independence (probs_marginal). The column `odds_ratio` describes whether this response is more likely under dependence ($>1$) or less likely under dependence ($<1$). We see here that items 3,4 are comorbid, typically either both present or both missing. Information about other groups of items (domains) can be looked up similarly based on their items_id. For additional documentation see: `dependence_intensity()`.

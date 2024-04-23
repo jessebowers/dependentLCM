@@ -95,3 +95,17 @@ sim_logprob_one <- function(xobs, pis, thetas) {
 sim_logprobs <- function(x, pis, thetas) {
   return(apply(x, 1, sim_logprob_one, pis=pis, thetas=thetas))
 }
+
+
+##############
+############## DATA
+##############
+
+#' @title randomLCA_symptoms_data
+#' @name randomLCA_symptoms_data
+#' @docType data
+#' @description See randomLCA::symptoms. Data was modified as follows. 1) NA rows are removed. 2) 'Freq' column is removed after duplicating rows to preserve frequencies. 3) Columns are renamed so that '1' refers to the first time point, '2' refers to the second time point, etc.
+#' @source Mihrshahi, S., Peat, J.K., Webb, K., Tovey, R.E., Marks, G.B., Mellis, C.M. and Leeder S.R. (2001) The Childhood Asthma Prevention Study (CAPS): Design and research protocol of a randomized trial for the primary prevention of asthma. Control led Clinical Trials, 22:333-354.
+#' @references randomLCA::symptoms
+#' @keywords data
+NULL
