@@ -17,4 +17,3 @@ Collate:
     'dependentLCM_fit.r'
     'describeDLCM.r'
     'generateData.r'
-    'label_switching.r'

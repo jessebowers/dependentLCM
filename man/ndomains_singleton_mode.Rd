@@ -16,3 +16,4 @@ ndomains_singleton_mode(nitems, prop = 2)
 How many domains (ndomains) we we need before 'all singleton domains' are prop-times more likely than 'one 2-item domain with rest singletons'? Using the prior only.
 Solves: ldomain_prior(rep(1, nitems), ndomains, specific_items=FALSE, log=TRUE) - ldomain_prior(c(2,rep(1, nitems-2)), ndomains, specific_items=FALSE, log=TRUE) = log(prop)
 }
+\keyword{internal}

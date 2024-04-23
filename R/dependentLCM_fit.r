@@ -816,7 +816,7 @@ dlcm2paramargs <- function(dlcm, iter_diff=0) {
 #' Solves: ldomain_prior(rep(1, nitems), ndomains, specific_items=FALSE, log=TRUE) - ldomain_prior(c(2,rep(1, nitems-2)), ndomains, specific_items=FALSE, log=TRUE) = log(prop)
 #' @param nitems integer. Number of items in the data.
 #' @param prop float. prop=1 forces singleton domains to be mode. prop>1 makes singleton domains increasingly frequent. Default is prop=2.
-#' @export
+#' @keywords internal
 ndomains_singleton_mode <- function(nitems, prop=2) {
   ceiling(nitems+prop*nitems*(nitems-1)/2-1)
 }
