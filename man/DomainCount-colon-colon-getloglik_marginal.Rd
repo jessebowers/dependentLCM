@@ -9,6 +9,6 @@
 \description{
 For a given domain, we want to know the probability of observing a series of responses.
 We calculate this probability conditioning on parameters, but marginalizing over theta (and convert to log scale)
-For domain_theta_prior_type="restrictive", we also include partial prior for domain
+For domain_theta_prior_type="patternadjusted", we also include partial prior for domain
 }
 \keyword{internal}

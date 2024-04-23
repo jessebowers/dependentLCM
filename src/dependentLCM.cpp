@@ -883,7 +883,7 @@ int DomainCount::itemsid_calc() {
 //' @title DomainCount::getloglik_marginal
 //' @description For a given domain, we want to know the probability of observing a series of responses.
 //' We calculate this probability conditioning on parameters, but marginalizing over theta (and convert to log scale)
-//' For domain_theta_prior_type="restrictive", we also include partial prior for domain
+//' For domain_theta_prior_type="patternadjusted", we also include partial prior for domain
 //' @param hparams hyperparameters
 //' @keywords internal
 float DomainCount::getloglik_marginal(const Hyperparameter& hparams) {
@@ -894,9 +894,9 @@ float DomainCount::getloglik_marginal(const Hyperparameter& hparams) {
   
   Rcpp::NumericVector theta_alpha = hparams.theta_alpha + Rcpp::NumericVector(npatterns);
   float ldenominator=0;
-  if (hparams.domain_theta_prior_type != "restrictive") {
+  if (hparams.domain_theta_prior_type != "patternadjusted") {
     ldenominator=lbeta(theta_alpha);
-  } // if hparams.domain_theta_prior_type=="restrictive", applies partial prior for domain by setting ldenominator=0
+  } // if hparams.domain_theta_prior_type=="patternadjusted", applies partial prior for domain by setting ldenominator=0
   float loglik = (
     lbeta(Rcpp::as<Rcpp::NumericVector> (counts) + theta_alpha)
     - ldenominator
@@ -920,7 +920,7 @@ void DomainCount::print() {
   TROUBLE_END;
 }
 
-// GLOBAL CONSTANTS - DO NOT MODIFY!
+// GLOBAL CONSTANTS - DO NOT MODIFY PROGRAMATICALLY!
 DomainCount BLANK_DOMAIN; // Example blank domain
 float fINF = std::numeric_limits<float>::infinity();
 double dINF = std::numeric_limits<double>::infinity();
@@ -1323,7 +1323,7 @@ Rcpp::IntegerMatrix BayesParameter::item2domainid_calc(const Hyperparameter& hpa
 //' @name BayesParameter::domain_prior
 //' @title BayesParameter::domain_prior
 //' @description Before observing data/other-parameters, how likely are we to put items into these particular domains?
-//' Note that for domain_theta_prior_type="restrictive" some of the prior is also given in DomainCount::getloglik_marginal()
+//' Note that for domain_theta_prior_type="patternadjusted" some of the prior is also given in DomainCount::getloglik_marginal()
 //' Some choices of domains may be more likely than other based on prior.
 //' @keywords internal
 float BayesParameter::domain_prior(Rcpp::IntegerVector& item2domainid_vec, const Hyperparameter& hparams) {
@@ -2264,7 +2264,7 @@ Archive BayesContainer::run_init(const Rcpp::IntegerMatrix& x_in, Rcpp::List hpa
 
 //' @name dependentLCM_fit_cpp
 //' @title dependentLCM_fit_cpp
-//' @description Does MCMC simulations for dependent LCM model.
+//' @description Does MCMC simulations for domain LCM model.
 //' This is a C++ script. Run dependentLCM_fit in dependentLCM.r to execute.
 //' @param x_in Matrix of responses we are analyzing
 //' @param hparams_list List of hyperparameter info. See getStart_hparams() in R.

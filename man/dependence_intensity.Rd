@@ -9,7 +9,7 @@ dependence_intensity(thetas_avg, dlcm, items_ids = NULL, class_pi = NULL)
 \arguments{
 \item{thetas_avg}{dataframe. Describes average response probabilities for different domains. As returned from dlcm.summary()}
 
-\item{dlcm}{list. Fitted dependent LCM}
+\item{dlcm}{list. Fitted domain LCM}
 
 \item{items_ids}{integerVector. Optional. Which domains do we want to process?}
 

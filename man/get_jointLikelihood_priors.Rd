@@ -7,7 +7,7 @@
 get_jointLikelihood_priors(dlcm)
 }
 \arguments{
-\item{dlcm}{Dependent latent class model outptut from dependentLCM_fit}
+\item{dlcm}{Domain latent class model outptut from dependentLCM_fit}
 }
 \description{
 For each iteration, calculate the prior probabilities of each parameter

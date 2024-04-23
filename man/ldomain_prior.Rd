@@ -10,7 +10,7 @@ ldomain_prior(
   ndomains,
   specific_items = FALSE,
   log = TRUE,
-  domain_theta_prior_type = "permissive",
+  domain_theta_prior_type = "bucket",
   x_npatterns = NULL
 )
 }
@@ -25,9 +25,9 @@ IF TRUE, we fix which items are in which domain, and calculate the probability o
 
 \item{log}{Boolean. If TRUE give probability in log scale.}
 
-\item{domain_theta_prior_type}{String. What domain prior are we using? One of c("permissive", "restrictive")}
+\item{domain_theta_prior_type}{String. What domain prior are we using? One of c("bucket", "patternadjusted")}
 
-\item{x_npatterns}{IntegerVector. For domain_theta_prior_type="restrictive". For each domain x, how many possible response patterns are there to that domain?}
+\item{x_npatterns}{IntegerVector. For domain_theta_prior_type="patternadjusted". For each domain x, how many possible response patterns are there to that domain?}
 }
 \description{
 What is the prior probability of this choice of domains?

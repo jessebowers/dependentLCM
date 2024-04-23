@@ -288,7 +288,7 @@ NULL
 #' @title DomainCount::getloglik_marginal
 #' @description For a given domain, we want to know the probability of observing a series of responses.
 #' We calculate this probability conditioning on parameters, but marginalizing over theta (and convert to log scale)
-#' For domain_theta_prior_type="restrictive", we also include partial prior for domain
+#' For domain_theta_prior_type="patternadjusted", we also include partial prior for domain
 #' @param hparams hyperparameters
 #' @keywords internal
 NULL
@@ -411,7 +411,7 @@ NULL
 #' @name BayesParameter::domain_prior
 #' @title BayesParameter::domain_prior
 #' @description Before observing data/other-parameters, how likely are we to put items into these particular domains?
-#' Note that for domain_theta_prior_type="restrictive" some of the prior is also given in DomainCount::getloglik_marginal()
+#' Note that for domain_theta_prior_type="patternadjusted" some of the prior is also given in DomainCount::getloglik_marginal()
 #' Some choices of domains may be more likely than other based on prior.
 #' @keywords internal
 NULL
@@ -553,7 +553,7 @@ NULL
 
 #' @name dependentLCM_fit_cpp
 #' @title dependentLCM_fit_cpp
-#' @description Does MCMC simulations for dependent LCM model.
+#' @description Does MCMC simulations for domain LCM model.
 #' This is a C++ script. Run dependentLCM_fit in dependentLCM.r to execute.
 #' @param x_in Matrix of responses we are analyzing
 #' @param hparams_list List of hyperparameter info. See getStart_hparams() in R.

@@ -1,9 +1,9 @@
 #' @include utilities.r
 NULL
 
-#' dependentLCM: Dependent Latent Class Model
+#' dependentLCM: Domain Latent Class Model
 #' @description 
-#' Latent Class Models (LCMs) are used to cluster multivariate categorical data (e.g. group participants based on survey responses). Traditional LCMs assume a property called conditional independence. This assumption can be restrictive, leading to model misspecification and overparameterization. To combat this problem, we developed a novel Bayesian model called a Dependent Latent Class Model (DLCM), which permits conditional dependence. Compared to traditional LCMs, DLCMs are effective in applications with time series, overlapping items, and structural zeroes.
+#' Latent Class Models (LCMs) are used to cluster multivariate categorical data (e.g. group participants based on survey responses). Traditional LCMs assume a property called conditional independence. This assumption can be patternadjusted, leading to model misspecification and overparameterization. To combat this problem, we developed a novel Bayesian model called a Domain Latent Class Model (DLCM), which permits conditional dependence. Compared to traditional LCMs, DLCMs are effective in applications with time series, overlapping items, and structural zeroes.
 #' 
 #' The primary function is dependentLCM_fit. 
 #' 
@@ -24,7 +24,7 @@ NULL
 NCLASS = 2
 CLASSPI_ALPHA = 1
 THETA_ALPHA = 1
-DOMAIN_THETA_PRIOR_TYPE = c("permissive", "restrictive", "niave")
+DOMAIN_THETA_PRIOR_TYPE = c("bucket", "patternadjusted", "niave")
 CLASS_INIT_METHODS = c("random_centers_polar", "random_centers", "random", "kmodes")
 DOMAIN_PROPOSAL_EMPTY = 0.3
 STEPS_ACTIVE = c("thetas"=TRUE, "domains"=TRUE, "class_pi"=TRUE, "classes"=TRUE, "identifiable"=TRUE, "likelihood"=TRUE, "class_collapse"=FALSE)
@@ -37,7 +37,7 @@ CLASS2DOMAIN_FUNS = list(
 )
 CLASS2DOMAINS = names(CLASS2DOMAIN_FUNS)
 
-#' Fits a bayesian dependent LCM model
+#' Fits a bayesian Domain LCM model
 #' @inheritParams getStart_hparams
 #' @inheritParams getStart_bayes_params
 #' @inheritParams doWarmup
@@ -325,8 +325,8 @@ dependentLCM_fit <- function(
 #' }
 #' @param domain_theta_prior_type string. Defines what sort of prior is used for domains and theta. One of the following.
 #' \itemize{
-#' \item{"permissive=}{ recommended/default. has moderate regularization on domains. Domain uses "balls in buckets" prior, and theta uses dirichlet prior.}
-#' \item{"restrictive=}{ has strong regularization on domains. As permissive, but domain prior is adjusted further to cancel out any theta prior.}
+#' \item{"bucket=}{ recommended/default. has moderate regularization on domains. Domain uses "balls in buckets" prior, and theta uses dirichlet prior.}
+#' \item{"patternadjusted=}{ has strong regularization on domains. As bucket, but domain prior is adjusted further to cancel out any theta prior.}
 #' \item{"niave=}{ no regularization on domains. Bad outcomes result. For demonstration purposes only. Assumes all domains are equally likely.}
 #' }
 #' @param domainPriorKnowledgeLog Numeric. An nitem*nitem upper triangular matrix. Values of zero indicate no prior knowledge of the domain structure. Values greater than zero indicate that this pair of items should be more likely to be in the same domain. Values less than zero indicate that this pair of items should be less likely to be in the same domain.
@@ -745,8 +745,8 @@ check_params <- function(all_params) {
     is_problem = TRUE
   }
   
-  if ((all_params$hparams$domain_theta_prior_type == "restrictive") & (all_params$hparams$theta_alpha!=1)) {
-    warning("domain_theta_prior_type=restrictive requires theta_alpha=1")
+  if ((all_params$hparams$domain_theta_prior_type == "patternadjusted") & (all_params$hparams$theta_alpha!=1)) {
+    warning("domain_theta_prior_type=patternadjusted requires theta_alpha=1")
     is_problem = TRUE
   }
   
@@ -768,10 +768,10 @@ check_params <- function(all_params) {
   return(is_problem)
 }
 
-#' Take dependent latent class model (dlcm) output (i.e. from dependentLCM_fit)
+#' Take domain latent class model (dlcm) output (i.e. from dependentLCM_fit)
 #' and convert it into Hyper/Bayes parameter arguments to put into dependentLCM_fit.
 #' Used namely for nesting dependentLCM_fit.
-#' @param dlcm Dependent latent class model from dependentLCM_fit()
+#' @param dlcm Domain latent class model from dependentLCM_fit()
 #' @param iter_diff Zero indicates last iteration. One indicates the previous iteration. Etc.
 #' @keywords internal
 dlcm2paramargs <- function(dlcm, iter_diff=0) {

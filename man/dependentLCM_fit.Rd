@@ -2,7 +2,7 @@
 % Please edit documentation in R/dependentLCM_fit.r
 \name{dependentLCM_fit}
 \alias{dependentLCM_fit}
-\title{Fits a bayesian dependent LCM model}
+\title{Fits a bayesian Domain LCM model}
 \usage{
 dependentLCM_fit(
   nitr,
@@ -55,8 +55,8 @@ If "HOMO" then defaults to c(0,0,...). If "HET" then defaults to c(0, 1, 2, ...)
 
 \item{domain_theta_prior_type}{string. Defines what sort of prior is used for domains and theta. One of the following.
 \itemize{
-\item{"permissive=}{ recommended/default. has moderate regularization on domains. Domain uses "balls in buckets" prior, and theta uses dirichlet prior.}
-\item{"restrictive=}{ has strong regularization on domains. As permissive, but domain prior is adjusted further to cancel out any theta prior.}
+\item{"bucket=}{ recommended/default. has moderate regularization on domains. Domain uses "balls in buckets" prior, and theta uses dirichlet prior.}
+\item{"patternadjusted=}{ has strong regularization on domains. As bucket, but domain prior is adjusted further to cancel out any theta prior.}
 \item{"niave=}{ no regularization on domains. Bad outcomes result. For demonstration purposes only. Assumes all domains are equally likely.}
 }}
 
@@ -144,7 +144,7 @@ The mcmc item includes the following values. mcmc does NOT discard any warmup it
 }
 }
 \description{
-Fits a bayesian dependent LCM model
+Fits a bayesian Domain LCM model
 }
 \examples{
 \dontrun{

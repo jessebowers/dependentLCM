@@ -3,18 +3,18 @@
 \name{get_jointLikelihood}
 \alias{get_jointLikelihood}
 \title{For each iteration, calculate the prior probabilities of each parameter and conditional probability of our responses (marginalized over class)
-Assumes domain prior of "permissive".
+Assumes domain prior of "bucket".
 Might require save_itrs=c(all=0, classes=Inf) in DLCM model.}
 \usage{
 get_jointLikelihood(dlcm, method = "itrLogLik")
 }
 \arguments{
-\item{dlcm}{Dependent latent class model outptut from dependentLCM_fit}
+\item{dlcm}{Domain latent class model outptut from dependentLCM_fit}
 
 \item{method}{Defines what variable from dlcm$mcmc is used to calculate resposne probabilities. One of c("itrLogLik", "class_loglik", "").}
 }
 \description{
 For each iteration, calculate the prior probabilities of each parameter and conditional probability of our responses (marginalized over class)
-Assumes domain prior of "permissive".
+Assumes domain prior of "bucket".
 Might require save_itrs=c(all=0, classes=Inf) in DLCM model.
 }

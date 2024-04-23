@@ -2,12 +2,12 @@
 % Please edit documentation in R/describeDLCM.r
 \name{dlcm.summary}
 \alias{dlcm.summary}
-\title{Get some summary statistics from fitted dependent LCM}
+\title{Get some summary statistics from fitted domain LCM}
 \usage{
 dlcm.summary(dlcm, nwarmup = NULL, waic_method = "agg")
 }
 \arguments{
-\item{dlcm}{list. Fitted dependent LCM}
+\item{dlcm}{list. Fitted domain LCM}
 
 \item{nwarmup}{integer. The first n iterations are considered warmup iterations}
 }
@@ -29,5 +29,5 @@ List with:
 }
 }
 \description{
-Get some summary statistics from fitted dependent LCM
+Get some summary statistics from fitted domain LCM
 }

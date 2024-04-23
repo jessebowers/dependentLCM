@@ -2,19 +2,19 @@
 % Please edit documentation in R/dependentLCM_fit.r
 \name{dlcm2paramargs}
 \alias{dlcm2paramargs}
-\title{Take dependent latent class model (dlcm) output (i.e. from dependentLCM_fit)
+\title{Take domain latent class model (dlcm) output (i.e. from dependentLCM_fit)
 and convert it into Hyper/Bayes parameter arguments to put into dependentLCM_fit.
 Used namely for nesting dependentLCM_fit.}
 \usage{
 dlcm2paramargs(dlcm, iter_diff = 0)
 }
 \arguments{
-\item{dlcm}{Dependent latent class model from dependentLCM_fit()}
+\item{dlcm}{Domain latent class model from dependentLCM_fit()}
 
 \item{iter_diff}{Zero indicates last iteration. One indicates the previous iteration. Etc.}
 }
 \description{
-Take dependent latent class model (dlcm) output (i.e. from dependentLCM_fit)
+Take domain latent class model (dlcm) output (i.e. from dependentLCM_fit)
 and convert it into Hyper/Bayes parameter arguments to put into dependentLCM_fit.
 Used namely for nesting dependentLCM_fit.
 }

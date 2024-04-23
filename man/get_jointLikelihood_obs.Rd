@@ -7,7 +7,7 @@
 get_jointLikelihood_obs(dlcm, method)
 }
 \arguments{
-\item{dlcm}{Dependent latent class model outptut from dependentLCM_fit}
+\item{dlcm}{Domain latent class model outptut from dependentLCM_fit}
 
 \item{method}{Defines what variable from dlcm$mcmc is used to calculate resposne probabilities. One of c("itrLogLik", "class_loglik", "").}
 }

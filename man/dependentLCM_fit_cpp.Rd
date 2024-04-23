@@ -14,7 +14,7 @@ dependentLCM_fit_cpp(x_in, hparams_list, params_list)
 \item{params_list}{List of parameter info. See getStart_bayes_params() in R.}
 }
 \description{
-Does MCMC simulations for dependent LCM model.
+Does MCMC simulations for domain LCM model.
 This is a C++ script. Run dependentLCM_fit in dependentLCM.r to execute.
 }
 \keyword{internal}

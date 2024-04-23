@@ -7,7 +7,7 @@
 dlcm.get_waic(dlcm, method = "agg", itrs = NULL)
 }
 \arguments{
-\item{dlcm}{Dependent Latent class model}
+\item{dlcm}{Domain Latent class model}
 
 \item{method}{string from c("agg", "raw").}
 

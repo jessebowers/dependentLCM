@@ -6,8 +6,8 @@ NULL
 ##############
 
 
-#' Get some summary statistics from fitted dependent LCM
-#' @param dlcm list. Fitted dependent LCM
+#' Get some summary statistics from fitted domain LCM
+#' @param dlcm list. Fitted domain LCM
 #' @param nwarmup integer. The first n iterations are considered warmup iterations
 #' @return List with:
 #' \itemize{
@@ -175,7 +175,7 @@ get_itrs_helper <- function(nsaved, nwarmup, nitr) {
 
 
 #' Calculate likelihood and WAIC
-#' @param dlcm Dependent Latent class model
+#' @param dlcm Domain Latent class model
 #' @param method string from c("agg", "raw"). 
 #' @param itrs integer vector. Which iterations should be include in calculation? Ignored if "agg" is chosen.
 #' @return List with a 'summary' and 'df' value. The 'summary' is a vector with the following summary statitics:
@@ -413,7 +413,7 @@ theta_item_probs <- function(items, this_sim, itrs=NULL, merge_itrs=TRUE, classe
 
 #' For each domain domain, compare the probabilities under local dependence (DLCM) versus under local independence (traditional LCM). Describes the amount of dependence captured by our DLCM model.
 #' @param thetas_avg dataframe. Describes average response probabilities for different domains. As returned from dlcm.summary()
-#' @param dlcm list. Fitted dependent LCM
+#' @param dlcm list. Fitted domain LCM
 #' @param items_ids integerVector. Optional. Which domains do we want to process?
 #' @param class_pi numericVector. Optional. Prior probability of being in each class. Used to aggregate certain terms across classes.
 #' @return Returns two objects.
@@ -697,13 +697,13 @@ kl_max <- function(nlevels) {
 #' If FALSE, we look for any domain which produces domains of this size regardless of what specific items they contain.
 #' IF TRUE, we fix which items are in which domain, and calculate the probability of grouping these specific items together.
 #' @param log Boolean. If TRUE give probability in log scale.
-#' @param domain_theta_prior_type String. What domain prior are we using? One of c("permissive", "restrictive")
-#' @param x_npatterns IntegerVector. For domain_theta_prior_type="restrictive". For each domain x, how many possible response patterns are there to that domain?
+#' @param domain_theta_prior_type String. What domain prior are we using? One of c("bucket", "patternadjusted")
+#' @param x_npatterns IntegerVector. For domain_theta_prior_type="patternadjusted". For each domain x, how many possible response patterns are there to that domain?
 #' @export
-ldomain_prior <- function(x, ndomains, specific_items=FALSE, log=TRUE, domain_theta_prior_type="permissive", x_npatterns=NULL) {
+ldomain_prior <- function(x, ndomains, specific_items=FALSE, log=TRUE, domain_theta_prior_type="bucket", x_npatterns=NULL) {
   
-  lpattern_adjustment = 0 # for "restrictive"
-  if (domain_theta_prior_type=="restrictive") {
+  lpattern_adjustment = 0 # for "patternadjusted"
+  if (domain_theta_prior_type=="patternadjusted") {
     if (length(x) != length(x_npatterns)) {
       stop("ldomain_prior: For domain_theta_prior_type==restrictive we require x_npatterns to be set.")
     }
@@ -733,7 +733,7 @@ ldomain_prior <- function(x, ndomains, specific_items=FALSE, log=TRUE, domain_th
 
 
 #' For each iteration, calculate the prior probabilities of each parameter and conditional probability of our responses (marginalized over class)
-#' Assumes domain prior of "permissive".
+#' Assumes domain prior of "bucket".
 #' Might require save_itrs=c(all=0, classes=Inf) in DLCM model.
 #' @inheritParams get_jointLikelihood_obs
 #' @export
@@ -752,7 +752,7 @@ get_jointLikelihood <- function(dlcm, method="itrLogLik") {
 
 
 #' Calculates probability of each response collapsed on classes, then aggregated for each iteration
-#' @param dlcm Dependent latent class model outptut from dependentLCM_fit
+#' @param dlcm Domain latent class model outptut from dependentLCM_fit
 #' @param method Defines what variable from dlcm$mcmc is used to calculate resposne probabilities. One of c("itrLogLik", "class_loglik", "").
 #' @keywords internal
 get_jointLikelihood_obs <- function(dlcm, method) {
