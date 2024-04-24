@@ -31,7 +31,7 @@ For details see: Bowers, J., & Culpepper, S. (2022). Dependent Latent Class Mode
 
 A provided dataset is assumed to have one row per observation and one column per item (question). For a given question, the values should range from zero up to the max value for that question. Questions with more than 2 values are supported, and all responses are treated as nominal (unordered). The current version of the code does not support missing values.
 
-We use data collected on $n=533$ infants.  Each infant has four visits to the doctor. At each visit, the doctor records whether the infant has four symptoms: Night cough, wheezing, itchy rash, and flexural dermatitis. This data was collected by collected by Mihrshai et al (2001) and is available in the randomLCA package (randomLCA::symptoms).
+We use data collected on $n=533$ infants.  Each infant has four visits to the doctor. At each visit, the doctor records whether the infant has four symptoms: Night cough, wheezing, itchy rash, and flexural dermatitis. Each column name contains the symptom followed by the visit number: e.g. `Wheeze.2` indicates wheezing at time point 2. This data was collected by collected by Mihrshai et al (2001) and is available in the randomLCA package (`randomLCA::symptoms`).
 
 ```{r}
 data("randomLCA_symptoms_data", package="dependentLCM")
@@ -55,7 +55,7 @@ dlcm <- dependentLCM_fit(
 )
 ```
 
-To determine the appropriate number of clusters (classes), multiple models should be fit. The model with the best goodness of fit should be chosen. Our package supports measuring goodness of fit using Watanabe-Akaike Information Criterion (WAIC): dependentLCM::dlcm.get_waic(dlcm). In this example four groups of infants fits well, and we omit any competing models.
+To determine the appropriate number of clusters (classes), multiple models should be fit. The model with the best goodness of fit should be chosen. Our package supports measuring goodness of fit using Watanabe-Akaike Information Criterion (WAIC): `dlcm.get_waic(dlcm)`. In this example four groups of infants fits well, and we omit any competing models.
 
 # Summarizing Results
 
@@ -71,7 +71,7 @@ dlcm$summary <- dlcm.summary(dlcm)
 knitr::kable(head(dlcm$summary$domain_items_all), format = "html")
 ```
 
-*thetas_avg_mode*: We now seek to interpret our four classes. The value `dlcm$summary$thetas_avg_mode` describes the how each class (group of infants) responds to each item (symptom). Each row takes a particular response to a particular group of items, and describes how likely we are to observe that response. The trailing columns give these response probabilities for each class in turn. In this example each of the four classes corresponds with either a high/low prevalence of skin symptoms, and either a high/low prevalence of lung symptoms. For additional documentation see: `dlcm.summary()`.
+*thetas_avg_mode*: We now seek to interpret our four classes. The value `dlcm$summary$thetas_avg_mode` describes the how each class (group of infants) responds to each item (symptom). Each row takes a particular response to a particular group of items, and describes how likely we are to observe that response. The trailing columns give these response probabilities for each class in turn. In this example each of the four classes corresponds with either a high/low prevalence of skin symptoms (e.g. in items 3/4), and either a high/low prevalence of lung symptoms (e.g. in items 1/2). For additional documentation see: `dlcm.summary()`.
 
 ```{r}
 knitr::kable(head(dlcm$summary$thetas_avg_mode, 10), format = "html")
