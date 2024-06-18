@@ -25,7 +25,10 @@ library(dplyr)
 
 *Domain LCMs:* Domain LCMs allow for questions (items) to be related. Traditional LCMs assume all items are answered separately/independently. Domain LCMs group related items into `domains'. The answer to one question in a domain impacts the responses to other questions in the same domain. Conversely the answer to questions in one domain do not impact the answers to the questions in any other domains.
 
-For details see: Bowers, J., & Culpepper, S. (2022). Dependent Latent Class Models (Version 1). arXiv. \url{https://doi.org/10.48550/ARXIV.2205.08677}
+For details see: 
+
+* Jesse Bowers. Steve Culpepper. "Domain Latent Class Models." Bayesian Anal. Advance Publication 1 - 28, 2024. https://doi.org/10.1214/24-BA1433
+* Bowers, J., & Culpepper, S. (2022). Dependent Latent Class Models (Version 1). arXiv. \url{https://doi.org/10.48550/ARXIV.2205.08677}
 
 # Data
 
