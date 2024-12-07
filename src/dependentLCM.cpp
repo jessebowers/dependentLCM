@@ -609,7 +609,7 @@ public:
   void set_initial(Rcpp::IntegerVector& items_in, const Hyperparameter& hparams, const Rcpp::NumericVector& lthetas_in = Rcpp::NumericVector(0));
   void set_initial(Rcpp::List list_domain, const Hyperparameter& hparams);
   static std::vector<std::map<int,  DomainCount> > list2domains(Rcpp::List list_list_domains, const Hyperparameter& hparams);
-  void set_pattern2id_map(const Hyperparameter& hparams);
+  void set_pattern2id_map(const Rcpp::IntegerVector& item_nlevels);
   
 public:
   template <typename vectype> int pattern2id(const vectype& xobs);
@@ -646,7 +646,7 @@ void DomainCount::set_initial(Rcpp::IntegerVector& items_in, const Hyperparamete
   TROUBLE_START(("DomainCount::set_initial #V1"));
   items = items_in;
   
-  set_pattern2id_map(hparams);
+  set_pattern2id_map(hparams.item_nlevels);
   
   if (lthetas_in.size() > 0) {
     lthetas = lthetas_in;
@@ -665,10 +665,10 @@ void DomainCount::set_initial(Rcpp::IntegerVector& items_in, const Hyperparamete
 //' See id2pattern(.) for more details
 //' Side effect. Sets npatterns
 //' @keywords internal
-void DomainCount::set_pattern2id_map(const Hyperparameter& hparams) {
+void DomainCount::set_pattern2id_map(const Rcpp::IntegerVector& item_nlevels) {
   TROUBLE_START(("DomainCount::set_pattern2id_map"));
   
-  pattern2id_map = Rcpp::IntegerVector(hparams.nitem, 0);
+  pattern2id_map = Rcpp::IntegerVector(item_nlevels.size(), 0);
   int ndomainitems = ndomainitems_calc();
   
   if (ndomainitems==0) {
@@ -681,7 +681,7 @@ void DomainCount::set_pattern2id_map(const Hyperparameter& hparams) {
   for (int i = 0; i < ndomainitems; i++) {
     iitem = items[i];
     pattern2id_map[iitem] = cumprod_current;
-    cumprod_current *= hparams.item_nlevels[iitem];
+    cumprod_current *= item_nlevels[iitem];
   }
   
   npatterns = cumprod_current; // Should match npatterns = lthetas.size() and product(item_nlevels[theseItems])
@@ -2350,6 +2350,26 @@ Rcpp::IntegerVector itemid2patterns(const Rcpp::IntegerVector& pattern_ids, cons
   
   return patterns;
 }
+
+//' @name get_pattern2id_map
+//' @title get_pattern2id_map
+//' @description Create 'conversion vector' for converting (vector) response pattern to representative ID
+//' The dot product of the pattern2id_map and the response pattern gives the pattern id. This does the opposite of id2pattern(.).
+//' @param items_ids ID reprsenting which items (positions) should be 'filled'. 
+//' @param item_nlevels How many possible values each item can take. The response pattern is assumed to 
+//' @export
+// [[Rcpp::export]]
+Rcpp::IntegerVector get_pattern2id_map(const Rcpp::IntegerVector& item_nlevels, const Rcpp::IntegerVector& items) {
+  TROUBLE_START(("get_pattern2id_map"));
+  // Wraps DomainCount::set_pattern2id_map(.) for use in R.
+  
+  DomainCount idomain;
+  idomain.items = items;
+  idomain.set_pattern2id_map(item_nlevels);
+  
+  TROUBLE_END; return idomain.pattern2id_map;
+}
+
 
 
 //' @name expSumLog
