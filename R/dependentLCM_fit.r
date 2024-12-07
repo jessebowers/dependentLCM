@@ -54,18 +54,25 @@ CLASS2DOMAINS = names(CLASS2DOMAIN_FUNS)
 #' \item{"class_loglik"}{=A 3-dimensional array. The first dimension has one slice per class. The second dimension has one slice per subject/observation. The third dimension has one slice per MCMC iteration. Each cell contains the log likelihood that we would observe the response pattern given by this subject, if the subject was in this class, based on the parameters in this iteration.}
 #' \item{"troubleshooting"}{=Used for investigationg bugs. Should be empty.}
 #' \item{".Random.seed"}{=The state of the random seed before this function was executed. If you set the seed to this state and run again you should get the same result.}
-#' \item{"domains"}{=Dataframe with one row for iteration X domain X pattern. For an MCMC iteration, it identifies what domains there are, and for each class what's the probability of getting a given response pattern to a given domain. It contains the following columns:
+#' \item{"domains"}{=Dataframe with one row for iteration X domain X pattern. Each domain (items_id) indicates a group of items, and each pattern (pattern_id) indicates the response pattern of those items. To look up information on these join to dataframe response_patterns on columns items_id and pattern_id. For each MCMC iteration, the 'domains' dataframe gives the response probability for each class and response pattern. It contains the following columns:
 #' \itemize{
 #' \item{"itr"}{=What MCMC iteration is this?}
 #' \item{"class"}{=What class are we calculating the response probabilities for?}
-#' \item{"domain"}{=ID. What domain is this?}
+#' \item{"domain"}{=ID. What domain is this? For most purposes you should use items_id instead.}
 #' \item{"pattern_id"}{=Integer uniquely identifying a response pattern to thie items in this domain. We will calculate the probability of this response pattern. pattern_id needs to be paired with a items_id to make sense of it.}
 #' \item{"items_id"}{=Integer uniquely identifying what items (what set of items) are in this domain.}
 #' \item{"class2domain"}{=For heterogeneous and partially heterogeneous DLCMs, this identifies which group of latent classes this domain belongs to.}
 #' \item{"prob"}{=What's the probability of getting this response pattern?}
+#' }}
+#' \item{"response_patterns"}{=Dataframe with one row for each domain X pattern. This identifies the items in the domain, and the vaues of the respone pattern. It has the following columns:
+#' \itemize{
+#' \item{"items_id"}{=Integer uniquely identifying what items (what set of items) are in this domain.}
+#' \item{"pattern_id"}{=Integer uniquely identifying a response pattern to thie items in this domain. We will calculate the probability of this response pattern. pattern_id needs to be paired with a items_id to make sense of it.}
+#' \item{"items"}{=Vector containing the items in this domain. Function of items_id.}
+#' \item{"pattern"}{=Vector containing the values in the response pattern. Function of with (items_id,pattern_id).}
+#' \item{"items_id_first"}{=Boolean. Filtering on TRUE gives unique domains/items_id.}
 #' \item{"nitems"}{=How many items are in this domain?}
-#' \item{items"}{=String listing the items in this domain. Function of items_id.}
-#' \item{item_#"}{=For each item #, gives the specific value of that item in this response pattern. A value of -1 indicates this item is not in this domain. item_# is a function of (items_id, pattern_id).}
+#' \item{"item_#"}{=For each item #, gives the specific value of that item in this response pattern. A value of -1 indicates this item is not in this domain. item_# is a function of (items_id, pattern_id).}
 #' }}
 #' \item{"domains_merged"}{=Dataframe describing what domains were chosen for each MCMC iteration. There is one row for MCMC iteratation X class2domain. For (partially) heterogeneous DLCMs, class2domain allows different classes to have different domains. The string column domains_merged describes the domains with vertical bars "|" separating domains, and commas "," separating items wtihin a given domain.}
 #' \item{"runtimes"}{=Describes how long the function ran in seconds. pre records the seconds of preprocessing before starting MCMC. mcmc describes how long it took to run the mcmc iterations. post describes how long it took to aggregate/transform the data after the MCMC is completed. Total gives the total time. There are 'secret' troubleshooting steps to get the runtime of specific C++ functions executed by this algorithm (these are stored under 'troubleshooting').}
@@ -187,39 +194,36 @@ dependentLCM_fit <- function(
   mode(mcmc$domains_id) <- "integer"
   mcmc$domains_lprobs <- unlist(mcmc$domains_lprobs)
   
-  # domains_patterns 
-  mcmc$domains_patterns <- itemid2patterns(mcmc$domains_id["pattern_id",], mcmc$domains_id["items_id",], hparams[["item_nlevels"]])
-  rownames(mcmc$domains_patterns) <- paste0("item_", seq_len(nrow(mcmc$domains_patterns)))
-  mode(mcmc$domains_patterns) <- "integer"
-  
   # response_patterns
   domains_id_unique_ids <- which(!duplicated(mcmc$domains_id[c("items_id", "pattern_id"), ], MARGIN=2, fromLast=TRUE))
   response_patterns <- as.data.frame(t(mcmc$domains_id[c("items_id", "pattern_id"), domains_id_unique_ids]))
+  {
+    idomains_patterns <- itemid2patterns(response_patterns$pattern_id, response_patterns$items_id, hparams[["item_nlevels"]])
+    rownames(idomains_patterns) <- paste0("item_", seq_len(nrow(idomains_patterns)))
+    mode(idomains_patterns) <- "integer"
+    all_params$hparams$domain_item_cols <- rownames(idomains_patterns)
+    response_patterns <- cbind.data.frame(
+      response_patterns
+      , t(idomains_patterns)
+    )
+  }
   response_patterns$items <- apply(
-    mcmc$domains_patterns[,domains_id_unique_ids]
+    response_patterns[,all_params$hparams$domain_item_cols]
     , 2
     , function(x) which(x>-1)
     , simplify = FALSE
   )
   response_patterns$pattern <- apply(
-    mcmc$domains_patterns[,domains_id_unique_ids]
+    response_patterns[,all_params$hparams$domain_item_cols]
     , 2, function(x) x[x>-1]
     , simplify = FALSE
   )
   response_patterns$items_id_first <- (response_patterns$pattern_id==0)
+  response_patterns$nitems <- sapply(response_patterns$items, length)
   mcmc$response_patterns <- response_patterns
   rm(response_patterns)
   
   # Supplemental
-  domains_items <- match_lookup(
-    x=mcmc$domains_id["items_id",]
-    , table=mcmc$response_patterns[mcmc$response_patterns$items_id_first,"items_id"]
-    , lookup=sapply(
-      mcmc$response_patterns[mcmc$response_patterns$items_id_first,"items"]
-      , paste0, collapse=","
-    )
-  )
-  domains_nitems <- as.integer(colSums(mcmc$domains_patterns > -1))
   domains_class2domain <- all_params$hparams$class2domain[mcmc$domains_id["class",,drop=TRUE]+1]
   mcmc$domains_id["itr",] <- mcmc$domains_id["itr",] + 1L # start at 1
   mcmc$.Random.seed <- .Random.seed_start
@@ -229,16 +233,11 @@ dependentLCM_fit <- function(
     t(mcmc$domains_id)
     , class2domain = domains_class2domain
     , prob=exp(mcmc$domains_lprobs)
-    , nitems = domains_nitems
-    , items = domains_items
-    , t(mcmc$domains_patterns)
     , stringsAsFactors = FALSE
   )
-  all_params$hparams$domain_item_cols <- grep("^item_[0-9]+", colnames(mcmc$domains))
   
   # Delete redundant info
   mcmc$domains_id <- NULL
-  mcmc$domains_patterns <- NULL
   mcmc$domains_lprobs <- NULL
   mcmc$nclass2domain <- NULL
   
