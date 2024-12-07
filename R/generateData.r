@@ -65,38 +65,6 @@ simulate_lcm <- function(n, pis, thetas) {
   return(list(classes=classes, responses=responses))
 }
 
-#' Take the parameters of a simulated lcm (simulate_lcm)
-#' and produce the probability of seeing this observation
-#' @inheritParams simulate_lcm
-#' @param xobs numeric vector. One vector observation
-#' @note Helper function for sim_logprobs. Currently only supports thetas in list form.
-#' @keywords internal
-sim_logprob_one <- function(xobs, pis, thetas) {
-  nclass <-length(pis)
-  class_logprobs <- sapply(
-    seq_len(nclass)
-    , function(iclass){
-      sum(log(mapply(
-        function(theta, xobs) theta[xobs+1]
-        , theta=thetas[[iclass]]
-        , xobs=xobs
-      )))}
-  )
-  class_logprobs <- class_logprobs + log(pis)
-  return(expSumLog(class_logprobs))
-}
-
-#' Take the parameters of a simulated lcm (simulate_lcm)
-#' and produce the probability of seeing each observation given
-#' @inheritParams simulate_lcm
-#' @param x numeric matrix. Data with one row per observation.
-#' @note Currently only supports thetas in list form. FUTURE extend to include matrix thetas as well.
-#' @export
-sim_logprobs <- function(x, pis, thetas) {
-  return(apply(x, 1, sim_logprob_one, pis=pis, thetas=thetas))
-}
-
-
 ##############
 ############## DATA
 ##############
