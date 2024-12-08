@@ -69,7 +69,7 @@ CLASS2DOMAINS = names(CLASS2DOMAIN_FUNS)
 #' \item{"items_id"}{=Integer uniquely identifying what items (what set of items) are in this domain.}
 #' \item{"pattern_id"}{=Integer uniquely identifying a response pattern to thie items in this domain. We will calculate the probability of this response pattern. pattern_id needs to be paired with a items_id to make sense of it.}
 #' \item{"items"}{=Vector containing the items in this domain. Function of items_id.}
-#' \item{"pattern"}{=Vector containing the values in the response pattern. Function of with (items_id,pattern_id).}
+#' \item{"pattern"}{=Vector containing the values in the response pattern. Function of (items_id,pattern_id).}
 #' \item{"items_id_first"}{=Boolean. Filtering on TRUE gives unique domains/items_id.}
 #' \item{"nitems"}{=How many items are in this domain?}
 #' \item{"item_#"}{=For each item #, gives the specific value of that item in this response pattern. A value of -1 indicates this item is not in this domain. item_# is a function of (items_id, pattern_id).}
@@ -197,31 +197,29 @@ dependentLCM_fit <- function(
   # response_patterns
   domains_id_unique_ids <- which(!duplicated(mcmc$domains_id[c("items_id", "pattern_id"), ], MARGIN=2, fromLast=TRUE))
   response_patterns <- as.data.frame(t(mcmc$domains_id[c("items_id", "pattern_id"), domains_id_unique_ids]))
-  {
-    idomains_patterns <- itemid2patterns(response_patterns$pattern_id, response_patterns$items_id, hparams[["item_nlevels"]])
-    rownames(idomains_patterns) <- paste0("item_", seq_len(nrow(idomains_patterns)))
-    mode(idomains_patterns) <- "integer"
-    all_params$hparams$domain_item_cols <- rownames(idomains_patterns)
-    response_patterns <- cbind.data.frame(
-      response_patterns
-      , t(idomains_patterns)
-    )
-  }
+  idomains_patterns <- itemid2patterns(response_patterns$pattern_id, response_patterns$items_id, hparams[["item_nlevels"]])
+  rownames(idomains_patterns) <- paste0("item_", seq_len(nrow(idomains_patterns)))
+  mode(idomains_patterns) <- "integer"
+  all_params$hparams$domain_item_cols <- rownames(idomains_patterns)
   response_patterns$items <- apply(
-    response_patterns[,all_params$hparams$domain_item_cols]
-    , 1
+    idomains_patterns
+    , 2
     , function(x) which(x>-1)
     , simplify = FALSE
   )
   response_patterns$pattern <- apply(
-    response_patterns[,all_params$hparams$domain_item_cols]
-    , 1, function(x) x[x>-1]
+    idomains_patterns
+    , 2, function(x) x[x>-1]
     , simplify = FALSE
   )
+  response_patterns$nitems <- apply(idomains_patterns>-1, 2, sum)
   response_patterns$items_id_first <- (response_patterns$pattern_id==0)
-  response_patterns$nitems <- sapply(response_patterns$items, length)
+  response_patterns <- cbind.data.frame(
+    response_patterns
+    , t(idomains_patterns)
+  )
   mcmc$response_patterns <- response_patterns
-  rm(response_patterns)
+  rm(response_patterns); rm(idomains_patterns)
   
   # Supplemental
   domains_class2domain <- all_params$hparams$class2domain[mcmc$domains_id["class",,drop=TRUE]+1]
