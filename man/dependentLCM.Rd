@@ -9,6 +9,8 @@ Latent Class Models (LCMs) are used to cluster multivariate categorical data (e.
 
 The primary function is dependentLCM_fit. 
 
+Jesse Bowers. Steve Culpepper. "Domain Latent Class Models." Bayesian Anal. Advance Publication 1 - 28, 2024. \url{https://doi.org/10.1214/24-BA1433}
+
 Bowers, J., & Culpepper, S. (2022). Dependent Latent Class Models (Version 1). arXiv. \url{https://doi.org/10.48550/ARXIV.2205.08677}
 
 \url{https://arxiv.org/abs/2205.08677}

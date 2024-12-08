@@ -126,18 +126,25 @@ The mcmc item includes the following values. mcmc does NOT discard any warmup it
 \item{"class_loglik"}{=A 3-dimensional array. The first dimension has one slice per class. The second dimension has one slice per subject/observation. The third dimension has one slice per MCMC iteration. Each cell contains the log likelihood that we would observe the response pattern given by this subject, if the subject was in this class, based on the parameters in this iteration.}
 \item{"troubleshooting"}{=Used for investigationg bugs. Should be empty.}
 \item{".Random.seed"}{=The state of the random seed before this function was executed. If you set the seed to this state and run again you should get the same result.}
-\item{"domains"}{=Dataframe with one row for iteration X domain X pattern. For an MCMC iteration, it identifies what domains there are, and for each class what's the probability of getting a given response pattern to a given domain. It contains the following columns:
+\item{"domains"}{=Dataframe with one row for iteration X domain X pattern. Each domain (items_id) indicates a group of items, and each pattern (pattern_id) indicates the response pattern of those items. To look up information on these join to dataframe response_patterns on columns items_id and pattern_id. For each MCMC iteration, the 'domains' dataframe gives the response probability for each class and response pattern. It contains the following columns:
 \itemize{
 \item{"itr"}{=What MCMC iteration is this?}
 \item{"class"}{=What class are we calculating the response probabilities for?}
-\item{"domain"}{=ID. What domain is this?}
+\item{"domain"}{=ID. What domain is this? For most purposes you should use items_id instead.}
 \item{"pattern_id"}{=Integer uniquely identifying a response pattern to thie items in this domain. We will calculate the probability of this response pattern. pattern_id needs to be paired with a items_id to make sense of it.}
 \item{"items_id"}{=Integer uniquely identifying what items (what set of items) are in this domain.}
 \item{"class2domain"}{=For heterogeneous and partially heterogeneous DLCMs, this identifies which group of latent classes this domain belongs to.}
 \item{"prob"}{=What's the probability of getting this response pattern?}
+}}
+\item{"response_patterns"}{=Dataframe with one row for each domain X pattern. This identifies the items in the domain, and the vaues of the respone pattern. It has the following columns:
+\itemize{
+\item{"items_id"}{=Integer uniquely identifying what items (what set of items) are in this domain.}
+\item{"pattern_id"}{=Integer uniquely identifying a response pattern to thie items in this domain. We will calculate the probability of this response pattern. pattern_id needs to be paired with a items_id to make sense of it.}
+\item{"items"}{=Vector containing the items in this domain. Function of items_id.}
+\item{"pattern"}{=Vector containing the values in the response pattern. Function of with (items_id,pattern_id).}
+\item{"items_id_first"}{=Boolean. Filtering on TRUE gives unique domains/items_id.}
 \item{"nitems"}{=How many items are in this domain?}
-\item{items"}{=String listing the items in this domain. Function of items_id.}
-\item{item_#"}{=For each item #, gives the specific value of that item in this response pattern. A value of -1 indicates this item is not in this domain. item_# is a function of (items_id, pattern_id).}
+\item{"item_#"}{=For each item #, gives the specific value of that item in this response pattern. A value of -1 indicates this item is not in this domain. item_# is a function of (items_id, pattern_id).}
 }}
 \item{"domains_merged"}{=Dataframe describing what domains were chosen for each MCMC iteration. There is one row for MCMC iteratation X class2domain. For (partially) heterogeneous DLCMs, class2domain allows different classes to have different domains. The string column domains_merged describes the domains with vertical bars "|" separating domains, and commas "," separating items wtihin a given domain.}
 \item{"runtimes"}{=Describes how long the function ran in seconds. pre records the seconds of preprocessing before starting MCMC. mcmc describes how long it took to run the mcmc iterations. post describes how long it took to aggregate/transform the data after the MCMC is completed. Total gives the total time. There are 'secret' troubleshooting steps to get the runtime of specific C++ functions executed by this algorithm (these are stored under 'troubleshooting').}

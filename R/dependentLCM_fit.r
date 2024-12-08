@@ -209,13 +209,13 @@ dependentLCM_fit <- function(
   }
   response_patterns$items <- apply(
     response_patterns[,all_params$hparams$domain_item_cols]
-    , 2
+    , 1
     , function(x) which(x>-1)
     , simplify = FALSE
   )
   response_patterns$pattern <- apply(
     response_patterns[,all_params$hparams$domain_item_cols]
-    , 2, function(x) x[x>-1]
+    , 1, function(x) x[x>-1]
     , simplify = FALSE
   )
   response_patterns$items_id_first <- (response_patterns$pattern_id==0)
@@ -246,7 +246,11 @@ dependentLCM_fit <- function(
   #
   
   mcmc$domains_merged <- as.data.frame(
-    mcmc$domains 
+    dplyr::inner_join(
+      x=mcmc$domains %>% dplyr::filter(pattern_id==0)
+      , y=mcmc$response_patterns %>% dplyr::filter(pattern_id==0)
+      , by=c("items_id", "pattern_id")
+      )
     %>% dplyr::filter(pattern_id==0) 
     %>% dplyr::group_by(itr, class2domain)
     %>% dplyr::filter(class == min(class))

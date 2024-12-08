@@ -8,7 +8,7 @@
 Mihrshahi, S., Peat, J.K., Webb, K., Tovey, R.E., Marks, G.B., Mellis, C.M. and Leeder S.R. (2001) The Childhood Asthma Prevention Study (CAPS): Design and research protocol of a randomized trial for the primary prevention of asthma. Control led Clinical Trials, 22:333-354.
 }
 \description{
-See randomLCA::symptoms. Data was transformed to remove NA values, and to remove the 'Freq' column.
+See randomLCA::symptoms. Data was modified as follows. 1) NA rows are removed. 2) 'Freq' column is removed after duplicating rows to preserve frequencies. 3) Columns are renamed so that '1' refers to the first time point, '2' refers to the second time point, etc.
 }
 \references{
 randomLCA::symptoms

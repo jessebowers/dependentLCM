@@ -601,6 +601,17 @@ itemid2patterns <- function(pattern_ids, items_ids, item_nlevels) {
     .Call(`_dependentLCM_itemid2patterns`, pattern_ids, items_ids, item_nlevels)
 }
 
+#' @name get_pattern2id_map
+#' @title get_pattern2id_map
+#' @description Create 'conversion vector' for converting (vector) response pattern to representative ID
+#' The dot product of the pattern2id_map and the response pattern gives the pattern id. This does the opposite of id2pattern(.).
+#' @param items_ids ID reprsenting which items (positions) should be 'filled'. 
+#' @param item_nlevels How many possible values each item can take. The response pattern is assumed to 
+#' @export
+get_pattern2id_map <- function(item_nlevels, items) {
+    .Call(`_dependentLCM_get_pattern2id_map`, item_nlevels, items)
+}
+
 #' @name expSumLog
 #' @title expSumLog
 #' Same as log(sum(exp(x))), but adjusted to improve precision.
