@@ -204,12 +204,12 @@ dependentLCM_fit <- function(
   response_patterns$items <- apply(
     idomains_patterns
     , 2
-    , function(x) which(x>-1)
+    , function(x) unname(which(x>-1))
     , simplify = FALSE
   )
   response_patterns$pattern <- apply(
     idomains_patterns
-    , 2, function(x) x[x>-1]
+    , 2, function(x) unname(x[x>-1])
     , simplify = FALSE
   )
   response_patterns$nitems <- apply(idomains_patterns>-1, 2, sum)
@@ -246,15 +246,19 @@ dependentLCM_fit <- function(
   mcmc$domains_merged <- as.data.frame(
     dplyr::inner_join(
       x=mcmc$domains %>% dplyr::filter(pattern_id==0)
-      , y=mcmc$response_patterns %>% dplyr::filter(pattern_id==0)
-      , by=c("items_id", "pattern_id")
-      )
-    %>% dplyr::filter(pattern_id==0) 
+      , y=(
+          mcmc$response_patterns 
+          %>% dplyr::filter(pattern_id==0)
+          %>% dplyr::mutate(items_str = sapply(items, paste0, collapse=","))
+        )
+      , by="items_id" # c("items_id", "pattern_id")
+    )
     %>% dplyr::group_by(itr, class2domain)
     %>% dplyr::filter(class == min(class))
     %>% dplyr::arrange(-nitems, items)
-    %>% dplyr::summarize(domains_merged=paste(items, collapse="|"), .groups="keep")
+    %>% dplyr::summarize(domains_merged=paste(items_str, collapse="|"), .groups="keep")
   )
+  # domains_merged$domains_merged <- factor(domains_merged$domains_merged)
   
   if (mcmc$nitrLik > 0) {
     names(mcmc$itrLogLik) <- paste0("itr", seq(to=hparams$nitr, length.out=mcmc$nitrLik))
