@@ -34,17 +34,35 @@ dlcm.summary <- function(dlcm, nwarmup=NULL, waic_method="agg") {
   itrs <- get_itrs_helper(nsaved=ncol(dlcm$mcmc$class_pi), nwarmup=nwarmup, nitr=dlcm$hparams$nitr)
   class_pi = rowMeans(dlcm$mcmc$class_pi[,itrs, drop=FALSE])
   
+  response_patterns_str <- (
+    dlcm$mcmc$response_patterns
+    %>% dplyr::mutate(
+      items_str = sapply(items, paste0, collapse=",")
+      , pattern_str = sapply(pattern, paste0, collapse=",")
+      )
+  )
+  
   { # Summarize most common domain structures
     
     # Per domain
     domain_items <- (
       dlcm$mcmc$domains 
       %>% dplyr::filter(pattern_id==0, itr > nwarmup) 
-      %>% dplyr::group_by(class2domain, items) 
-      %>% dplyr::filter(class == min(class)) 
-      %>% dplyr::summarize(nitems=max(nitems), n=dplyr::n(), .groups="keep") 
-      %>% dplyr::arrange(-n)
-    )
+      %>% dplyr::group_by(class2domain, items_id) 
+      %>% dplyr::filter(class == min(class))
+      %>% dplyr::summarize(nitr=dplyr::n(), .groups="keep")
+      %>% dplyr::left_join(
+        y=(
+            response_patterns_str
+            %>% dplyr::filter(items_id_first) 
+            %>% dplyr::select(items_id, items, items_str, nitems)
+          )
+        , by="items_id"
+      ) 
+      %>% dplyr::arrange(-nitr, -nitems)
+      %>% dplyr::select(class2domain, items_id, items, items_str, nitems, nitr) # Reorder columns
+      )
+
     
     # Per domains structure
     domain_items_all_raw <- (
@@ -64,29 +82,38 @@ dlcm.summary <- function(dlcm, nwarmup=NULL, waic_method="agg") {
     
     # single most common domain structure
     first_mode_domain_itr <- unlist(domain_items_all_raw[which(domain_items_all_raw$domains_merged == unclass(domain_items_all[1,"domains_merged"]))[1],"itr"])
-    mode_domains <- unique(dlcm$mcmc$domains %>% dplyr::filter(itr==first_mode_domain_itr, pattern_id==0) %>% .[,c("class", "class2domain", "items_id", "items")]) %>% dplyr::mutate(is_one=1)
+    mode_domains <- (
+      unique(
+        dlcm$mcmc$domains 
+        %>% dplyr::filter(itr==first_mode_domain_itr, pattern_id==0) 
+        %>% .[,c("class", "class2domain", "items_id")]
+      ) 
+      %>% dplyr::mutate(is_one=1)
+      %>% dplyr::left_join(
+        y=(
+          dlcm$mcmc$response_patterns 
+          %>% dplyr::filter(items_id_first) 
+          %>% dplyr::select(items_id, items)
+        )
+        , by="items_id"
+      )
+    )
     
     rm(domain_items_all_raw)
   }
   
   { # Response probabilities (thetas)
     
-    # identify each domain and response pattern
-    response_patterns <- dlcm$mcmc$response_patterns
-    response_patterns$pattern_str <- sapply(response_patterns$pattern, paste0, collapse=", ")
-    
-    
     thetas_avg <- (
       dlcm$mcmc$domains
       %>% dplyr::filter(itr > nwarmup) 
       %>% dplyr::group_by(class, items_id, pattern_id) 
       %>% dplyr::summarize(
-        items = dplyr::first(items)
-        , n=dplyr::n()
+        nitr=dplyr::n()
         , prob=mean(prob)
         , .groups="drop")
       %>% dplyr::left_join(
-        y=response_patterns[,c("items_id", "pattern_id", "pattern_str")]
+        y=response_patterns_str[,c("items_id", "pattern_id", "items", "items_str", "pattern", "pattern_str")]
         , by=c("items_id", "pattern_id")
       ) # lookup item_value
       %>% dplyr::left_join(
@@ -94,19 +121,18 @@ dlcm.summary <- function(dlcm, nwarmup=NULL, waic_method="agg") {
         , by=c("class", "items_id")
       ) # identify which domains are from the most common domain structure
       %>% dplyr::rename(is_mode=is_one, item_value=pattern_str)
-      %>% .[, c("class", "items_id", "pattern_id", "items", "item_value", "is_mode", "n", "prob")]
+      %>% .[, c("class", "items_id", "items", "items_str", "pattern_id", "pattern", "item_value", "is_mode", "nitr", "prob")]
     )
     
     dependence_intensity_dfs <- dependence_intensity(
       thetas_avg=thetas_avg
-      , dlcm=dlcm
       , items_ids = unique(mode_domains$items_id)
       , class_pi = class_pi
     )
     
     thetas_avg_mode <- reshape2::dcast(
       data=thetas_avg %>% dplyr::filter(is_mode==TRUE)
-      , formula = items_id + pattern_id + items + item_value ~ class
+      , formula = items_id + items_str + pattern_id + item_value ~ class
       , value.var = "prob"
     )
   }
@@ -413,7 +439,6 @@ theta_item_probs <- function(items, this_sim, itrs=NULL, merge_itrs=TRUE, classe
 
 #' For each domain domain, compare the probabilities under local dependence (DLCM) versus under local independence (traditional LCM). Describes the amount of dependence captured by our DLCM model.
 #' @param thetas_avg dataframe. Describes average response probabilities for different domains. As returned from dlcm.summary()
-#' @param dlcm list. Fitted domain LCM
 #' @param items_ids integerVector. Optional. Which domains do we want to process?
 #' @param class_pi numericVector. Optional. Prior probability of being in each class. Used to aggregate certain terms across classes.
 #' @return Returns two objects.
@@ -436,10 +461,7 @@ theta_item_probs <- function(items, this_sim, itrs=NULL, merge_itrs=TRUE, classe
 #' \item{"kl_ratio"}{= The KL divergence scaled to 0 (independence) to 1 (perfect dependence).}
 #' }
 #' @export
-dependence_intensity <- function(thetas_avg, dlcm, items_ids=NULL, class_pi=NULL) {
-  
-  response_patterns <- dlcm$mcmc$response_patterns
-  response_patterns$nitems <- sapply(response_patterns$items, length) 
+dependence_intensity <- function(thetas_avg, items_ids=NULL, class_pi=NULL) {
   
   if (identical(items_ids, NULL)) {
     items_ids=unique(thetas_avg$items_id)
@@ -447,11 +469,7 @@ dependence_intensity <- function(thetas_avg, dlcm, items_ids=NULL, class_pi=NULL
   
   thetas_marginal_ratio <- (
     thetas_avg
-    %>% dplyr::left_join(
-      y=response_patterns
-      , by=c("items_id", "pattern_id")
-    )
-    %>% dplyr::filter(nitems>1, items_id %in% items_ids)
+    %>% dplyr::filter(sapply(items, length)>1, items_id %in% items_ids)
     %>% dplyr::group_by(class, items_id)
     %>% dplyr::summarize(
       pattern_id=list(pattern_id)
