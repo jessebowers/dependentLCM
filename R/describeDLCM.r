@@ -373,19 +373,28 @@ theta_item_probs <- function(items, this_sim, itrs=NULL, merge_itrs=TRUE, classe
     class_filter = (this_sim$mcmc$domains$class %in% classes)
   }
   
-  
+  domains_relevant <- this_sim$mcmc$response_patterns[
+    sapply(this_sim$mcmc$response_patterns$items, function(iitems) length(intersect(iitems, items))>0)
+    & this_sim$mcmc$response_patterns$items_id_first
+    , "items_id"
+    ]
   afilter <- which(
-    (this_sim$mcmc$domains$itr %in% itrs)
+    (this_sim$mcmc$domains$items_id %in% domains_relevant)
+    & (this_sim$mcmc$domains$itr %in% itrs)
     & class_filter
   )
   nitr <- length(itrs)
   nitems <- length(items)
-  items_colnames <- colnames(this_sim$mcmc$domains)[this_sim$hparams$domain_item_cols[items]]
+  items_colnames <- this_sim$hparams$domain_item_cols[items]
   
   # Reduce thetas down to relevant patterns only (merging redundant patterns as necessary)
   thetas_agg <- aggregate(
     formula(paste0("prob ~ ", paste(c(items_colnames, "class", "itr"), collapse=" + ")))
-    , this_sim$mcmc$domains[afilter, ]
+    , dplyr::left_join(
+      x=this_sim$mcmc$domains[afilter, ]
+      , y=this_sim$mcmc$response_patterns
+      , by=c("items_id", "pattern_id")
+    )
     , sum
   )
   thetas_agg <- thetas_agg[!(rowSums(thetas_agg[, seq_len(nitems), drop=FALSE]) == -nitems), ] # Remove unrelated rows
