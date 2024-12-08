@@ -141,7 +141,7 @@ The mcmc item includes the following values. mcmc does NOT discard any warmup it
 \item{"items_id"}{=Integer uniquely identifying what items (what set of items) are in this domain.}
 \item{"pattern_id"}{=Integer uniquely identifying a response pattern to thie items in this domain. We will calculate the probability of this response pattern. pattern_id needs to be paired with a items_id to make sense of it.}
 \item{"items"}{=Vector containing the items in this domain. Function of items_id.}
-\item{"pattern"}{=Vector containing the values in the response pattern. Function of with (items_id,pattern_id).}
+\item{"pattern"}{=Vector containing the values in the response pattern. Function of (items_id,pattern_id).}
 \item{"items_id_first"}{=Boolean. Filtering on TRUE gives unique domains/items_id.}
 \item{"nitems"}{=How many items are in this domain?}
 \item{"item_#"}{=For each item #, gives the specific value of that item in this response pattern. A value of -1 indicates this item is not in this domain. item_# is a function of (items_id, pattern_id).}

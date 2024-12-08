@@ -4,12 +4,10 @@
 \alias{dependence_intensity}
 \title{For each domain domain, compare the probabilities under local dependence (DLCM) versus under local independence (traditional LCM). Describes the amount of dependence captured by our DLCM model.}
 \usage{
-dependence_intensity(thetas_avg, dlcm, items_ids = NULL, class_pi = NULL)
+dependence_intensity(thetas_avg, items_ids = NULL, class_pi = NULL)
 }
 \arguments{
 \item{thetas_avg}{dataframe. Describes average response probabilities for different domains. As returned from dlcm.summary()}
-
-\item{dlcm}{list. Fitted domain LCM}
 
 \item{items_ids}{integerVector. Optional. Which domains do we want to process?}
 

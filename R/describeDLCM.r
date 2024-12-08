@@ -821,6 +821,10 @@ get_jointLikelihood_priors <- function(dlcm) {
   duplicated_domains <- duplicated(dlcm$mcmc$domains[, c("itr", "domain", "class2domain")]) # Want only one row per domain
   domain_prior <- (
     dlcm$mcmc$domains[!duplicated_domains,!(colnames(dlcm$mcmc$domains)%in% c("items"))]
+    %>% dplyr::left_join(
+      y=dlcm$mcmc$response_patterns %>% dplyr::filter(items_id_first) %>% dplyr::select(items_id, nitems)
+      , by="items_id"
+    )
     %>% dplyr::group_by(itr, class2domain)
     %>% dplyr::summarize(
       nitems_list=list(nitems)
