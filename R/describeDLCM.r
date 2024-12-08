@@ -868,3 +868,78 @@ get_jointLikelihood_priors <- function(dlcm) {
   
   return(joint_loglikelihood)
 }
+
+
+#' Take new data and predict class membership. Suppose a DLCM has already been fit: 'dlcm<-dependentLCM_fit(...)'.
+#' Note that this will not necessarily match dlcm.summary(dlcm)$classes_cnts and dlcm.summary(dlcm)$classes since this function uses the posterior average response probabilities. This function is intended mainly for new observations not fit in the original model.
+#' @param data_new matrix. Data matching the existing DLCM run. Column position determines the item. Assumed to already be an integer matrix (e.g. see getStart_matrix() if necessary).
+#' @param item_nlevels IntegerVector. The number of values each item can take, as in dlcm$hparams$item_nlevels.
+#' @param thetas_avg Dataframe. Fitted response probabilites as from dlcm.summary(dlcm)$thetas_avg. Only rows with is_mode==1 are used.
+#' @param class_pi_avg NumericVector. The fitted size of each class as from dlcm.summary(dlcm)$class_pi.
+#' @returns List with two values. logLiks gives the logged conditional probability of an observation under each class, ignoring class_pi_avg. class_probs gives the probability that each observation belongs with each class, including class_pi_avg.
+#' @export
+predict_class <- function(data_new, item_nlevels, thetas_avg, class_pi_avg) {
+  
+  data_new <- as.matrix(data_new)
+  thetas_avg <- thetas_avg %>% dplyr::filter(is_mode==1)
+  thetas_avg$lprob <- log(thetas_avg$prob)
+  nclasses <- max(thetas_avg$class)+1
+  
+  #
+  # Calculate probabilities for each domain
+  #
+  
+  thetas_avg_mode <- reshape2::dcast(
+    data=thetas_avg %>% dplyr::filter(is_mode==1)
+    , formula = items_id + pattern_id ~ class
+    , value.var = "lprob"
+  ) %>% dplyr::arrange(items_id, pattern_id) # should already be ordered but make sure
+  
+  all_domains <- (
+    unique(thetas_avg %>% dplyr::select(items_id, items))
+    %>% dplyr::mutate(
+      pattern2id_map=lapply(
+        items
+        , get_pattern2id_map
+        , item_nlevels=item_nlevels
+      )
+    )
+  )
+  all_domains$lprobs <- lapply(
+    all_domains$items_id
+    , function(iitems_id) thetas_avg_mode %>% dplyr::filter(items_id==iitems_id) %>% .[,-c(1,2)]
+  )
+  
+  #
+  # Calculate probabilities for each observation/domain
+  #
+  
+  logprobs <- array(data=NA, dim=c(nrow(data_new), nrow(all_domains), max(nclasses)))
+  dimnames(logprobs) <- list(
+    NULL
+    , paste0(all_domains$items_id)
+    , paste0("class", seq_len(nclasses))
+  )
+  for (domain_index in seq_len(nrow(all_domains))) {
+    ilprobs <- all_domains[domain_index,"lprobs"][[1]][[1]]
+    idata_new_trans <- as.vector(data_new %*% all_domains[domain_index,]$pattern2id_map[[1]])
+    logprobs[,domain_index,] <- sapply(seq_len(nclasses), function(iclass) ilprobs[cbind(idata_new_trans+1,iclass)])
+  }
+  
+  #
+  # Aggregate across domains
+  #
+  
+  logLiks <- apply(logprobs, c(1,3), sum, na.rm=TRUE)
+  colnames(logLiks) <- paste0("class", seq_len(nclasses))
+  
+  class_probs <- logLiks
+  class_probs <- sweep(class_probs, 2, log(class_pi_avg), '+')
+  class_probs <- class_probs - apply(class_probs, 1, expSumLog)
+  class_probs <- exp(class_probs)
+  
+  return(list(
+    logLiks=logLiks
+    , class_probs=class_probs
+  ))
+}
