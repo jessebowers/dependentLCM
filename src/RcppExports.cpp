@@ -49,14 +49,15 @@ BEGIN_RCPP
 END_RCPP
 }
 // get_pattern2id_map
-Rcpp::IntegerVector get_pattern2id_map(const Rcpp::IntegerVector& item_nlevels, const Rcpp::IntegerVector& items);
-RcppExport SEXP _dependentLCM_get_pattern2id_map(SEXP item_nlevelsSEXP, SEXP itemsSEXP) {
+Rcpp::IntegerVector get_pattern2id_map(const Rcpp::IntegerVector& item_nlevels, const Rcpp::IntegerVector& items, const int items_addend);
+RcppExport SEXP _dependentLCM_get_pattern2id_map(SEXP item_nlevelsSEXP, SEXP itemsSEXP, SEXP items_addendSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type item_nlevels(item_nlevelsSEXP);
     Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type items(itemsSEXP);
-    rcpp_result_gen = Rcpp::wrap(get_pattern2id_map(item_nlevels, items));
+    Rcpp::traits::input_parameter< const int >::type items_addend(items_addendSEXP);
+    rcpp_result_gen = Rcpp::wrap(get_pattern2id_map(item_nlevels, items, items_addend));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -89,7 +90,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_dependentLCM_dependentLCM_fit_cpp", (DL_FUNC) &_dependentLCM_dependentLCM_fit_cpp, 3},
     {"_dependentLCM_id2pattern", (DL_FUNC) &_dependentLCM_id2pattern, 2},
     {"_dependentLCM_itemid2patterns", (DL_FUNC) &_dependentLCM_itemid2patterns, 3},
-    {"_dependentLCM_get_pattern2id_map", (DL_FUNC) &_dependentLCM_get_pattern2id_map, 2},
+    {"_dependentLCM_get_pattern2id_map", (DL_FUNC) &_dependentLCM_get_pattern2id_map, 3},
     {"_dependentLCM_expSumLog", (DL_FUNC) &_dependentLCM_expSumLog, 1},
     {"_dependentLCM_is_identifiable_r", (DL_FUNC) &_dependentLCM_is_identifiable_r, 3},
     {NULL, NULL, 0}

@@ -4,10 +4,12 @@
 \alias{get_pattern2id_map}
 \title{get_pattern2id_map}
 \usage{
-get_pattern2id_map(item_nlevels, items)
+get_pattern2id_map(item_nlevels, items, items_addend = -1L)
 }
 \arguments{
-\item{item_nlevels}{How many possible values each item can take. The response pattern is assumed to}
+\item{item_nlevels}{How many possible values each item can take.}
+
+\item{items_addend}{Should be -1 when run in R and 0 when run in C++. This is added to items_ids.}
 
 \item{items_ids}{ID reprsenting which items (positions) should be 'filled'.}
 }
