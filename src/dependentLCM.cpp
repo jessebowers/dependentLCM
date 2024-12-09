@@ -2356,15 +2356,16 @@ Rcpp::IntegerVector itemid2patterns(const Rcpp::IntegerVector& pattern_ids, cons
 //' @description Create 'conversion vector' for converting (vector) response pattern to representative ID
 //' The dot product of the pattern2id_map and the response pattern gives the pattern id. This does the opposite of id2pattern(.).
 //' @param items_ids ID reprsenting which items (positions) should be 'filled'. 
-//' @param item_nlevels How many possible values each item can take. The response pattern is assumed to 
+//' @param item_nlevels How many possible values each item can take.
+//' @param items_addend Should be -1 when run in R and 0 when run in C++. This is added to items_ids.
 //' @export
 // [[Rcpp::export]]
-Rcpp::IntegerVector get_pattern2id_map(const Rcpp::IntegerVector& item_nlevels, const Rcpp::IntegerVector& items) {
+Rcpp::IntegerVector get_pattern2id_map(const Rcpp::IntegerVector& item_nlevels, const Rcpp::IntegerVector& items, const int items_addend=-1) {
   TROUBLE_START(("get_pattern2id_map"));
   // Wraps DomainCount::set_pattern2id_map(.) for use in R.
   
   DomainCount idomain;
-  idomain.items = items;
+  idomain.items = items + items_addend;
   idomain.set_pattern2id_map(item_nlevels);
   
   TROUBLE_END; return idomain.pattern2id_map;
